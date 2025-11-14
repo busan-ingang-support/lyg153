@@ -47,7 +47,7 @@ teacherHomeroom.get('/', async (c) => {
   query += ` ORDER BY sem.year DESC, sem.semester DESC, c.grade, c.name`
 
   const result = await DB.prepare(query).bind(...params).all()
-  return c.json({ success: true, homeroom_assignments: result.results })
+  return c.json({ success: true, homerooms: result.results })
 })
 
 // Get homeroom teacher for a class in a specific semester

@@ -64,10 +64,14 @@ boards.get('/posts', async (c) => {
         bp.*,
         u.name as author_name,
         b.name as board_name,
-        b.board_type
+        b.board_type,
+        c.subject_id,
+        s.name as subject_name
       FROM board_posts bp
       LEFT JOIN users u ON bp.author_id = u.id
       LEFT JOIN boards b ON bp.board_id = b.id
+      LEFT JOIN courses c ON b.target_id = c.id AND b.board_type = 'course'
+      LEFT JOIN subjects s ON c.subject_id = s.id
       WHERE bp.is_deleted = 0
     `;
     const params: any[] = [];
@@ -85,6 +89,11 @@ boards.get('/posts', async (c) => {
     if (is_notice) {
       query += ' AND bp.is_notice = ?';
       params.push(is_notice);
+    }
+    
+    // 공지사항은 교사(teacher) 또는 관리자(admin, super_admin)가 작성한 글만
+    if (is_notice === '1') {
+      query += ' AND u.role IN (\'teacher\', \'admin\', \'super_admin\')';
     }
     
     query += ' ORDER BY bp.is_notice DESC, bp.created_at DESC LIMIT ? OFFSET ?';
@@ -166,10 +175,18 @@ boards.post('/posts', async (c) => {
   }
   
   try {
-    // JWT 토큰에서 사용자 ID 추출
-    const author_id = await getUserIdFromToken(token);
-    if (!author_id) {
+    // JWT 토큰에서 사용자 정보 추출
+    const payload = await verifyToken(token);
+    if (!payload || !payload.userId) {
       return c.json({ error: '유효하지 않은 토큰입니다' }, 401);
+    }
+    
+    const author_id = payload.userId;
+    const user_role = payload.role;
+    
+    // 학생은 공지사항을 작성할 수 없음
+    if (is_notice === 1 && user_role === 'student') {
+      return c.json({ error: '학생은 공지사항을 작성할 수 없습니다' }, 403);
     }
     
     const result = await db.prepare(`

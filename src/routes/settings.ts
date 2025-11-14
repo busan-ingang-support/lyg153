@@ -1,7 +1,42 @@
 import { Hono } from 'hono'
 import type { CloudflareBindings } from '../types/bindings'
+import { verifyToken } from '../utils/auth'
 
 const settings = new Hono<{ Bindings: CloudflareBindings }>()
+
+// 토큰에서 사용자 정보 추출 헬퍼
+async function getUserFromToken(token: string): Promise<{ userId: number; role: string } | null> {
+  try {
+    const payload = await verifyToken(token);
+    if (!payload || !payload.userId) {
+      return null;
+    }
+    return {
+      userId: payload.userId,
+      role: payload.role || ''
+    };
+  } catch {
+    return null;
+  }
+}
+
+// 관리자 권한 체크 헬퍼
+async function checkAdminPermission(c: any): Promise<boolean> {
+  const authHeader = c.req.header('Authorization');
+  const token = authHeader?.replace('Bearer ', '');
+  
+  if (!token) {
+    return false;
+  }
+  
+  const user = await getUserFromToken(token);
+  if (!user) {
+    return false;
+  }
+  
+  // 관리자 또는 최고관리자만 허용
+  return user.role === 'admin' || user.role === 'super_admin';
+}
 
 // Get all system settings
 settings.get('/', async (c) => {
@@ -42,6 +77,12 @@ settings.get('/:key', async (c) => {
 
 // Update or create setting
 settings.put('/:key', async (c) => {
+  // 관리자 권한 체크
+  const hasPermission = await checkAdminPermission(c);
+  if (!hasPermission) {
+    return c.json({ success: false, message: '시스템 설정은 관리자만 수정할 수 있습니다.' }, 403);
+  }
+  
   const { DB } = c.env
   const key = c.req.param('key')
   const { setting_value, setting_type, description, updated_by } = await c.req.json()
@@ -119,6 +160,12 @@ settings.put('/:key', async (c) => {
 
 // Batch update multiple settings
 settings.post('/batch', async (c) => {
+  // 관리자 권한 체크
+  const hasPermission = await checkAdminPermission(c);
+  if (!hasPermission) {
+    return c.json({ success: false, message: '시스템 설정은 관리자만 수정할 수 있습니다.' }, 403);
+  }
+  
   const { DB } = c.env
   const { settings: settingsToUpdate, updated_by } = await c.req.json()
 
@@ -203,6 +250,12 @@ settings.post('/batch', async (c) => {
 
 // Delete setting
 settings.delete('/:key', async (c) => {
+  // 관리자 권한 체크
+  const hasPermission = await checkAdminPermission(c);
+  if (!hasPermission) {
+    return c.json({ success: false, message: '시스템 설정은 관리자만 삭제할 수 있습니다.' }, 403);
+  }
+  
   const { DB } = c.env
   const key = c.req.param('key')
 

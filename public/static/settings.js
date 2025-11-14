@@ -2,6 +2,13 @@
 
 // 시스템 설정 페이지 표시
 async function showSystemSettings() {
+    // 권한 체크
+    if (currentUser.role !== 'admin' && currentUser.role !== 'super_admin') {
+        alert('시스템 설정은 관리자만 접근할 수 있습니다.');
+        navigateToPage('dashboard');
+        return;
+    }
+    
     const content = document.getElementById('main-content');
     
     content.innerHTML = `

@@ -34,6 +34,12 @@ INSERT OR IGNORE INTO classes (name, grade, semester_id, homeroom_teacher_id, ro
   ('1학년 2반', 1, 1, 2, '102', 25),
   ('2학년 1반', 2, 1, 1, '201', 25);
 
+-- 담임 배정 (teacher_homeroom)
+-- teacher1(김선생)은 1학년 1반 담임, teacher2(이선생)은 1학년 2반 담임
+INSERT OR IGNORE INTO teacher_homeroom (teacher_id, class_id, semester_id) VALUES 
+  (1, 1, 1),  -- teacher1 → 1학년 1반
+  (2, 2, 1);  -- teacher2 → 1학년 2반
+
 -- 테스트 학생 계정 (비밀번호: student123)
 INSERT OR IGNORE INTO users (username, password_hash, email, name, role, phone) VALUES 
   ('student1', 'student123', 'student1@school.com', '박학생', 'student', '010-4567-8901'),
@@ -55,10 +61,103 @@ INSERT OR IGNORE INTO users (username, password_hash, email, name, role, phone) 
 INSERT OR IGNORE INTO parent_student (parent_user_id, student_id, relationship, is_primary) VALUES 
   (6, 1, '부', 1);
 
--- 테스트 수업 생성
-INSERT OR IGNORE INTO courses (subject_id, semester_id, teacher_id, class_id, course_name, schedule) VALUES 
+-- 테스트 수업 생성 (기존 데이터 삭제 후 재삽입)
+DELETE FROM courses WHERE class_id = 1 AND semester_id = 1;
+
+INSERT INTO courses (subject_id, semester_id, teacher_id, class_id, course_name, schedule) VALUES 
   (1, 1, 1, 1, '1학년 1반 국어', '월,수,금 1교시'),
-  (3, 1, 2, 1, '1학년 1반 수학', '화,목 1,2교시');
+  (2, 1, 1, 1, '1학년 1반 영어', '월,수,금 2교시'),
+  (3, 1, 2, 1, '1학년 1반 수학', '화,목 1,2교시'),
+  (4, 1, 2, 1, '1학년 1반 과학', '화,목 3교시'),
+  (5, 1, 1, 1, '1학년 1반 사회', '월,수 3교시'),
+  (6, 1, 1, 1, '1학년 1반 음악', '금 3교시'),
+  (7, 1, 1, 1, '1학년 1반 미술', '금 4교시'),
+  (8, 1, 1, 1, '1학년 1반 체육', '화,목 4교시');
+
+-- 테스트 시간표 생성 (1학년 1반)
+-- 기존 시간표 삭제
+DELETE FROM schedules WHERE class_id = 1;
+
+-- courses의 ID를 course_name으로 조회하여 삽입
+-- 월요일
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '월', 1, '101' FROM courses WHERE course_name = '1학년 1반 국어' AND class_id = 1;
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '월', 2, '101' FROM courses WHERE course_name = '1학년 1반 영어' AND class_id = 1;
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '월', 3, '101' FROM courses WHERE course_name = '1학년 1반 사회' AND class_id = 1;
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '월', 4, '101' FROM courses WHERE course_name = '1학년 1반 영어' AND class_id = 1;
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '월', 5, '102' FROM courses WHERE course_name = '1학년 1반 수학' AND class_id = 1;
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '월', 6, '103' FROM courses WHERE course_name = '1학년 1반 과학' AND class_id = 1;
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '월', 7, '체육관' FROM courses WHERE course_name = '1학년 1반 체육' AND class_id = 1;
+
+-- 화요일
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '화', 1, '102' FROM courses WHERE course_name = '1학년 1반 수학' AND class_id = 1;
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '화', 2, '102' FROM courses WHERE course_name = '1학년 1반 수학' AND class_id = 1;
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '화', 3, '103' FROM courses WHERE course_name = '1학년 1반 과학' AND class_id = 1;
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '화', 4, '체육관' FROM courses WHERE course_name = '1학년 1반 체육' AND class_id = 1;
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '화', 5, '101' FROM courses WHERE course_name = '1학년 1반 국어' AND class_id = 1;
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '화', 6, '101' FROM courses WHERE course_name = '1학년 1반 영어' AND class_id = 1;
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '화', 7, '101' FROM courses WHERE course_name = '1학년 1반 사회' AND class_id = 1;
+
+-- 수요일
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '수', 1, '101' FROM courses WHERE course_name = '1학년 1반 국어' AND class_id = 1;
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '수', 2, '101' FROM courses WHERE course_name = '1학년 1반 영어' AND class_id = 1;
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '수', 3, '101' FROM courses WHERE course_name = '1학년 1반 사회' AND class_id = 1;
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '수', 4, '103' FROM courses WHERE course_name = '1학년 1반 과학' AND class_id = 1;
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '수', 5, '102' FROM courses WHERE course_name = '1학년 1반 수학' AND class_id = 1;
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '수', 6, '체육관' FROM courses WHERE course_name = '1학년 1반 체육' AND class_id = 1;
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '수', 7, '음악실' FROM courses WHERE course_name = '1학년 1반 음악' AND class_id = 1;
+
+-- 목요일
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '목', 1, '102' FROM courses WHERE course_name = '1학년 1반 수학' AND class_id = 1;
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '목', 2, '102' FROM courses WHERE course_name = '1학년 1반 수학' AND class_id = 1;
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '목', 3, '103' FROM courses WHERE course_name = '1학년 1반 과학' AND class_id = 1;
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '목', 4, '체육관' FROM courses WHERE course_name = '1학년 1반 체육' AND class_id = 1;
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '목', 5, '101' FROM courses WHERE course_name = '1학년 1반 국어' AND class_id = 1;
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '목', 6, '101' FROM courses WHERE course_name = '1학년 1반 영어' AND class_id = 1;
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '목', 7, '101' FROM courses WHERE course_name = '1학년 1반 사회' AND class_id = 1;
+
+-- 금요일
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '금', 1, '101' FROM courses WHERE course_name = '1학년 1반 국어' AND class_id = 1;
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '금', 2, '101' FROM courses WHERE course_name = '1학년 1반 영어' AND class_id = 1;
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '금', 3, '음악실' FROM courses WHERE course_name = '1학년 1반 음악' AND class_id = 1;
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '금', 4, '미술실' FROM courses WHERE course_name = '1학년 1반 미술' AND class_id = 1;
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '금', 5, '102' FROM courses WHERE course_name = '1학년 1반 수학' AND class_id = 1;
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '금', 6, '103' FROM courses WHERE course_name = '1학년 1반 과학' AND class_id = 1;
+INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number) 
+SELECT 1, id, '금', 7, '체육관' FROM courses WHERE course_name = '1학년 1반 체육' AND class_id = 1;
 
 -- 테스트 동아리 생성
 INSERT OR IGNORE INTO clubs (name, description, advisor_teacher_id, semester_id, max_members) VALUES 

@@ -252,4 +252,24 @@ schedules.post('/check-conflict', async (c) => {
   }
 });
 
+// ============================================
+// 교시별 시간 정보 조회
+// ============================================
+schedules.get('/periods', async (c) => {
+  const db = c.env.DB;
+  
+  try {
+    const { results } = await db.prepare(`
+      SELECT * FROM schedule_periods 
+      WHERE is_active = 1
+      ORDER BY period_number
+    `).all();
+    
+    return c.json({ periods: results || [] });
+  } catch (error: any) {
+    console.error('교시 시간 조회 오류:', error);
+    return c.json({ error: '교시 시간 조회 중 오류가 발생했습니다' }, 500);
+  }
+});
+
 export default schedules;

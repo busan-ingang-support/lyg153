@@ -92,6 +92,38 @@ students.get('/next-student-number', async (c) => {
   }
 });
 
+// user_id로 학생 조회
+students.get('/user/:userId', async (c) => {
+  try {
+    const db = c.env.DB;
+    const userId = c.req.param('userId');
+    
+    // user_id로 학생 정보 조회
+    const student = await db.prepare(`
+      SELECT 
+        s.*,
+        u.name,
+        u.email,
+        u.phone,
+        c.name as class_name,
+        c.grade as current_class_grade
+      FROM students s
+      JOIN users u ON s.user_id = u.id
+      LEFT JOIN classes c ON s.class_id = c.id
+      WHERE s.user_id = ?
+    `).bind(userId).first();
+    
+    if (!student) {
+      return c.json({ error: 'Student not found' }, 404);
+    }
+    
+    return c.json({ student });
+  } catch (error) {
+    console.error('Get student by user_id error:', error);
+    return c.json({ error: 'Internal server error' }, 500);
+  }
+});
+
 // 특정 학생 상세 조회
 students.get('/:id', async (c) => {
   try {

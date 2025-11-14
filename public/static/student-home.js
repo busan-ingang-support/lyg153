@@ -32,7 +32,7 @@ async function showStudentHome() {
                             <div class="flex items-center space-x-4">
                                 <div class="text-right">
                                     <p class="text-sm font-medium text-gray-700">${currentUser.name}</p>
-                                    <p class="text-xs text-gray-500">학생</p>
+                                    <p class="text-xs text-gray-500" id="student-class-info">학생 · 로딩 중...</p>
                                 </div>
                                 <button id="student-logout-btn" class="btn-secondary text-sm">로그아웃</button>
                             </div>
@@ -53,6 +53,39 @@ async function showStudentHome() {
     
     // 이벤트 리스너 설정
     setupStudentNavigation();
+    
+    // 학생 반 정보 로드
+    loadStudentClassInfo();
+}
+
+// 학생 반 정보 로드
+async function loadStudentClassInfo() {
+    try {
+        const response = await axios.get(`/api/students/user/${currentUser.id}`, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        
+        const student = response.data.student;
+        const classInfo = document.getElementById('student-class-info');
+        
+        if (classInfo && student.class_id) {
+            // 반 정보 조회
+            const classResponse = await axios.get(`/api/classes/${student.class_id}`, {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            
+            const className = classResponse.data.class?.name || `${student.grade}학년`;
+            classInfo.textContent = `학생 · ${className}`;
+        } else if (classInfo) {
+            classInfo.textContent = '학생';
+        }
+    } catch (error) {
+        console.error('반 정보 로드 실패:', error);
+        const classInfo = document.getElementById('student-class-info');
+        if (classInfo) {
+            classInfo.textContent = '학생';
+        }
+    }
 }
 
 // 학생 네비게이션 설정
@@ -235,7 +268,7 @@ async function loadRecentNotices() {
 async function loadTodaySchedule() {
     try {
         // 현재 학생의 반 정보 가져오기
-        const studentResponse = await axios.get(`/api/students/${currentUser.id}`, {
+        const studentResponse = await axios.get(`/api/students/user/${currentUser.id}`, {
             headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
@@ -270,14 +303,20 @@ async function loadTodaySchedule() {
             return;
         }
         
+        // 교시별로 정렬
+        schedules.sort((a, b) => a.period - b.period);
+        
         container.innerHTML = schedules.map(schedule => `
-            <div class="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg">
-                <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
-                    <span class="text-sm font-bold text-blue-600">${schedule.period}교시</span>
+            <div class="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
+                <div class="w-14 h-14 rounded-full bg-blue-200 flex items-center justify-center flex-shrink-0">
+                    <span class="text-sm font-bold text-blue-700">${schedule.period}</span>
                 </div>
-                <div class="flex-1">
-                    <p class="text-sm font-medium text-gray-800">${escapeHtml(schedule.subject_name || '수업')}</p>
-                    <p class="text-xs text-gray-500">${escapeHtml(schedule.teacher_name || '')} ${schedule.room_number ? '· ' + schedule.room_number : ''}</p>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-gray-800 mb-1">${escapeHtml(schedule.subject_name || '수업')}</p>
+                    <div class="flex items-center space-x-2 text-xs text-gray-600">
+                        <span><i class="fas fa-chalkboard-teacher mr-1"></i>${escapeHtml(schedule.teacher_name || '')}</span>
+                        ${schedule.room_number ? `<span><i class="fas fa-door-open mr-1"></i>${escapeHtml(schedule.room_number)}</span>` : ''}
+                    </div>
                 </div>
             </div>
         `).join('');
@@ -365,7 +404,7 @@ async function loadWeeklySchedule(container) {
     
     try {
         // 학생의 반 정보 가져오기
-        const studentResponse = await axios.get(`/api/students/${currentUser.id}`, {
+        const studentResponse = await axios.get(`/api/students/user/${currentUser.id}`, {
             headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
@@ -384,36 +423,69 @@ async function loadWeeklySchedule(container) {
         const days = ['월', '화', '수', '목', '금'];
         const periods = 7;
         
+        // 교시별 시간 정보 가져오기 (선택사항)
+        let periodTimes = {};
+        try {
+            const periodResponse = await axios.get('/api/schedules/periods', {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            if (periodResponse.data.periods) {
+                periodResponse.data.periods.forEach(p => {
+                    periodTimes[p.period_number] = p;
+                });
+            }
+        } catch (e) {
+            // 교시 시간 정보가 없어도 계속 진행
+        }
+        
         let html = `
             <div class="card-modern overflow-x-auto">
-                <table class="w-full">
+                <div class="mb-4 flex items-center justify-between">
+                    <h3 class="text-lg font-bold text-gray-800">주간 시간표</h3>
+                    <div class="text-sm text-gray-500">
+                        <i class="fas fa-calendar-alt mr-2"></i>
+                        ${new Date().getFullYear()}년 ${new Date().getMonth() + 1}월
+                    </div>
+                </div>
+                <table class="w-full min-w-[600px]">
                     <thead>
                         <tr class="bg-gray-50">
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">교시</th>
-                            ${days.map(day => `<th class="px-4 py-3 text-center text-sm font-semibold text-gray-700">${day}</th>`).join('')}
+                            <th class="px-3 py-3 text-left text-xs font-semibold text-gray-700 w-20">교시</th>
+                            ${days.map(day => `<th class="px-3 py-3 text-center text-xs font-semibold text-gray-700">${day}</th>`).join('')}
                         </tr>
                     </thead>
                     <tbody>
         `;
         
         for (let period = 1; period <= periods; period++) {
-            html += '<tr class="border-t border-gray-200">';
-            html += `<td class="px-4 py-4 text-sm font-medium text-gray-700">${period}교시</td>`;
+            const periodTime = periodTimes[period];
+            const timeStr = periodTime ? `${periodTime.start_time} - ${periodTime.end_time}` : '';
+            
+            html += '<tr class="border-t border-gray-200 hover:bg-gray-50">';
+            html += `<td class="px-3 py-4 text-center">
+                <div class="text-sm font-medium text-gray-700">${period}</div>
+                ${timeStr ? `<div class="text-xs text-gray-400 mt-1">${timeStr}</div>` : ''}
+            </td>`;
             
             days.forEach(day => {
                 const item = schedule[day]?.[period];
                 if (item) {
+                    // 오늘 날짜인지 확인
+                    const today = new Date();
+                    const todayDay = ['일', '월', '화', '수', '목', '금', '토'][today.getDay()];
+                    const isToday = day === todayDay;
+                    
                     html += `
-                        <td class="px-4 py-4 text-center">
-                            <div class="bg-blue-50 rounded-lg p-3">
-                                <p class="text-sm font-medium text-gray-800">${escapeHtml(item.subject_name || '수업')}</p>
-                                <p class="text-xs text-gray-500 mt-1">${escapeHtml(item.teacher_name || '')}</p>
-                                ${item.room_number ? `<p class="text-xs text-gray-400">${item.room_number}</p>` : ''}
+                        <td class="px-3 py-4">
+                            <div class="bg-blue-50 ${isToday ? 'ring-2 ring-blue-400' : ''} rounded-lg p-3 min-h-[80px]">
+                                <p class="text-sm font-semibold text-gray-800 mb-1">${escapeHtml(item.subject_name || '수업')}</p>
+                                <p class="text-xs text-gray-600 mb-1">${escapeHtml(item.teacher_name || '')}</p>
+                                ${item.room_number ? `<p class="text-xs text-gray-500"><i class="fas fa-door-open mr-1"></i>${escapeHtml(item.room_number)}</p>` : ''}
                             </div>
                         </td>
                     `;
                 } else {
-                    html += '<td class="px-4 py-4 text-center text-gray-400 text-sm">-</td>';
+                    html += '<td class="px-3 py-4 text-center text-gray-300 text-sm">-</td>';
                 }
             });
             
@@ -438,7 +510,7 @@ async function loadStudentInfo(container) {
     container.innerHTML = '<div class="text-center py-12"><i class="fas fa-spinner fa-spin text-3xl text-gray-400"></i></div>';
     
     try {
-        const response = await axios.get(`/api/students/${currentUser.id}`, {
+        const response = await axios.get(`/api/students/user/${currentUser.id}`, {
             headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
@@ -527,7 +599,7 @@ async function showStudentBoard() {
         <div class="max-w-5xl mx-auto">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-2xl font-bold text-gray-800">게시판</h2>
-                <button onclick="showBoardWriteModal()" class="btn-pastel-primary px-4 py-2 rounded-lg">
+                <button id="board-write-btn" onclick="showBoardWriteModal()" class="btn-pastel-primary px-4 py-2 rounded-lg">
                     <i class="fas fa-pen mr-2"></i>글쓰기
                 </button>
             </div>
@@ -535,14 +607,14 @@ async function showStudentBoard() {
             <!-- 게시판 탭 -->
             <div class="border-b border-gray-200 mb-6">
                 <nav class="flex space-x-8">
-                    <button class="board-tab border-b-2 border-purple-600 text-purple-600 pb-3 px-1 font-medium" data-board="all">
-                        전체
-                    </button>
-                    <button class="board-tab border-b-2 border-transparent text-gray-500 pb-3 px-1 hover:text-gray-700" data-board="notice">
+                    <button class="board-tab border-b-2 border-purple-600 text-purple-600 pb-3 px-1 font-medium" data-board="notice">
                         공지사항
                     </button>
                     <button class="board-tab border-b-2 border-transparent text-gray-500 pb-3 px-1 hover:text-gray-700" data-board="class">
-                        반 게시판
+                        반 커뮤니티
+                    </button>
+                    <button class="board-tab border-b-2 border-transparent text-gray-500 pb-3 px-1 hover:text-gray-700" data-board="course">
+                        과목 커뮤니티
                     </button>
                     <button class="board-tab border-b-2 border-transparent text-gray-500 pb-3 px-1 hover:text-gray-700" data-board="club">
                         동아리
@@ -582,9 +654,11 @@ async function showStudentBoard() {
                         <label class="block text-gray-700 text-sm font-medium mb-2">내용</label>
                         <textarea id="board-content" required rows="10" class="input-modern w-full" placeholder="내용을 입력하세요"></textarea>
                     </div>
-                    <div class="flex items-center">
-                        <input type="checkbox" id="board-notice" class="mr-2">
-                        <label for="board-notice" class="text-sm text-gray-700">공지사항으로 등록</label>
+                    <div id="board-notice-option" class="hidden">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="board-notice" class="mr-2">
+                            <label for="board-notice" class="text-sm text-gray-700">공지사항으로 등록</label>
+                        </div>
                     </div>
                     <div class="flex justify-end space-x-3">
                         <button type="button" onclick="closeBoardWriteModal()" class="btn-secondary px-6 py-2 rounded-lg">
@@ -612,32 +686,83 @@ async function showStudentBoard() {
             e.target.classList.add('border-purple-600', 'text-purple-600');
             e.target.classList.remove('border-transparent', 'text-gray-500');
             
+            // 공지사항 탭이면 글쓰기 버튼 숨기기
+            const writeBtn = document.getElementById('board-write-btn');
+            if (writeBtn) {
+                if (boardType === 'notice') {
+                    writeBtn.classList.add('hidden');
+                } else {
+                    writeBtn.classList.remove('hidden');
+                }
+            }
+            
+            // 게시판 선택 드롭다운 업데이트
+            loadBoardSelect();
+            
             // 게시글 목록 로드
             loadBoardList(boardType);
         });
     });
+    
+    // 초기 로드 시 공지사항 탭이므로 글쓰기 버튼 숨기기
+    const writeBtn = document.getElementById('board-write-btn');
+    if (writeBtn) {
+        writeBtn.classList.add('hidden');
+    }
 
     // 글쓰기 폼 이벤트
     document.getElementById('board-write-form')?.addEventListener('submit', handleBoardWrite);
+    
+    // 게시판 선택 시 공지사항 옵션 표시/숨김
+    document.getElementById('board-select')?.addEventListener('change', async (e) => {
+        const boardId = e.target.value;
+        const noticeOption = document.getElementById('board-notice-option');
+        const activeTab = document.querySelector('.board-tab.border-purple-600')?.getAttribute('data-board') || 'notice';
+        
+        if (boardId && noticeOption) {
+            // 공지사항 탭이면 공지 옵션 표시, 반 커뮤니티/과목 커뮤니티면 숨김
+            if (activeTab === 'notice') {
+                noticeOption.classList.remove('hidden');
+            } else {
+                noticeOption.classList.add('hidden');
+            }
+        }
+    });
 
     // 기본 게시글 목록 로드
-    loadBoardList('all');
+    loadBoardList('notice');
     loadBoardSelect();
 }
 
 // 게시판 목록 로드
-async function loadBoardList(boardType = 'all') {
+async function loadBoardList(boardType = 'notice') {
     const container = document.getElementById('board-list');
     container.innerHTML = '<div class="text-center py-12"><i class="fas fa-spinner fa-spin text-3xl text-gray-400"></i></div>';
     
     try {
-        let url = '/api/boards/posts?board_type=student';
+        let url = '/api/boards/posts';
+        let params = [];
+        
         if (boardType === 'notice') {
-            url += '&is_notice=1';
+            // 공지사항: 학생용 게시판의 공지글만
+            url += '?board_type=student&is_notice=1';
         } else if (boardType === 'class') {
-            url += '&board_type=class';
+            // 반 커뮤니티: 현재 학생의 반 게시판
+            const studentResponse = await axios.get(`/api/students/user/${currentUser.id}`, {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            const classId = studentResponse.data.student.class_id;
+            if (classId) {
+                url += `?board_type=class&target_id=${classId}`;
+            } else {
+                container.innerHTML = '<p class="text-gray-500 text-center py-12">배정된 반이 없습니다.</p>';
+                return;
+            }
+        } else if (boardType === 'course') {
+            // 과목 커뮤니티: 전체 과목 게시판
+            url += '?board_type=course';
         } else if (boardType === 'club') {
-            url += '&board_type=club';
+            url += '?board_type=club';
         }
         
         const response = await axios.get(url, {
@@ -662,6 +787,7 @@ async function loadBoardList(boardType = 'all') {
                     <div class="flex-1">
                         <div class="flex items-center space-x-2 mb-2">
                             ${post.is_notice ? '<span class="badge badge-warning text-xs">공지</span>' : ''}
+                            ${post.subject_name ? `<span class="badge badge-info text-xs">${escapeHtml(post.subject_name)}</span>` : ''}
                             <h3 class="text-lg font-bold text-gray-800">${escapeHtml(post.title)}</h3>
                         </div>
                         <p class="text-sm text-gray-600 mb-3 line-clamp-2">${escapeHtml(post.content)}</p>
@@ -683,7 +809,32 @@ async function loadBoardList(boardType = 'all') {
 // 게시판 선택 드롭다운 로드
 async function loadBoardSelect() {
     try {
-        const response = await axios.get('/api/boards?board_type=student', {
+        // 현재 탭에 따라 다른 게시판 목록 로드
+        const activeTab = document.querySelector('.board-tab.border-purple-600')?.getAttribute('data-board') || 'notice';
+        let boardType = 'student';
+        let targetId = null;
+        
+        if (activeTab === 'class') {
+            // 반 커뮤니티: 현재 학생의 반 게시판
+            const studentResponse = await axios.get(`/api/students/user/${currentUser.id}`, {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            const classId = studentResponse.data.student.class_id;
+            boardType = 'class';
+            targetId = classId;
+        } else if (activeTab === 'course') {
+            // 과목 커뮤니티: 과목별 게시판
+            boardType = 'course';
+        } else if (activeTab === 'club') {
+            boardType = 'club';
+        }
+        
+        let url = `/api/boards?board_type=${boardType}`;
+        if (targetId) {
+            url += `&target_id=${targetId}`;
+        }
+        
+        const response = await axios.get(url, {
             headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
@@ -691,8 +842,12 @@ async function loadBoardSelect() {
         const select = document.getElementById('board-select');
         
         if (select) {
-            select.innerHTML = '<option value="">게시판을 선택하세요</option>' +
-                boards.map(board => `<option value="${board.id}">${escapeHtml(board.name)}</option>`).join('');
+            if (boards.length === 0) {
+                select.innerHTML = '<option value="">게시판이 없습니다</option>';
+            } else {
+                select.innerHTML = '<option value="">게시판을 선택하세요</option>' +
+                    boards.map(board => `<option value="${board.id}">${escapeHtml(board.name)}</option>`).join('');
+            }
         }
     } catch (error) {
         console.error('게시판 목록 로드 실패:', error);
@@ -802,7 +957,23 @@ async function showBoardDetail(postId) {
 
 // 글쓰기 모달 제어
 function showBoardWriteModal() {
-    document.getElementById('board-write-modal').classList.remove('hidden');
+    const modal = document.getElementById('board-write-modal');
+    modal.classList.remove('hidden');
+    
+    // 현재 탭에 따라 공지사항 옵션 표시/숨김
+    const activeTab = document.querySelector('.board-tab.border-purple-600')?.getAttribute('data-board') || 'notice';
+    const noticeOption = document.getElementById('board-notice-option');
+    
+    if (noticeOption) {
+        if (activeTab === 'notice') {
+            noticeOption.classList.remove('hidden');
+        } else {
+            noticeOption.classList.add('hidden');
+        }
+    }
+    
+    // 게시판 선택 드롭다운 업데이트
+    loadBoardSelect();
 }
 
 function closeBoardWriteModal() {
@@ -835,7 +1006,11 @@ async function handleBoardWrite(e) {
         });
         
         closeBoardWriteModal();
-        loadBoardList('all');
+        
+        // 현재 활성 탭의 게시글 목록 새로고침
+        const activeTab = document.querySelector('.board-tab.border-purple-600')?.getAttribute('data-board') || 'notice';
+        loadBoardList(activeTab);
+        
         alert('게시글이 작성되었습니다.');
     } catch (error) {
         console.error('게시글 작성 실패:', error);
@@ -926,7 +1101,7 @@ async function showStudentQnA() {
 async function loadQnACourses() {
     try {
         // 현재 학생의 수강 과목 가져오기
-        const studentResponse = await axios.get(`/api/students/${currentUser.id}`, {
+        const studentResponse = await axios.get(`/api/students/user/${currentUser.id}`, {
             headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
@@ -999,9 +1174,10 @@ async function loadQnAList() {
             <div class="card-modern hover:shadow-md transition-shadow">
                 <div class="flex items-start justify-between mb-3">
                     <div class="flex-1">
-                        <div class="flex items-center space-x-2 mb-2">
+                        <div class="flex items-center space-x-2 mb-2 flex-wrap">
                             <span class="badge ${getQnAStatusBadge(qna.status)}">${getQnAStatusText(qna.status)}</span>
                             ${qna.is_private ? '<span class="badge badge-secondary text-xs">비공개</span>' : ''}
+                            ${qna.subject_name ? `<span class="badge badge-info text-xs">${escapeHtml(qna.subject_name)}</span>` : ''}
                             <h3 class="text-lg font-bold text-gray-800">${escapeHtml(qna.title)}</h3>
                         </div>
                         <p class="text-sm text-gray-600 mb-3 line-clamp-2">${escapeHtml(qna.question)}</p>
@@ -1015,7 +1191,7 @@ async function loadQnAList() {
                             </div>
                         ` : ''}
                         <div class="flex items-center space-x-4 text-xs text-gray-500">
-                            <span><i class="fas fa-book mr-1"></i>${escapeHtml(qna.course_name || '과목')}</span>
+                            <span><i class="fas fa-book mr-1"></i>${escapeHtml(qna.course_name || qna.subject_name || '과목')}</span>
                             <span><i class="fas fa-clock mr-1"></i>${formatDate(qna.created_at)}</span>
                         </div>
                     </div>

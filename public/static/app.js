@@ -27,6 +27,13 @@ async function initializeApp() {
     const savedToken = localStorage.getItem('authToken');
     const savedUser = localStorage.getItem('currentUser');
     
+    // 중복 호출 방지
+    if (window.isInitializing) {
+        console.log('initializeApp 이미 실행 중 - 건너뜀');
+        return;
+    }
+    window.isInitializing = true;
+    
     if (savedToken && savedUser) {
         // 이미 로그인된 상태면 대시보드로
         authToken = savedToken;
@@ -54,6 +61,7 @@ async function initializeApp() {
     }
     
     setupEventListeners();
+    window.isInitializing = false;
 }
 
 // 모든 스크립트가 로드된 후 초기화
@@ -128,8 +136,10 @@ async function handleLogin(e) {
             loginModal.classList.add('hidden');
         }
         
-        // 역할별 대시보드로 이동
-        showDashboard();
+        // 역할별 대시보드로 이동 (initializeApp에서 이미 호출되었으므로 건너뛰기)
+        if (!window.isInitializing) {
+            showDashboard();
+        }
     } catch (error) {
         const errorDiv = document.getElementById('login-error');
         const errorMessage = document.getElementById('error-message');
@@ -191,9 +201,33 @@ async function showDashboard() {
 
 // 관리자 대시보드 표시 (기존 로직)
 async function showAdminDashboard() {
-    // dashboard-screen이 없으면 생성
+    // currentUser가 없으면 localStorage에서 복원 시도
+    if (!currentUser) {
+        const savedUser = localStorage.getItem('currentUser');
+        const savedToken = localStorage.getItem('authToken');
+        if (savedUser) {
+            currentUser = JSON.parse(savedUser);
+        }
+        if (savedToken) {
+            authToken = savedToken;
+        }
+    }
+    
+    // currentUser가 여전히 없으면 에러
+    if (!currentUser) {
+        console.error('currentUser가 설정되지 않았습니다.');
+        return;
+    }
+    
+    // dashboard-screen이 없거나 구조가 손상되었으면 생성
     let dashboardScreen = document.getElementById('dashboard-screen');
-    if (!dashboardScreen) {
+    let sidebarNavCheck = document.getElementById('sidebar-nav');
+    
+    // dashboard-screen이 없거나, sidebar-nav가 없으면 다시 생성
+    const needsCreation = !dashboardScreen || !sidebarNavCheck;
+    
+    if (needsCreation) {
+        console.log('dashboard-screen 생성 시작 (존재:', !!dashboardScreen, ', sidebar-nav 존재:', !!sidebarNavCheck, ')');
         const app = document.getElementById('app');
         app.innerHTML = `
             <!-- 대시보드 화면 -->
@@ -240,11 +274,15 @@ async function showAdminDashboard() {
             </div>
         `;
         
+        console.log('dashboard-screen HTML 설정 완료');
+        
         // 로그아웃 버튼 이벤트 재설정
         document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
         
         dashboardScreen = document.getElementById('dashboard-screen');
+        console.log('dashboard-screen 요소:', dashboardScreen);
     } else {
+        console.log('dashboard-screen 이미 존재함 - 표시');
         dashboardScreen.classList.remove('hidden');
     }
     
@@ -256,9 +294,31 @@ async function showAdminDashboard() {
         'parent': '학부모'
     };
     
+    // DOM이 완전히 렌더링될 때까지 대기 (새로 생성된 경우)
+    if (needsCreation) {
+        console.log('DOM 렌더링 대기 중...');
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        console.log('DOM 렌더링 완료');
+    }
+    
     const userInfo = document.getElementById('user-info');
     if (userInfo) {
         userInfo.textContent = currentUser.name + ' (' + roleNames[currentUser.role] + ')';
+    } else {
+        console.error('user-info 요소를 찾을 수 없습니다.');
+    }
+    
+    // 로딩 중 표시
+    const sidebarNav = document.getElementById('sidebar-nav');
+    console.log('sidebarNav 로딩 스피너 표시:', sidebarNav);
+    if (sidebarNav) {
+        sidebarNav.innerHTML = `
+            <div class="flex items-center justify-center py-8">
+                <i class="fas fa-spinner fa-spin text-2xl text-gray-400"></i>
+            </div>
+        `;
+    } else {
+        console.error('sidebar-nav 요소를 찾을 수 없습니다 (로딩 스피너)');
     }
     
     // 사이드바 메뉴 로드
@@ -270,12 +330,75 @@ async function showAdminDashboard() {
 
 // 교사 대시보드 표시 (자기 반/과목만)
 async function showTeacherDashboard() {
-    // 일단 관리자와 동일하게 표시 (추후 권한에 따라 메뉴 필터링)
+    // 관리자 대시보드와 동일한 구조 사용
+    // loadSidebarMenu()에서 이미 교사 권한을 체크하여 필터링된 메뉴를 로드함
     await showAdminDashboard();
     
-    // TODO: 교사 권한에 따른 메뉴 필터링
-    // - 자기 담당 반만 보기
-    // - 자기 과목만 보기
+    // 교사 정보는 loadSidebarMenu()에서 이미 가져왔으므로
+    // 여기서는 추가 작업 없음 (필요시 여기서도 확인 가능)
+}
+
+// 교사 필터링 헬퍼 함수
+function getTeacherFilterParams() {
+    if (currentUser.role === 'teacher' && window.currentTeacher) {
+        return { teacher_id: window.currentTeacher.id };
+    }
+    return {};
+}
+
+// 교사용 메뉴 필터링
+async function filterTeacherMenu(teacherId, permissions) {
+    const sidebarNav = document.getElementById('sidebar-nav');
+    if (!sidebarNav) return;
+    
+    // 모든 메뉴 항목 가져오기
+    const menuItems = sidebarNav.querySelectorAll('.nav-link');
+    
+    menuItems.forEach(item => {
+        const page = item.getAttribute('data-page');
+        let shouldShow = false;
+        
+        // 대시보드는 항상 표시
+        if (page === 'dashboard') {
+            shouldShow = true;
+        }
+        // 담임 반 관리 권한이 있으면 반 관리 표시
+        else if (page === 'classes' && permissions.includes('manage_own_class')) {
+            shouldShow = true;
+        }
+        // 과목 관리 권한이 있으면 과목 관리 표시
+        else if (page === 'subjects' && permissions.includes('manage_own_courses')) {
+            shouldShow = true;
+        }
+        // 출석 관리 권한이 있으면 출석 관리 표시
+        else if (page === 'attendance' && permissions.includes('manage_attendance')) {
+            shouldShow = true;
+        }
+        // 성적 관리 권한이 있으면 성적 관리 표시
+        else if (page === 'grades' && permissions.includes('manage_grades')) {
+            shouldShow = true;
+        }
+        // 전체 학생 관리 권한이 있으면 학생 관리 표시
+        else if (page === 'students' && permissions.includes('manage_all_students')) {
+            shouldShow = true;
+        }
+        // 성적표 출력, 생활기록부는 항상 표시 (자기 반 학생만)
+        else if (page === 'reports' || page === 'records') {
+            shouldShow = true;
+        }
+        // 설정은 관리자만 (교사는 절대 접근 불가)
+        else if (page === 'settings') {
+            shouldShow = false; // 교사는 항상 숨김
+        }
+        // 담임 배정은 관리자만
+        else if (page === 'homeroom' && (currentUser.role === 'admin' || currentUser.role === 'super_admin')) {
+            shouldShow = true;
+        }
+        
+        if (!shouldShow) {
+            item.style.display = 'none';
+        }
+    });
 }
 
 // 부모 대시보드 표시 (자녀 정보만)
@@ -290,12 +413,83 @@ async function showParentDashboard() {
 // 사이드바 메뉴 동적 로드 (모듈 설정 기반)
 async function loadSidebarMenu() {
     try {
+        // currentUser가 없으면 localStorage에서 복원 시도
+        if (!currentUser) {
+            const savedUser = localStorage.getItem('currentUser');
+            const savedToken = localStorage.getItem('authToken');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+            }
+            if (savedToken) {
+                authToken = savedToken;
+            }
+        }
+        
+        // currentUser가 여전히 없으면 에러
+        if (!currentUser) {
+            console.error('loadSidebarMenu: currentUser가 설정되지 않았습니다.');
+            console.error('localStorage authToken:', localStorage.getItem('authToken'));
+            console.error('localStorage currentUser:', localStorage.getItem('currentUser'));
+            // 폴백 메뉴라도 표시
+            showDefaultSidebarMenu();
+            return;
+        }
+        
+        // 디버깅: 역할 및 호출 스택 확인
+        console.log('===== loadSidebarMenu 호출 =====');
+        console.log('currentUser 역할:', currentUser?.role);
+        console.log('호출 스택:', new Error().stack);
+        
+        // 교사인 경우 권한 정보 먼저 가져오기 (완료될 때까지 대기)
+        let teacherPermissions = [];
+        let isTeacher = false;
+        let teacherId = null;
+        
+        // currentUser가 확실히 설정되어 있고 교사인지 확인
+        if (currentUser && currentUser.role === 'teacher') {
+            isTeacher = true;
+            console.log('교사 사용자 확인됨 - 권한 정보 로드 시작');
+            try {
+                console.log('API 호출: /api/users/' + currentUser.id);
+                const userResponse = await axios.get(`/api/users/${currentUser.id}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                console.log('사용자 정보 응답:', userResponse.data);
+                
+                const teacher = userResponse.data.user?.teacher;
+                if (teacher) {
+                    teacherId = teacher.id;
+                    console.log('교사 ID:', teacherId);
+                    const permissionsResponse = await axios.get(`/api/teacher-permissions?teacher_id=${teacher.id}`, {
+                        headers: { 'Authorization': `Bearer ${authToken}` }
+                    });
+                    console.log('권한 정보 응답:', permissionsResponse.data);
+                    teacherPermissions = (permissionsResponse.data.permissions || []).map(p => p.permission_type);
+                    
+                    // 전역 변수에 교사 정보 저장
+                    window.currentTeacher = {
+                        id: teacher.id,
+                        permissions: teacherPermissions
+                    };
+                } else {
+                    console.log('교사 정보 없음 - 기본 메뉴 표시');
+                }
+            } catch (error) {
+                console.error('교사 정보 로드 실패:', error);
+                console.error('에러 상세:', error.response?.data);
+                // 에러가 발생해도 교사는 기본 메뉴를 볼 수 있어야 함
+            }
+        }
+        
         // 활성화된 모듈만 조회
+        console.log('모듈 설정 API 호출 시작');
         const response = await axios.get('/api/module-settings/enabled', {
             headers: { 'Authorization': 'Bearer ' + authToken }
         });
+        console.log('모듈 설정 응답:', response.data);
         
         const modules = response.data.modules || [];
+        console.log('활성화된 모듈 개수:', modules.length);
         
         // 모듈명과 페이지명 매핑
         const modulePageMap = {
@@ -311,9 +505,16 @@ async function loadSidebarMenu() {
             'counseling': 'counseling'
         };
         
+        console.log('sidebar-nav 요소 찾기 시도');
         const sidebarNav = document.getElementById('sidebar-nav');
-        if (!sidebarNav) return;
+        if (!sidebarNav) {
+            console.error('sidebar-nav 요소를 찾을 수 없습니다.');
+            console.error('현재 DOM:', document.body.innerHTML.substring(0, 500));
+            return;
+        }
+        console.log('sidebar-nav 요소 찾음:', sidebarNav);
         
+        console.log('메뉴 HTML 생성 시작');
         let menuHTML = `
             <!-- 고정 메뉴: 대시보드 -->
             <a href="#" data-page="dashboard" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
@@ -321,27 +522,82 @@ async function loadSidebarMenu() {
                 <span>대시보드</span>
             </a>
         `;
+        console.log('대시보드 메뉴 추가됨');
         
-        // 활성화된 모듈 메뉴 추가
+        // 관리자 전용 모듈 목록 (교사에게는 절대 표시 안 함)
+        const adminOnlyModules = ['users', 'user-management', 'admin', 'settings', 'homeroom'];
+        
+        // 활성화된 모듈 메뉴 추가 (교사인 경우 필터링)
         modules.forEach(module => {
             const pageName = modulePageMap[module.module_name];
+            
+            // 교사인 경우 관리자 전용 모듈은 무조건 제외
+            if (isTeacher && (adminOnlyModules.includes(module.module_name) || adminOnlyModules.includes(pageName) || pageName === 'settings' || pageName === 'homeroom')) {
+                return; // 이 모듈은 건너뛰기
+            }
+            
             if (pageName) {
-                menuHTML += `
-                    <a href="#" data-page="${pageName}" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
-                        <i class="fas ${module.icon} w-5 mr-3"></i>
-                        <span>${module.module_label}</span>
-                    </a>
-                `;
+                let shouldShow = true;
+                
+                // 교사인 경우 권한 체크
+                if (isTeacher) {
+                    // 반 관리(classes)와 과목 관리(subjects)는 교사에게 기본적으로 항상 표시
+                    if (pageName === 'classes' || pageName === 'subjects') {
+                        shouldShow = true;
+                    }
+                    // 다른 메뉴들은 권한 체크
+                    else {
+                        shouldShow = false;
+                        
+                        if (pageName === 'attendance' && teacherPermissions.includes('manage_attendance')) {
+                            shouldShow = true;
+                        } else if (pageName === 'grades' && teacherPermissions.includes('manage_grades')) {
+                            shouldShow = true;
+                        } else if (pageName === 'students' && teacherPermissions.includes('manage_all_students')) {
+                            shouldShow = true;
+                        }
+                        // 기타 모듈(awards, reading, volunteer, clubs, counseling)은 권한이 없으면 숨김
+                    }
+                }
+                
+                if (shouldShow) {
+                    menuHTML += `
+                        <a href="#" data-page="${pageName}" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+                            <i class="fas ${module.icon} w-5 mr-3"></i>
+                            <span>${module.module_label}</span>
+                        </a>
+                    `;
+                }
+            }
+            // modulePageMap에 없는 모듈도 교사인 경우 제외 (관리자 전용일 가능성)
+            else if (isTeacher) {
+                // 모듈명이나 라벨에 "관리자", "사용자", "설정", "담임" 등이 포함되어 있으면 제외
+                const moduleNameLower = (module.module_name || '').toLowerCase();
+                const moduleLabelLower = (module.module_label || '').toLowerCase();
+                if (moduleNameLower.includes('admin') || moduleNameLower.includes('user') || 
+                    moduleNameLower.includes('setting') || moduleNameLower.includes('homeroom') ||
+                    moduleLabelLower.includes('관리자') || moduleLabelLower.includes('사용자') || 
+                    moduleLabelLower.includes('설정') || moduleLabelLower.includes('담임')) {
+                    return; // 이 모듈은 건너뛰기
+                }
             }
         });
         
         // 구분선 및 관리 메뉴
+        menuHTML += `<div class="border-t border-gray-700 my-4"></div>`;
+        
+        // 담임 배정은 관리자만 (교사는 절대 표시 안 함)
+        if (!isTeacher) {
+            menuHTML += `
+                <a href="#" data-page="homeroom" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+                    <i class="fas fa-user-tie w-5 mr-3"></i>
+                    <span>담임 배정</span>
+                </a>
+            `;
+        }
+        
+        // 성적표 출력, 생활기록부는 항상 표시
         menuHTML += `
-            <div class="border-t border-gray-700 my-4"></div>
-            <a href="#" data-page="homeroom" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
-                <i class="fas fa-user-tie w-5 mr-3"></i>
-                <span>담임 배정</span>
-            </a>
             <a href="#" data-page="reports" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
                 <i class="fas fa-print w-5 mr-3"></i>
                 <span>성적표 출력</span>
@@ -350,25 +606,78 @@ async function loadSidebarMenu() {
                 <i class="fas fa-file-alt w-5 mr-3"></i>
                 <span>생활기록부</span>
             </a>
-            <a href="#" data-page="settings" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
-                <i class="fas fa-cog w-5 mr-3"></i>
-                <span>설정</span>
-            </a>
         `;
         
+        // 설정은 관리자만 (교사는 절대 표시 안 함)
+        if (!isTeacher) {
+            menuHTML += `
+                <a href="#" data-page="settings" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+                    <i class="fas fa-cog w-5 mr-3"></i>
+                    <span>설정</span>
+                </a>
+            `;
+        }
+        
+        console.log('===== 메뉴 HTML 생성 완료 =====');
+        console.log('isTeacher:', isTeacher);
+        console.log('생성된 메뉴 개수:', menuHTML.split('nav-link').length - 1);
+        
         sidebarNav.innerHTML = menuHTML;
+        
+        console.log('===== 메뉴 렌더링 완료 =====');
     } catch (error) {
         console.error('사이드바 메뉴 로드 실패:', error);
-        // 에러 발생 시 기본 메뉴 표시
-        showDefaultSidebarMenu();
+        console.error('오류 상세:', error);
+        
+        // 에러 발생 시에도 역할 기반 기본 메뉴 표시
+        const sidebarNav = document.getElementById('sidebar-nav');
+        if (sidebarNav) {
+            const isTeacher = currentUser && currentUser.role === 'teacher';
+            const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.role === 'super_admin');
+            
+            console.log('에러 발생 - 폴백 메뉴 표시:', { isTeacher, isAdmin, role: currentUser?.role });
+            
+            // 역할에 맞는 기본 메뉴 표시
+            if (isTeacher) {
+                showDefaultTeacherMenu(sidebarNav);
+            } else if (isAdmin) {
+                showDefaultAdminMenu(sidebarNav);
+            } else {
+                showDefaultSidebarMenu();
+            }
+        }
     }
 }
 
-// 기본 사이드바 메뉴 (폴백)
-function showDefaultSidebarMenu() {
-    const sidebarNav = document.getElementById('sidebar-nav');
-    if (!sidebarNav) return;
-    
+// 교사용 기본 메뉴
+function showDefaultTeacherMenu(sidebarNav) {
+    sidebarNav.innerHTML = `
+        <a href="#" data-page="dashboard" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+            <i class="fas fa-home w-5 mr-3"></i>
+            <span>대시보드</span>
+        </a>
+        <a href="#" data-page="classes" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+            <i class="fas fa-chalkboard-teacher w-5 mr-3"></i>
+            <span>반 관리</span>
+        </a>
+        <a href="#" data-page="subjects" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+            <i class="fas fa-book w-5 mr-3"></i>
+            <span>과목 관리</span>
+        </a>
+        <div class="border-t border-gray-700 my-4"></div>
+        <a href="#" data-page="reports" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+            <i class="fas fa-print w-5 mr-3"></i>
+            <span>성적표 출력</span>
+        </a>
+        <a href="#" data-page="records" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+            <i class="fas fa-file-alt w-5 mr-3"></i>
+            <span>생활기록부</span>
+        </a>
+    `;
+}
+
+// 관리자용 기본 메뉴
+function showDefaultAdminMenu(sidebarNav) {
     sidebarNav.innerHTML = `
         <a href="#" data-page="dashboard" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
             <i class="fas fa-home w-5 mr-3"></i>
@@ -377,6 +686,14 @@ function showDefaultSidebarMenu() {
         <a href="#" data-page="students" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
             <i class="fas fa-user-graduate w-5 mr-3"></i>
             <span>학생 관리</span>
+        </a>
+        <a href="#" data-page="classes" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+            <i class="fas fa-chalkboard-teacher w-5 mr-3"></i>
+            <span>반 관리</span>
+        </a>
+        <a href="#" data-page="subjects" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+            <i class="fas fa-book w-5 mr-3"></i>
+            <span>과목 관리</span>
         </a>
         <a href="#" data-page="attendance" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
             <i class="fas fa-clipboard-check w-5 mr-3"></i>
@@ -387,11 +704,84 @@ function showDefaultSidebarMenu() {
             <span>성적 관리</span>
         </a>
         <div class="border-t border-gray-700 my-4"></div>
+        <a href="#" data-page="homeroom" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+            <i class="fas fa-user-tie w-5 mr-3"></i>
+            <span>담임 배정</span>
+        </a>
+        <a href="#" data-page="reports" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+            <i class="fas fa-print w-5 mr-3"></i>
+            <span>성적표 출력</span>
+        </a>
+        <a href="#" data-page="records" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+            <i class="fas fa-file-alt w-5 mr-3"></i>
+            <span>생활기록부</span>
+        </a>
         <a href="#" data-page="settings" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
             <i class="fas fa-cog w-5 mr-3"></i>
             <span>설정</span>
         </a>
     `;
+}
+
+// 기본 사이드바 메뉴 (폴백)
+function showDefaultSidebarMenu() {
+    const sidebarNav = document.getElementById('sidebar-nav');
+    if (!sidebarNav) return;
+    
+    const isTeacher = currentUser && currentUser.role === 'teacher';
+    
+    let menuHTML = `
+        <a href="#" data-page="dashboard" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+            <i class="fas fa-home w-5 mr-3"></i>
+            <span>대시보드</span>
+        </a>
+    `;
+    
+    // 교사인 경우 기본 메뉴만 표시
+    if (isTeacher) {
+        menuHTML += `
+            <a href="#" data-page="classes" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+                <i class="fas fa-chalkboard-teacher w-5 mr-3"></i>
+                <span>반 관리</span>
+            </a>
+            <a href="#" data-page="subjects" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+                <i class="fas fa-book w-5 mr-3"></i>
+                <span>과목 관리</span>
+            </a>
+            <div class="border-t border-gray-700 my-4"></div>
+            <a href="#" data-page="reports" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+                <i class="fas fa-print w-5 mr-3"></i>
+                <span>성적표 출력</span>
+            </a>
+            <a href="#" data-page="records" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+                <i class="fas fa-file-alt w-5 mr-3"></i>
+                <span>생활기록부</span>
+            </a>
+        `;
+    } else {
+        // 관리자용 기본 메뉴
+        menuHTML += `
+            <a href="#" data-page="students" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+                <i class="fas fa-user-graduate w-5 mr-3"></i>
+                <span>학생 관리</span>
+            </a>
+            <a href="#" data-page="attendance" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+                <i class="fas fa-clipboard-check w-5 mr-3"></i>
+                <span>출석 관리</span>
+            </a>
+            <a href="#" data-page="grades" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+                <i class="fas fa-chart-line w-5 mr-3"></i>
+                <span>성적 관리</span>
+            </a>
+            <div class="border-t border-gray-700 my-4"></div>
+            <a href="#" data-page="settings" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+                <i class="fas fa-cog w-5 mr-3"></i>
+                <span>설정</span>
+            </a>
+        `;
+    }
+    
+    sidebarNav.innerHTML = menuHTML;
 }
 
 // 현재 학기 로드
@@ -737,7 +1127,13 @@ function navigateToPage(page) {
             showRecordsPage(contentArea);
             break;
         case 'settings':
-            showSystemSettings();
+            // 관리자만 접근 가능
+            if (currentUser.role === 'admin' || currentUser.role === 'super_admin') {
+                showSystemSettings();
+            } else {
+                alert('시스템 설정은 관리자만 접근할 수 있습니다.');
+                navigateToPage('dashboard');
+            }
             break;
         default:
             showDashboardPage(contentArea);
@@ -746,6 +1142,13 @@ function navigateToPage(page) {
 
 // 대시보드 페이지
 function showDashboardPage(container) {
+    // 교사인 경우 교사용 대시보드 표시
+    if (currentUser && currentUser.role === 'teacher') {
+        showTeacherDashboardPage(container);
+        return;
+    }
+    
+    // 관리자용 대시보드
     container.innerHTML = `
         <div class="space-y-6">
             <!-- 환영 메시지 -->
@@ -927,6 +1330,229 @@ function showDashboardPage(container) {
     loadDashboardStats();
     loadTodayAttendanceStats();
     loadGradeDistribution();
+}
+
+// 교사 전용 대시보드 페이지
+async function showTeacherDashboardPage(container) {
+    container.innerHTML = `
+        <div class="space-y-6">
+            <!-- 환영 메시지 -->
+            <div class="bg-gradient-to-r from-green-600 to-blue-600 rounded-2xl shadow-xl p-8 text-white">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-3xl font-bold mb-2">환영합니다, ${currentUser.name} 선생님 👋</h1>
+                        <p class="text-green-100">오늘도 학생들과 함께 멋진 하루를 만들어가세요</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm text-green-100">현재 학기</p>
+                        <p class="text-2xl font-bold" id="teacher-stat-semester">-</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 담당 반 정보 -->
+            <div id="teacher-homeroom-section">
+                <div class="text-center py-8">
+                    <i class="fas fa-spinner fa-spin text-3xl text-gray-400"></i>
+                </div>
+            </div>
+            
+            <!-- 담당 과목 및 출석/성적 빠른 링크 -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- 담당 과목 목록 -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-6">
+                        <i class="fas fa-book text-purple-600 mr-2"></i>
+                        담당 과목
+                    </h2>
+                    <div id="teacher-courses-list" class="space-y-3">
+                        <div class="text-center py-8">
+                            <i class="fas fa-spinner fa-spin text-3xl text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 빠른 작업 -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-6">
+                        <i class="fas fa-bolt text-yellow-600 mr-2"></i>
+                        빠른 작업
+                    </h2>
+                    <div class="grid grid-cols-2 gap-4">
+                        <button onclick="navigateToPage('attendance')" 
+                                class="flex flex-col items-center p-4 rounded-lg hover:bg-green-50 transition group border-2 border-gray-100">
+                            <div class="bg-green-100 rounded-full p-3 mb-2 group-hover:bg-green-200 transition">
+                                <i class="fas fa-clipboard-check text-2xl text-green-600"></i>
+                            </div>
+                            <span class="text-sm font-medium text-gray-700">출석 입력</span>
+                        </button>
+                        
+                        <button onclick="navigateToPage('grades')" 
+                                class="flex flex-col items-center p-4 rounded-lg hover:bg-purple-50 transition group border-2 border-gray-100">
+                            <div class="bg-purple-100 rounded-full p-3 mb-2 group-hover:bg-purple-200 transition">
+                                <i class="fas fa-edit text-2xl text-purple-600"></i>
+                            </div>
+                            <span class="text-sm font-medium text-gray-700">성적 입력</span>
+                        </button>
+                        
+                        <button onclick="navigateToPage('classes')" 
+                                class="flex flex-col items-center p-4 rounded-lg hover:bg-blue-50 transition group border-2 border-gray-100">
+                            <div class="bg-blue-100 rounded-full p-3 mb-2 group-hover:bg-blue-200 transition">
+                                <i class="fas fa-door-open text-2xl text-blue-600"></i>
+                            </div>
+                            <span class="text-sm font-medium text-gray-700">반 관리</span>
+                        </button>
+                        
+                        <button onclick="navigateToPage('counseling')" 
+                                class="flex flex-col items-center p-4 rounded-lg hover:bg-pink-50 transition group border-2 border-gray-100">
+                            <div class="bg-pink-100 rounded-full p-3 mb-2 group-hover:bg-pink-200 transition">
+                                <i class="fas fa-comments text-2xl text-pink-600"></i>
+                            </div>
+                            <span class="text-sm font-medium text-gray-700">상담 기록</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 오늘의 출석 현황 -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-xl font-bold text-gray-800">
+                        <i class="fas fa-calendar-check text-blue-600 mr-2"></i>
+                        오늘의 출석 현황
+                    </h2>
+                    <button onclick="navigateToPage('attendance')" class="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                        자세히 보기 <i class="fas fa-arrow-right ml-1"></i>
+                    </button>
+                </div>
+                <div id="teacher-attendance-stats" class="space-y-4">
+                    <div class="text-center py-8">
+                        <i class="fas fa-spinner fa-spin text-3xl text-gray-400"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // 데이터 로드
+    loadTeacherDashboardData();
+}
+
+// 교사 대시보드 데이터 로드
+async function loadTeacherDashboardData() {
+    if (!currentUser || !window.currentTeacher) {
+        console.error('교사 정보를 찾을 수 없습니다.');
+        return;
+    }
+    
+    try {
+        // 담당 반 정보 조회
+        const homeroomRes = await axios.get(`/api/teacher-homeroom?teacher_id=${window.currentTeacher.id}`, {
+            headers: { 'Authorization': 'Bearer ' + authToken }
+        });
+        
+        const homerooms = homeroomRes.data.homerooms || [];
+        
+        // 담당 반 표시
+        const homeroomSection = document.getElementById('teacher-homeroom-section');
+        if (homerooms.length > 0) {
+            homeroomSection.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-${homerooms.length > 1 ? '2' : '1'} gap-6">
+                    ${homerooms.map(homeroom => `
+                        <div class="bg-white rounded-xl shadow-lg p-6 cursor-pointer hover:shadow-xl transition-shadow" onclick="showClassDetail(${homeroom.class_id})">
+                            <div class="flex items-center justify-between mb-4">
+                                <h2 class="text-2xl font-bold text-gray-800">${homeroom.class_name}</h2>
+                                <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">담임</span>
+                            </div>
+                            <div class="space-y-2">
+                                <div class="flex items-center text-gray-600">
+                                    <i class="fas fa-door-open w-5 mr-2"></i>
+                                    <span>교실: ${homeroom.room_number || '미정'}</span>
+                                </div>
+                                <div class="flex items-center text-gray-600">
+                                    <i class="fas fa-user-graduate w-5 mr-2"></i>
+                                    <span id="homeroom-${homeroom.class_id}-students">학생: <i class="fas fa-spinner fa-spin text-sm"></i></span>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            // 각 반의 학생 수 조회
+            homerooms.forEach(async (homeroom) => {
+                try {
+                    const studentsRes = await axios.get(`/api/students?class_id=${homeroom.class_id}`, {
+                        headers: { 'Authorization': 'Bearer ' + authToken }
+                    });
+                    const studentCount = studentsRes.data.students?.length || 0;
+                    const elem = document.getElementById(`homeroom-${homeroom.class_id}-students`);
+                    if (elem) {
+                        elem.innerHTML = `학생: ${studentCount}명`;
+                    }
+                } catch (error) {
+                    console.error('학생 수 조회 실패:', error);
+                }
+            });
+        } else {
+            homeroomSection.innerHTML = `
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <p class="text-gray-500 text-center py-4">담당 반이 없습니다.</p>
+                </div>
+            `;
+        }
+        
+        // 담당 과목 조회
+        const coursesRes = await axios.get(`/api/courses?teacher_id=${window.currentTeacher.id}`, {
+            headers: { 'Authorization': 'Bearer ' + authToken }
+        });
+        
+        const courses = coursesRes.data.courses || [];
+        const coursesList = document.getElementById('teacher-courses-list');
+        
+        if (courses.length > 0) {
+            coursesList.innerHTML = courses.map(course => `
+                <div class="p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-semibold text-gray-800">${course.course_name || course.subject_name}</h3>
+                            <p class="text-sm text-gray-600 mt-1">${course.class_name} · ${course.schedule || '시간 미정'}</p>
+                        </div>
+                        <span class="px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs font-medium">${course.credits || 0}학점</span>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            coursesList.innerHTML = `<p class="text-gray-500 text-center py-4">담당 과목이 없습니다.</p>`;
+        }
+        
+        // 학기 정보 조회
+        const semestersRes = await axios.get('/api/semesters', {
+            headers: { 'Authorization': 'Bearer ' + authToken }
+        });
+        const currentSemester = semestersRes.data.semesters?.find(s => s.is_current);
+        if (currentSemester) {
+            document.getElementById('teacher-stat-semester').textContent = currentSemester.name;
+        }
+        
+        // 오늘의 출석 현황 (담당 반 기준)
+        const attendanceStats = document.getElementById('teacher-attendance-stats');
+        if (homerooms.length > 0) {
+            attendanceStats.innerHTML = `
+                <p class="text-gray-600 text-center">담당 반 학생들의 출석 현황</p>
+                <div class="text-center py-4">
+                    <button onclick="navigateToPage('attendance')" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                        출석 입력하기
+                    </button>
+                </div>
+            `;
+        } else {
+            attendanceStats.innerHTML = `<p class="text-gray-500 text-center py-4">담당 반이 없습니다.</p>`;
+        }
+        
+    } catch (error) {
+        console.error('교사 대시보드 데이터 로드 실패:', error);
+    }
 }
 
 // 성적표 출력 페이지
@@ -1539,10 +2165,23 @@ async function handleEditStudent(e) {
 // 수업 관리 화면
 async function showCourseManagement(container) {
     try {
-        const [subjectsRes, semestersRes] = await Promise.all([
+        // 교사인 경우 담당 과목만 조회
+        let coursesUrl = '/api/courses';
+        if (currentUser.role === 'teacher' && window.currentTeacher) {
+            coursesUrl += `?teacher_id=${window.currentTeacher.id}`;
+        }
+        
+        const [subjectsRes, semestersRes, coursesRes] = await Promise.all([
             axios.get('/api/subjects', { headers: { 'Authorization': 'Bearer ' + authToken } }),
-            axios.get('/api/semesters', { headers: { 'Authorization': 'Bearer ' + authToken } })
+            axios.get('/api/semesters', { headers: { 'Authorization': 'Bearer ' + authToken } }),
+            axios.get(coursesUrl, { headers: { 'Authorization': 'Bearer ' + authToken } })
         ]);
+        
+        const courses = coursesRes.data.courses || [];
+        // 교사인 경우 담당 과목만 표시
+        const teacherSubjects = currentUser.role === 'teacher' && window.currentTeacher 
+            ? [...new Set(courses.map(c => c.subject_id))] 
+            : null;
         
         container.innerHTML = `
             <div>
@@ -1555,12 +2194,17 @@ async function showCourseManagement(container) {
                     <div>
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="text-lg font-semibold">과목 목록</h3>
-                            <button onclick="showAddSubjectForm()" class="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">
-                                <i class="fas fa-plus mr-1"></i>추가
-                            </button>
+                            ${currentUser.role !== 'teacher' ? `
+                                <button onclick="showAddSubjectForm()" class="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">
+                                    <i class="fas fa-plus mr-1"></i>추가
+                                </button>
+                            ` : ''}
                         </div>
                         <div class="space-y-2">
-                            ${subjectsRes.data.subjects.map(subject => `
+                            ${(teacherSubjects 
+                                ? subjectsRes.data.subjects.filter(s => teacherSubjects.includes(s.id))
+                                : subjectsRes.data.subjects
+                            ).map(subject => `
                                 <div class="border p-4 rounded-lg hover:bg-gray-50">
                                     <div class="flex justify-between items-center">
                                         <div>
@@ -1576,15 +2220,20 @@ async function showCourseManagement(container) {
                                     </div>
                                 </div>
                             `).join('')}
+                            ${teacherSubjects && subjectsRes.data.subjects.filter(s => teacherSubjects.includes(s.id)).length === 0 ? `
+                                <p class="text-gray-500 text-center py-4">담당 과목이 없습니다.</p>
+                            ` : ''}
                         </div>
                     </div>
                     
                     <div>
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="text-lg font-semibold">학기 목록</h3>
-                            <button onclick="showAddSemesterForm()" class="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">
-                                <i class="fas fa-plus mr-1"></i>추가
-                            </button>
+                            ${currentUser.role !== 'teacher' ? `
+                                <button onclick="showAddSemesterForm()" class="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">
+                                    <i class="fas fa-plus mr-1"></i>추가
+                                </button>
+                            ` : ''}
                         </div>
                         <div class="space-y-2">
                             ${semestersRes.data.semesters.map(semester => `
@@ -1613,12 +2262,28 @@ async function showCourseManagement(container) {
 // 출석 관리 화면
 async function showAttendanceManagement(container) {
     try {
+        // 교사인 경우 담당 반의 학생만 조회
+        let studentsUrl = '/api/students?limit=1000';
+        let classesUrl = '/api/classes';
+        
+        if (currentUser.role === 'teacher' && window.currentTeacher) {
+            // 담임인 반 조회
+            const homeroomResponse = await axios.get(`/api/teacher-homeroom?teacher_id=${window.currentTeacher.id}`, {
+                headers: { 'Authorization': 'Bearer ' + authToken }
+            });
+            const homeroomClasses = (homeroomResponse.data.homerooms || []).map(h => h.class_id);
+            if (homeroomClasses.length > 0) {
+                studentsUrl += `&class_id=${homeroomClasses[0]}`; // 첫 번째 담임 반
+                classesUrl += `?class_ids=${homeroomClasses.join(',')}`;
+            }
+        }
+        
         const [studentsRes, classesRes] = await Promise.all([
-            axios.get('/api/students?limit=1000', { headers: { 'Authorization': 'Bearer ' + authToken } }),
-            axios.get('/api/classes', { headers: { 'Authorization': 'Bearer ' + authToken } })
+            axios.get(studentsUrl, { headers: { 'Authorization': 'Bearer ' + authToken } }),
+            axios.get(classesUrl, { headers: { 'Authorization': 'Bearer ' + authToken } })
         ]);
         
-        const students = studentsRes.data.students;
+        let students = studentsRes.data.students || [];
         
         // 전역 변수에 저장
         window.allAttendanceStudents = students;
@@ -2124,11 +2789,28 @@ function viewStudentAttendance(studentId, studentName) {
 // 성적 관리 화면
 async function showGradeManagement(container) {
     try {
-        const studentsRes = await axios.get('/api/students?limit=1000', {
-            headers: { 'Authorization': 'Bearer ' + authToken }
-        });
+        // 교사인 경우 담당 반의 학생만 조회
+        let studentsUrl = '/api/students?limit=1000';
+        let classesUrl = '/api/classes';
         
-        const students = studentsRes.data.students;
+        if (currentUser.role === 'teacher' && window.currentTeacher) {
+            // 담임인 반 조회
+            const homeroomResponse = await axios.get(`/api/teacher-homeroom?teacher_id=${window.currentTeacher.id}`, {
+                headers: { 'Authorization': 'Bearer ' + authToken }
+            });
+            const homeroomClasses = (homeroomResponse.data.homerooms || []).map(h => h.class_id);
+            if (homeroomClasses.length > 0) {
+                studentsUrl += `&class_id=${homeroomClasses[0]}`; // 첫 번째 담임 반
+                classesUrl += `?class_ids=${homeroomClasses.join(',')}`;
+            }
+        }
+        
+        const [studentsRes, classesRes] = await Promise.all([
+            axios.get(studentsUrl, { headers: { 'Authorization': 'Bearer ' + authToken } }),
+            axios.get(classesUrl, { headers: { 'Authorization': 'Bearer ' + authToken } })
+        ]);
+        
+        let students = studentsRes.data.students || [];
         
         // 전역 변수에 저장
         window.allGradeStudents = students;
@@ -2189,14 +2871,12 @@ async function showGradeManagement(container) {
             </div>
         `;
         
-        // 반 목록 로드
+        // 반 목록 로드 (이미 위에서 로드됨)
         try {
-            const classesRes = await axios.get('/api/classes', {
-                headers: { 'Authorization': 'Bearer ' + authToken }
-            });
             const classFilter = document.getElementById('grade-class-filter');
+            const classes = classesRes.data.classes || [];
             classFilter.innerHTML = '<option value="">전체 반</option>' + 
-                classesRes.data.classes.map(cls => `
+                classes.map(cls => `
                     <option value="${cls.name}">${cls.name}</option>
                 `).join('');
         } catch (err) {
@@ -2715,11 +3395,41 @@ function setClassViewMode(mode) {
 
 async function showClassManagement(container) {
     try {
-        const response = await axios.get('/api/classes', {
+        // 교사인 경우 담임인 반만 조회
+        let url = '/api/classes';
+        if (currentUser.role === 'teacher' && window.currentTeacher) {
+            // 담임인 반 조회 (teacher_homeroom 테이블 사용)
+            const homeroomResponse = await axios.get(`/api/teacher-homeroom?teacher_id=${window.currentTeacher.id}`, {
+                headers: { 'Authorization': 'Bearer ' + authToken }
+            });
+            const homeroomClasses = (homeroomResponse.data.homerooms || []).map(h => h.class_id);
+            if (homeroomClasses.length > 0) {
+                url += `?class_ids=${homeroomClasses.join(',')}`;
+            } else {
+                // 담임인 반이 없으면 빈 배열 반환
+                container.innerHTML = `
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-800 mb-8">반 관리</h1>
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <p class="text-gray-500 text-center py-8">담당 반이 없습니다.</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+        }
+        
+        const response = await axios.get(url, {
             headers: { 'Authorization': 'Bearer ' + authToken }
         });
         
-        const classes = response.data.classes;
+        let classes = response.data.classes || [];
+        
+        // class_ids로 필터링된 경우
+        if (currentUser.role === 'teacher' && window.currentTeacher && url.includes('class_ids')) {
+            const classIds = url.split('class_ids=')[1].split(',').map(id => parseInt(id));
+            classes = classes.filter(c => classIds.includes(c.id));
+        }
         const viewMode = getClassViewMode();
         
         container.innerHTML = `
@@ -2728,7 +3438,7 @@ async function showClassManagement(container) {
                 
                 <div class="bg-white rounded-lg shadow p-6">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-xl font-semibold text-gray-700">전체 반 목록</h2>
+                    <h2 class="text-xl font-semibold text-gray-700">${currentUser.role === 'teacher' ? '담당 반 목록' : '전체 반 목록'}</h2>
                     <div class="flex gap-2">
                         <!-- 보기 모드 전환 버튼 -->
                         <div class="flex bg-gray-100 rounded-lg p-1">
@@ -2743,12 +3453,14 @@ async function showClassManagement(container) {
                                 <i class="fas fa-list mr-1"></i>리스트형
                             </button>
                         </div>
-                        <button onclick="showBulkStudentTransfer()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
-                            <i class="fas fa-exchange-alt mr-2"></i>학생 소속 일괄 변경
-                        </button>
-                        <button onclick="navigateToPage('class-add')" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                            <i class="fas fa-plus mr-2"></i>반 추가
-                        </button>
+                        ${currentUser.role !== 'teacher' ? `
+                            <button onclick="showBulkStudentTransfer()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                                <i class="fas fa-exchange-alt mr-2"></i>학생 소속 일괄 변경
+                            </button>
+                            <button onclick="navigateToPage('class-add')" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                                <i class="fas fa-plus mr-2"></i>반 추가
+                            </button>
+                        ` : ''}
                     </div>
                 </div>
                 
@@ -2869,10 +3581,15 @@ async function showClassDetail(classId) {
             axios.get(`/api/students?class_id=${classId}`, { headers: { 'Authorization': 'Bearer ' + authToken } })
         ]);
         
-        const classInfo = classRes.data;
+        const classInfo = classRes.data.class || classRes.data;
         const students = studentsRes.data.students || [];
         
-        const contentArea = document.getElementById('content-area');
+        const contentArea = document.getElementById('main-content');
+        if (!contentArea) {
+            console.error('main-content 요소를 찾을 수 없습니다.');
+            return;
+        }
+        
         contentArea.innerHTML = `
             <div>
                 <!-- 헤더 -->

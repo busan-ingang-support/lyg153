@@ -212,7 +212,12 @@ async function assignHomeroomTeacher(classId, className) {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         });
         
-        const teachers = teachersResponse.data.users;
+        const teachers = teachersResponse.data.users.filter(t => t.teacher_id != null);
+        
+        if (teachers.length === 0) {
+            alert('담임 배정 가능한 교사가 없습니다. 교사 정보를 먼저 등록해주세요.');
+            return;
+        }
         
         const modal = document.createElement('div');
         modal.id = 'assign-homeroom-modal';
@@ -286,7 +291,12 @@ async function changeHomeroomTeacher(classId, homeroomId, className) {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         });
         
-        const teachers = teachersResponse.data.users;
+        const teachers = teachersResponse.data.users.filter(t => t.teacher_id != null);
+        
+        if (teachers.length === 0) {
+            alert('담임 배정 가능한 교사가 없습니다. 교사 정보를 먼저 등록해주세요.');
+            return;
+        }
         
         const modal = document.createElement('div');
         modal.id = 'change-homeroom-modal';

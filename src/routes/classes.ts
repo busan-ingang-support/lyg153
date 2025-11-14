@@ -6,7 +6,7 @@ const classes = new Hono<{ Bindings: CloudflareBindings }>();
 // 모든 반 조회
 classes.get('/', async (c) => {
   const db = c.env.DB;
-  const { semester_id, grade } = c.req.query();
+  const { semester_id, grade, class_ids } = c.req.query();
   
   let query = `
     SELECT c.*, s.name as semester_name, u.name as teacher_name
@@ -25,6 +25,14 @@ classes.get('/', async (c) => {
   if (grade) {
     query += ' AND c.grade = ?';
     params.push(Number(grade));
+  }
+  if (class_ids) {
+    // 쉼표로 구분된 class_ids 필터링
+    const ids = class_ids.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+    if (ids.length > 0) {
+      query += ` AND c.id IN (${ids.map(() => '?').join(',')})`;
+      params.push(...ids);
+    }
   }
   
   query += ' ORDER BY c.grade, c.name';

@@ -2,6 +2,14 @@
 // 사용자(교사) 관리 페이지
 // ============================================
 
+// HTML 이스케이프 헬퍼
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 // 사용자 관리 메인 페이지
 async function showUserManagement(container) {
     try {
@@ -190,12 +198,17 @@ function renderUsersList() {
                 ${user.phone || '-'}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
-                <button onclick="editUser(${user.id})" class="text-blue-600 hover:text-blue-800 mr-3">
+                <button onclick="editUser(${user.id})" class="text-blue-600 hover:text-blue-800 mr-3" title="수정">
                     <i class="fas fa-edit"></i>
                 </button>
                 <button onclick="changeUserRole(${user.id}, '${user.name}', '${user.role}')" class="text-purple-600 hover:text-purple-800 mr-3" title="권한 변경">
                     <i class="fas fa-user-shield"></i>
                 </button>
+                ${user.role === 'teacher' ? `
+                    <button onclick="manageTeacherPermissions(${user.id}, '${user.name}')" class="text-green-600 hover:text-green-800 mr-3" title="교사 권한 관리">
+                        <i class="fas fa-key"></i>
+                    </button>
+                ` : ''}
                 ${user.role !== 'super_admin' && user.role !== 'student' ? `
                     <button onclick="deleteUser(${user.id}, '${user.name}', '${user.role}')" class="text-red-600 hover:text-red-800" title="삭제">
                         <i class="fas fa-trash"></i>
@@ -240,6 +253,230 @@ function resetUserFilters() {
     document.getElementById('user-role-filter').value = '';
     window.filteredUsers = window.allUsers;
     renderUsersList();
+}
+
+// 교사 권한 관리
+async function manageTeacherPermissions(userId, userName) {
+    try {
+        // 교사 정보 가져오기
+        const userResponse = await axios.get(`/api/users/${userId}`, {
+            headers: { 'Authorization': 'Bearer ' + authToken }
+        });
+        
+        console.log('userResponse.data:', userResponse.data);
+        let teacher = userResponse.data.user?.teacher || userResponse.data.teacher;
+        let teacherId;
+        
+        // teacher 정보가 없으면 생성 시도
+        if (!teacher) {
+            console.log('teacher 정보가 없어서 생성 시도:', userId, userResponse.data);
+            // teacher_number 생성 (T + 연도 + 4자리 숫자)
+            const year = new Date().getFullYear();
+            const randomNum = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+            const teacherNumber = `T${year}${randomNum}`;
+            
+            try {
+                // teachers 테이블에 레코드 생성
+                const createResponse = await axios.post('/api/teachers', {
+                    user_id: userId,
+                    teacher_number: teacherNumber,
+                    subject: null,
+                    hire_date: new Date().toISOString().split('T')[0],
+                    position: '교사',
+                    department: null
+                }, {
+                    headers: { 'Authorization': 'Bearer ' + authToken }
+                });
+                
+                teacherId = createResponse.data.id;
+                
+                // 다시 교사 정보 가져오기
+                const userResponse2 = await axios.get(`/api/users/${userId}`, {
+                    headers: { 'Authorization': 'Bearer ' + authToken }
+                });
+                teacher = userResponse2.data.user?.teacher;
+            } catch (createError) {
+                console.error('교사 정보 생성 실패:', createError);
+                // 이미 존재하는 경우 (UNIQUE constraint) - 다시 조회 시도
+                if (createError.response?.status === 409 || createError.response?.status === 400) {
+                    // 잠시 대기 후 다시 조회 (DB 트랜잭션 완료 대기)
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    
+                    // 다시 조회
+                    try {
+                        const userResponse2 = await axios.get(`/api/users/${userId}`, {
+                            headers: { 'Authorization': 'Bearer ' + authToken }
+                        });
+                        teacher = userResponse2.data.user?.teacher;
+                        if (teacher) {
+                            teacherId = teacher.id;
+                        } else {
+                            // 여전히 없으면 직접 teachers 테이블에서 조회 시도
+                            // 하지만 이건 API가 없으므로, 에러 메시지만 표시
+                            alert('교사 정보가 이미 존재하지만 조회할 수 없습니다. 잠시 후 다시 시도해주세요.');
+                            return;
+                        }
+                    } catch (retryError) {
+                        console.error('교사 정보 재조회 실패:', retryError);
+                        alert('교사 정보를 조회할 수 없습니다. 잠시 후 다시 시도해주세요.');
+                        return;
+                    }
+                } else {
+                    alert('교사 정보를 생성할 수 없습니다: ' + (createError.response?.data?.error || createError.message));
+                    return;
+                }
+            }
+        } else {
+            teacherId = teacher.id;
+        }
+        
+        if (!teacherId) {
+            alert('교사 정보를 찾을 수 없습니다.');
+            return;
+        }
+        
+        // 현재 권한 가져오기
+        const permissionsResponse = await axios.get(`/api/teacher-permissions?teacher_id=${teacherId}`, {
+            headers: { 'Authorization': 'Bearer ' + authToken }
+        });
+        
+        const currentPermissions = (permissionsResponse.data.permissions || []).map(p => p.permission_type);
+        
+        // 권한 관리 모달 표시
+        showTeacherPermissionsModal(teacherId, userName, currentPermissions);
+    } catch (error) {
+        console.error('교사 권한 조회 실패:', error);
+        alert('교사 권한 정보를 불러올 수 없습니다: ' + (error.response?.data?.error || error.message));
+    }
+}
+
+// 교사 권한 관리 모달
+function showTeacherPermissionsModal(teacherId, teacherName, currentPermissions) {
+    const modal = document.createElement('div');
+    modal.id = 'teacher-permissions-modal';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    
+    const permissionTypes = [
+        { value: 'manage_own_class', label: '자기 반 관리', description: '담당 반의 학생 및 시간표 관리' },
+        { value: 'manage_own_courses', label: '자기 과목 관리', description: '담당 과목의 수업 및 성적 관리' },
+        { value: 'manage_attendance', label: '출석 관리', description: '담당 반/과목의 출석 관리' },
+        { value: 'manage_grades', label: '성적 관리', description: '담당 과목의 성적 입력 및 관리' },
+        { value: 'manage_all_students', label: '전체 학생 관리', description: '모든 학생 정보 조회 및 관리' },
+        { value: 'manage_teachers', label: '교사 관리', description: '다른 교사 정보 조회 및 관리' },
+        { value: 'manage_system', label: '시스템 설정', description: '시스템 전체 설정 관리' }
+    ];
+    
+    modal.innerHTML = `
+        <div class="bg-white rounded-lg shadow-xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">교사 권한 관리</h2>
+                <button onclick="closeTeacherPermissionsModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            
+            <div class="mb-6">
+                <p class="text-sm text-gray-600">교사: <span class="font-semibold text-lg">${escapeHtml(teacherName)}</span></p>
+            </div>
+            
+            <form id="teacher-permissions-form" class="space-y-4">
+                ${permissionTypes.map(perm => `
+                    <div class="flex items-start p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                        <input type="checkbox" 
+                               id="perm-${perm.value}" 
+                               name="permissions" 
+                               value="${perm.value}"
+                               ${currentPermissions.includes(perm.value) ? 'checked' : ''}
+                               class="mt-1 mr-4 w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        <div class="flex-1">
+                            <label for="perm-${perm.value}" class="block text-sm font-medium text-gray-800 cursor-pointer">
+                                ${perm.label}
+                            </label>
+                            <p class="text-xs text-gray-500 mt-1">${perm.description}</p>
+                        </div>
+                    </div>
+                `).join('')}
+                
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
+                    <p class="text-sm text-blue-800">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        권한을 선택하면 해당 교사가 해당 기능을 사용할 수 있습니다.
+                    </p>
+                </div>
+                
+                <div class="flex justify-end space-x-4 mt-6">
+                    <button type="button" onclick="closeTeacherPermissionsModal()" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                        취소
+                    </button>
+                    <button type="submit" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                        <i class="fas fa-save mr-2"></i>권한 저장
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // 폼 제출 이벤트
+    document.getElementById('teacher-permissions-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await saveTeacherPermissions(teacherId, teacherName);
+    });
+}
+
+// 교사 권한 저장
+async function saveTeacherPermissions(teacherId, teacherName) {
+    try {
+        const form = document.getElementById('teacher-permissions-form');
+        const checkboxes = form.querySelectorAll('input[name="permissions"]:checked');
+        const selectedPermissions = Array.from(checkboxes).map(cb => cb.value);
+        
+        // 기존 권한 가져오기
+        const permissionsResponse = await axios.get(`/api/teacher-permissions?teacher_id=${teacherId}`, {
+            headers: { 'Authorization': 'Bearer ' + authToken }
+        });
+        const existingPermissions = (permissionsResponse.data.permissions || []).map(p => p.permission_type);
+        
+        // 추가할 권한
+        const toAdd = selectedPermissions.filter(p => !existingPermissions.includes(p));
+        // 제거할 권한
+        const toRemove = existingPermissions.filter(p => !selectedPermissions.includes(p));
+        
+        // 권한 추가
+        for (const permission of toAdd) {
+            await axios.post('/api/teacher-permissions', {
+                teacher_id: teacherId,
+                permission_type: permission
+            }, {
+                headers: { 'Authorization': 'Bearer ' + authToken }
+            });
+        }
+        
+        // 권한 제거
+        for (const permission of toRemove) {
+            const perm = permissionsResponse.data.permissions.find(p => p.permission_type === permission);
+            if (perm) {
+                await axios.delete(`/api/teacher-permissions/${perm.id}`, {
+                    headers: { 'Authorization': 'Bearer ' + authToken }
+                });
+            }
+        }
+        
+        alert(`${teacherName} 교사의 권한이 업데이트되었습니다.`);
+        closeTeacherPermissionsModal();
+    } catch (error) {
+        console.error('권한 저장 실패:', error);
+        alert('권한 저장에 실패했습니다.');
+    }
+}
+
+// 교사 권한 관리 모달 닫기
+function closeTeacherPermissionsModal() {
+    const modal = document.getElementById('teacher-permissions-modal');
+    if (modal) {
+        modal.remove();
+    }
 }
 
 // 사용자 권한 변경

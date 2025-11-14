@@ -26,6 +26,8 @@ import courses from './routes/courses';
 import schedules from './routes/schedules';
 import boards from './routes/boards';
 import courseQna from './routes/course-qna';
+import teacherPermissions from './routes/teacher-permissions';
+import teachers from './routes/teachers';
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -58,6 +60,8 @@ app.route('/api/courses', courses);
 app.route('/api/schedules', schedules);
 app.route('/api/boards', boards);
 app.route('/api/course-qna', courseQna);
+app.route('/api/teacher-permissions', teacherPermissions);
+app.route('/api/teachers', teachers);
 
 // 기본 홈페이지
 app.get('/', (c) => {
@@ -145,77 +149,7 @@ app.get('/', (c) => {
                         <div class="p-4">
                             <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-4">주요 기능</h2>
                             <nav class="space-y-1">
-                                <a href="#" data-page="dashboard" class="nav-link flex items-center px-4 py-2.5 text-gray-600 hover:bg-purple-50 hover:text-purple-700 rounded-lg smooth-transition">
-                                    <i class="fas fa-home w-5 mr-3"></i>
-                                    <span>대시보드</span>
-                                </a>
-                                <a href="#" data-page="students" class="nav-link flex items-center px-4 py-2.5 text-gray-600 hover:bg-purple-50 hover:text-purple-700 rounded-lg smooth-transition">
-                                    <i class="fas fa-user-graduate w-5 mr-3"></i>
-                                    <span>학생 관리</span>
-                                </a>
-                                <a href="#" data-page="courses" class="nav-link flex items-center px-4 py-2.5 text-gray-600 hover:bg-purple-50 hover:text-purple-700 rounded-lg smooth-transition">
-                                    <i class="fas fa-chalkboard w-5 mr-3"></i>
-                                    <span>수업 관리</span>
-                                </a>
-                                <a href="#" data-page="classes" class="nav-link flex items-center px-4 py-2.5 text-gray-600 hover:bg-purple-50 hover:text-purple-700 rounded-lg smooth-transition">
-                                    <i class="fas fa-book w-5 mr-3"></i>
-                                    <span>반 관리</span>
-                                </a>
-                                <a href="#" data-page="attendance" class="nav-link flex items-center px-4 py-2.5 text-gray-600 hover:bg-purple-50 hover:text-purple-700 rounded-lg smooth-transition">
-                                    <i class="fas fa-clipboard-check w-5 mr-3"></i>
-                                    <span>출석 관리</span>
-                                </a>
-                                <a href="#" data-page="grades" class="nav-link flex items-center px-4 py-2.5 text-gray-600 hover:bg-purple-50 hover:text-purple-700 rounded-lg smooth-transition">
-                                    <i class="fas fa-chart-line w-5 mr-3"></i>
-                                    <span>성적 관리</span>
-                                </a>
-                                <a href="#" data-page="subjects" class="nav-link flex items-center px-4 py-2.5 text-gray-600 hover:bg-purple-50 hover:text-purple-700 rounded-lg smooth-transition">
-                                    <i class="fas fa-book-open w-5 mr-3"></i>
-                                    <span>과목 관리</span>
-                                </a>
-                                <a href="#" data-page="awards" class="nav-link flex items-center px-4 py-2.5 text-gray-600 hover:bg-purple-50 hover:text-purple-700 rounded-lg smooth-transition">
-                                    <i class="fas fa-trophy w-5 mr-3"></i>
-                                    <span>수상 관리</span>
-                                </a>
-                                <a href="#" data-page="reading" class="nav-link flex items-center px-4 py-2.5 text-gray-600 hover:bg-purple-50 hover:text-purple-700 rounded-lg smooth-transition">
-                                    <i class="fas fa-book-reader w-5 mr-3"></i>
-                                    <span>독서활동</span>
-                                </a>
-                                <a href="#" data-page="volunteer" class="nav-link flex items-center px-4 py-2.5 text-gray-600 hover:bg-purple-50 hover:text-purple-700 rounded-lg smooth-transition">
-                                    <i class="fas fa-hands-helping w-5 mr-3"></i>
-                                    <span>봉사활동</span>
-                                </a>
-                                <a href="#" data-page="clubs" class="nav-link flex items-center px-4 py-2.5 text-gray-600 hover:bg-purple-50 hover:text-purple-700 rounded-lg smooth-transition">
-                                    <i class="fas fa-users w-5 mr-3"></i>
-                                    <span>동아리</span>
-                                </a>
-                                <a href="#" data-page="counseling" class="nav-link flex items-center px-4 py-2.5 text-gray-600 hover:bg-purple-50 hover:text-purple-700 rounded-lg smooth-transition">
-                                    <i class="fas fa-comments w-5 mr-3"></i>
-                                    <span>상담 내역</span>
-                                </a>
-                                <div class="border-t border-gray-200 my-3"></div>
-                                <a href="#" data-page="reports" class="nav-link flex items-center px-4 py-2.5 text-gray-600 hover:bg-purple-50 hover:text-purple-700 rounded-lg smooth-transition">
-                                    <i class="fas fa-print w-5 mr-3"></i>
-                                    <span>성적표 출력</span>
-                                </a>
-                                <a href="#" data-page="records" class="nav-link flex items-center px-4 py-2.5 text-gray-600 hover:bg-purple-50 hover:text-purple-700 rounded-lg smooth-transition">
-                                    <i class="fas fa-file-alt w-5 mr-3"></i>
-                                    <span>생활기록부</span>
-                                </a>
-                                <div class="border-t border-gray-200 my-3"></div>
-                                <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 px-2">관리자</h2>
-                                <a href="#" data-page="users" class="nav-link flex items-center px-4 py-2.5 text-gray-600 hover:bg-purple-50 hover:text-purple-700 rounded-lg smooth-transition">
-                                    <i class="fas fa-users-cog w-5 mr-3"></i>
-                                    <span>사용자 관리</span>
-                                </a>
-                                <a href="#" data-page="homeroom" class="nav-link flex items-center px-4 py-2.5 text-gray-600 hover:bg-purple-50 hover:text-purple-700 rounded-lg smooth-transition">
-                                    <i class="fas fa-user-tie w-5 mr-3"></i>
-                                    <span>담임 배정</span>
-                                </a>
-                                <a href="#" data-page="settings" class="nav-link flex items-center px-4 py-2.5 text-gray-600 hover:bg-purple-50 hover:text-purple-700 rounded-lg smooth-transition">
-                                    <i class="fas fa-cog w-5 mr-3"></i>
-                                    <span>설정</span>
-                                </a>
+                                <!-- 동적으로 메뉴가 로드됩니다 -->
                             </nav>
                         </div>
                     </aside>
