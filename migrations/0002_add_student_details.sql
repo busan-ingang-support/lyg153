@@ -1,26 +1,10 @@
--- 학생 테이블에 상세 정보 필드 추가
--- birthdate, gender, blood_type, emergency_contact는 0001에 이미 있으므로 생략
--- ALTER TABLE students ADD COLUMN birthdate DATE;
--- ALTER TABLE students ADD COLUMN gender TEXT CHECK(gender IN ('male', 'female'));
--- ALTER TABLE students ADD COLUMN blood_type TEXT CHECK(blood_type IN ('A', 'B', 'AB', 'O'));
+-- 학생 테이블 상세 정보 필드
+-- 이 마이그레이션의 모든 컬럼은 이미 프로덕션 DB에 존재함
+-- 0001_initial_schema.sql 또는 수동 작업으로 이미 추가됨
+-- 따라서 이 마이그레이션은 건너뜀
 
--- 추가 필드만 삽입
-ALTER TABLE students ADD COLUMN religion TEXT;
-ALTER TABLE students ADD COLUMN nationality TEXT DEFAULT 'KR';
-ALTER TABLE students ADD COLUMN profile_photo_url TEXT;
-
--- 보호자 정보 컬럼 추가
-ALTER TABLE students ADD COLUMN guardian_name TEXT;
-ALTER TABLE students ADD COLUMN guardian_relation TEXT;
-ALTER TABLE students ADD COLUMN guardian_phone TEXT;
-ALTER TABLE students ADD COLUMN guardian_email TEXT;
-ALTER TABLE students ADD COLUMN guardian_address TEXT;
-
--- 이전 학력 정보
-ALTER TABLE students ADD COLUMN previous_school TEXT;
-ALTER TABLE students ADD COLUMN previous_school_type TEXT CHECK(previous_school_type IN ('elementary', 'middle', 'high', 'other'));
-
--- 특이사항 및 메모
-ALTER TABLE students ADD COLUMN medical_notes TEXT;
-ALTER TABLE students ADD COLUMN allergy_info TEXT;
-ALTER TABLE students ADD COLUMN special_notes TEXT;
+-- 참고: 다음 컬럼들이 이미 존재함
+-- birthdate, gender, blood_type, religion, nationality, profile_photo_url
+-- guardian_name, guardian_relation, guardian_phone, guardian_email, guardian_address
+-- previous_school, previous_school_type
+-- medical_notes, allergy_info, special_notes
