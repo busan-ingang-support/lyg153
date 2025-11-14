@@ -1,7 +1,10 @@
 -- 학생 테이블에 상세 정보 필드 추가
-ALTER TABLE students ADD COLUMN birthdate DATE;
-ALTER TABLE students ADD COLUMN gender TEXT CHECK(gender IN ('male', 'female'));
-ALTER TABLE students ADD COLUMN blood_type TEXT CHECK(blood_type IN ('A', 'B', 'AB', 'O'));
+-- birthdate, gender, blood_type, emergency_contact는 0001에 이미 있으므로 생략
+-- ALTER TABLE students ADD COLUMN birthdate DATE;
+-- ALTER TABLE students ADD COLUMN gender TEXT CHECK(gender IN ('male', 'female'));
+-- ALTER TABLE students ADD COLUMN blood_type TEXT CHECK(blood_type IN ('A', 'B', 'AB', 'O'));
+
+-- 추가 필드만 삽입
 ALTER TABLE students ADD COLUMN religion TEXT;
 ALTER TABLE students ADD COLUMN nationality TEXT DEFAULT 'KR';
 ALTER TABLE students ADD COLUMN profile_photo_url TEXT;
