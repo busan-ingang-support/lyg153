@@ -89,9 +89,32 @@ function handleLogout() {
     document.getElementById('login-screen').classList.remove('hidden');
 }
 
-// 대시보드 표시
+// 역할별 메인 화면 라우팅
 async function showDashboard() {
     document.getElementById('login-screen').classList.add('hidden');
+    
+    // 역할에 따라 다른 화면으로 라우팅
+    switch (currentUser.role) {
+        case 'student':
+            showStudentHome();
+            break;
+        case 'teacher':
+            showTeacherDashboard();
+            break;
+        case 'admin':
+        case 'super_admin':
+            showAdminDashboard();
+            break;
+        case 'parent':
+            showParentDashboard();
+            break;
+        default:
+            showAdminDashboard();
+    }
+}
+
+// 관리자 대시보드 표시 (기존 로직)
+async function showAdminDashboard() {
     document.getElementById('dashboard-screen').classList.remove('hidden');
     
     const roleNames = {
@@ -110,6 +133,25 @@ async function showDashboard() {
     
     // 대시보드 페이지로 이동
     navigateToPage('dashboard');
+}
+
+// 교사 대시보드 표시 (자기 반/과목만)
+async function showTeacherDashboard() {
+    // 일단 관리자와 동일하게 표시 (추후 권한에 따라 메뉴 필터링)
+    await showAdminDashboard();
+    
+    // TODO: 교사 권한에 따른 메뉴 필터링
+    // - 자기 담당 반만 보기
+    // - 자기 과목만 보기
+}
+
+// 부모 대시보드 표시 (자녀 정보만)
+async function showParentDashboard() {
+    // 부모는 기본 대시보드 사용 (제한된 메뉴)
+    await showAdminDashboard();
+    
+    // TODO: 부모용 메뉴 구성
+    // - 자녀의 출석/성적 조회만
 }
 
 // 사이드바 메뉴 동적 로드 (모듈 설정 기반)

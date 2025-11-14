@@ -24,6 +24,7 @@ import reading from './routes/reading';
 import moduleSettings from './routes/module-settings';
 import courses from './routes/courses';
 import schedules from './routes/schedules';
+import boards from './routes/boards';
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -54,6 +55,7 @@ app.route('/api/reading', reading);
 app.route('/api/module-settings', moduleSettings);
 app.route('/api/courses', courses);
 app.route('/api/schedules', schedules);
+app.route('/api/boards', boards);
 
 // 기본 홈페이지
 app.get('/', (c) => {
@@ -227,7 +229,8 @@ app.get('/', (c) => {
         </div>
         
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
-        <script src="/static/app.js?v=202511071013"></script>
+        <script src="/static/app.js?v=202511141300"></script>
+        <script src="/static/student-home.js?v=202511141300"></script>
         <script src="/static/add-pages-functions.js?v=202511111600"></script>
         <script src="/static/schedule-management.js?v=202511111700"></script>
         <script src="/static/subject-management.js?v=202511111700"></script>
