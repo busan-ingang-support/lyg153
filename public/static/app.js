@@ -191,8 +191,60 @@ async function showDashboard() {
 
 // 관리자 대시보드 표시 (기존 로직)
 async function showAdminDashboard() {
-    const dashboardScreen = document.getElementById('dashboard-screen');
-    if (dashboardScreen) {
+    // dashboard-screen이 없으면 생성
+    let dashboardScreen = document.getElementById('dashboard-screen');
+    if (!dashboardScreen) {
+        const app = document.getElementById('app');
+        app.innerHTML = `
+            <!-- 대시보드 화면 -->
+            <div id="dashboard-screen">
+                <!-- 상단 네비게이션 바 -->
+                <nav class="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-50">
+                    <div class="px-6">
+                        <div class="flex items-center justify-between py-4">
+                            <div class="flex items-center space-x-3">
+                                <div class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-purple-100">
+                                    <i class="fas fa-graduation-cap text-base text-purple-600"></i>
+                                </div>
+                                <h1 class="text-lg font-bold text-gray-800">학적 관리 시스템</h1>
+                            </div>
+                            <div class="flex items-center space-x-4">
+                                <span id="user-info" class="text-sm text-gray-600"></span>
+                                <button id="logout-btn" class="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 smooth-transition font-medium text-sm">
+                                    <i class="fas fa-sign-out-alt mr-2"></i>로그아웃
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </nav>
+                
+                <!-- 메인 레이아웃 (사이드바 + 컨텐츠) -->
+                <div class="flex pt-16">
+                    <!-- 왼쪽 사이드바 (고정) -->
+                    <aside class="fixed left-0 top-16 bottom-0 w-64 bg-white border-r border-gray-200 overflow-y-auto">
+                        <div class="p-4">
+                            <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-4">주요 기능</h2>
+                            <nav id="sidebar-nav" class="space-y-1">
+                                <!-- 동적으로 메뉴 로드 -->
+                            </nav>
+                        </div>
+                    </aside>
+                    
+                    <!-- 오른쪽 메인 컨텐츠 영역 -->
+                    <main class="ml-64 flex-1 p-8 bg-transparent min-h-screen">
+                        <div id="main-content">
+                            <!-- 동적으로 컨텐츠가 로드됩니다 -->
+                        </div>
+                    </main>
+                </div>
+            </div>
+        `;
+        
+        // 로그아웃 버튼 이벤트 재설정
+        document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
+        
+        dashboardScreen = document.getElementById('dashboard-screen');
+    } else {
         dashboardScreen.classList.remove('hidden');
     }
     
@@ -589,6 +641,12 @@ async function loadGradeDistribution() {
 function navigateToPage(page) {
     currentView = page;
     const contentArea = document.getElementById('main-content');
+    
+    // main-content가 없으면 에러
+    if (!contentArea) {
+        console.error('main-content 요소를 찾을 수 없습니다. dashboard-screen이 생성되었는지 확인하세요.');
+        return;
+    }
     
     // 스크롤 최상단으로
     window.scrollTo(0, 0);
