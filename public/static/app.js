@@ -102,7 +102,17 @@ function handleLogout() {
 
 // 역할별 메인 화면 라우팅
 async function showDashboard() {
-    document.getElementById('login-screen').classList.add('hidden');
+    // 공개 홈페이지 숨기기 (있으면)
+    const publicHome = document.getElementById('public-home');
+    if (publicHome) {
+        publicHome.style.display = 'none';
+    }
+    
+    // 기존 로그인 화면 숨기기 (있으면)
+    const loginScreen = document.getElementById('login-screen');
+    if (loginScreen) {
+        loginScreen.classList.add('hidden');
+    }
     
     // 역할에 따라 다른 화면으로 라우팅
     switch (currentUser.role) {
@@ -126,7 +136,10 @@ async function showDashboard() {
 
 // 관리자 대시보드 표시 (기존 로직)
 async function showAdminDashboard() {
-    document.getElementById('dashboard-screen').classList.remove('hidden');
+    const dashboardScreen = document.getElementById('dashboard-screen');
+    if (dashboardScreen) {
+        dashboardScreen.classList.remove('hidden');
+    }
     
     const roleNames = {
         'super_admin': '최고관리자',
@@ -136,8 +149,10 @@ async function showAdminDashboard() {
         'parent': '학부모'
     };
     
-    document.getElementById('user-info').textContent = 
-        currentUser.name + ' (' + roleNames[currentUser.role] + ')';
+    const userInfo = document.getElementById('user-info');
+    if (userInfo) {
+        userInfo.textContent = currentUser.name + ' (' + roleNames[currentUser.role] + ')';
+    }
     
     // 사이드바 메뉴 로드
     await loadSidebarMenu();
