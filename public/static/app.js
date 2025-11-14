@@ -9,9 +9,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const savedUser = localStorage.getItem('currentUser');
     
     if (savedToken && savedUser) {
+        // 이미 로그인된 상태면 대시보드로
         authToken = savedToken;
         currentUser = JSON.parse(savedUser);
         showDashboard();
+    } else {
+        // 로그인 안 되어있으면 공개 홈페이지 표시
+        showPublicHome();
     }
     
     setupEventListeners();
@@ -69,6 +73,13 @@ async function handleLogin(e) {
         localStorage.setItem('authToken', authToken);
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
         
+        // 로그인 모달 닫기 (있으면)
+        const loginModal = document.getElementById('login-modal');
+        if (loginModal) {
+            loginModal.classList.add('hidden');
+        }
+        
+        // 역할별 대시보드로 이동
         showDashboard();
     } catch (error) {
         const errorDiv = document.getElementById('login-error');
@@ -85,8 +96,8 @@ function handleLogout() {
     currentUser = null;
     authToken = null;
     
-    document.getElementById('dashboard-screen').classList.add('hidden');
-    document.getElementById('login-screen').classList.remove('hidden');
+    // 공개 홈페이지로 돌아가기
+    showPublicHome();
 }
 
 // 역할별 메인 화면 라우팅

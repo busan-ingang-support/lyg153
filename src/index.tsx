@@ -229,8 +229,9 @@ app.get('/', (c) => {
         </div>
         
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
-        <script src="/static/app.js?v=202511141300"></script>
-        <script src="/static/student-home.js?v=202511141300"></script>
+        <script src="/static/app.js?v=202511141400"></script>
+        <script src="/static/public-home.js?v=202511141400"></script>
+        <script src="/static/student-home.js?v=202511141400"></script>
         <script src="/static/add-pages-functions.js?v=202511111600"></script>
         <script src="/static/schedule-management.js?v=202511111700"></script>
         <script src="/static/subject-management.js?v=202511111700"></script>
