@@ -1,7 +1,18 @@
 import { Hono } from 'hono';
 import type { CloudflareBindings } from '../types';
+import { verifyToken } from '../utils/auth';
 
 const boards = new Hono<{ Bindings: CloudflareBindings }>();
+
+// 토큰에서 사용자 ID 추출 헬퍼
+async function getUserIdFromToken(token: string): Promise<number | null> {
+  try {
+    const payload = await verifyToken(token);
+    return payload?.userId || null;
+  } catch {
+    return null;
+  }
+}
 
 // ============================================
 // 게시판 목록 조회
@@ -155,8 +166,11 @@ boards.post('/posts', async (c) => {
   }
   
   try {
-    // TODO: JWT 토큰에서 사용자 ID 추출 (현재는 임시로 하드코딩)
-    const author_id = 1; // 실제로는 토큰에서 추출
+    // JWT 토큰에서 사용자 ID 추출
+    const author_id = await getUserIdFromToken(token);
+    if (!author_id) {
+      return c.json({ error: '유효하지 않은 토큰입니다' }, 401);
+    }
     
     const result = await db.prepare(`
       INSERT INTO board_posts (board_id, author_id, title, content, is_notice)
@@ -191,8 +205,11 @@ boards.post('/comments', async (c) => {
   }
   
   try {
-    // TODO: JWT 토큰에서 사용자 ID 추출
-    const author_id = 1;
+    // JWT 토큰에서 사용자 ID 추출
+    const author_id = await getUserIdFromToken(token);
+    if (!author_id) {
+      return c.json({ error: '유효하지 않은 토큰입니다' }, 401);
+    }
     
     const result = await db.prepare(`
       INSERT INTO board_comments (post_id, author_id, content, parent_comment_id)

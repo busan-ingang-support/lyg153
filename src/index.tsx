@@ -25,6 +25,7 @@ import moduleSettings from './routes/module-settings';
 import courses from './routes/courses';
 import schedules from './routes/schedules';
 import boards from './routes/boards';
+import courseQna from './routes/course-qna';
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -56,6 +57,7 @@ app.route('/api/module-settings', moduleSettings);
 app.route('/api/courses', courses);
 app.route('/api/schedules', schedules);
 app.route('/api/boards', boards);
+app.route('/api/course-qna', courseQna);
 
 // 기본 홈페이지
 app.get('/', (c) => {

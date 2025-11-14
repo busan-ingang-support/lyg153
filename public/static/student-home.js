@@ -525,13 +525,322 @@ async function showStudentBoard() {
     
     content.innerHTML = `
         <div class="max-w-5xl mx-auto">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6">게시판</h2>
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">게시판</h2>
+                <button onclick="showBoardWriteModal()" class="btn-pastel-primary px-4 py-2 rounded-lg">
+                    <i class="fas fa-pen mr-2"></i>글쓰기
+                </button>
+            </div>
             
-            <div class="card-modern">
-                <p class="text-gray-500 text-center py-12">게시판 기능은 곧 추가될 예정입니다.</p>
+            <!-- 게시판 탭 -->
+            <div class="border-b border-gray-200 mb-6">
+                <nav class="flex space-x-8">
+                    <button class="board-tab border-b-2 border-purple-600 text-purple-600 pb-3 px-1 font-medium" data-board="all">
+                        전체
+                    </button>
+                    <button class="board-tab border-b-2 border-transparent text-gray-500 pb-3 px-1 hover:text-gray-700" data-board="notice">
+                        공지사항
+                    </button>
+                    <button class="board-tab border-b-2 border-transparent text-gray-500 pb-3 px-1 hover:text-gray-700" data-board="class">
+                        반 게시판
+                    </button>
+                    <button class="board-tab border-b-2 border-transparent text-gray-500 pb-3 px-1 hover:text-gray-700" data-board="club">
+                        동아리
+                    </button>
+                </nav>
+            </div>
+
+            <!-- 게시글 목록 -->
+            <div id="board-list" class="space-y-4">
+                <div class="text-center py-12">
+                    <i class="fas fa-spinner fa-spin text-3xl text-gray-400"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- 글쓰기 모달 -->
+        <div id="board-write-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-8 relative max-h-[90vh] overflow-y-auto">
+                <button onclick="closeBoardWriteModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+                
+                <h3 class="text-2xl font-bold text-gray-800 mb-6">게시글 작성</h3>
+                
+                <form id="board-write-form" class="space-y-4">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-medium mb-2">게시판 선택</label>
+                        <select id="board-select" class="input-modern w-full" required>
+                            <option value="">게시판을 선택하세요</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-medium mb-2">제목</label>
+                        <input type="text" id="board-title" required class="input-modern w-full" placeholder="제목을 입력하세요">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-medium mb-2">내용</label>
+                        <textarea id="board-content" required rows="10" class="input-modern w-full" placeholder="내용을 입력하세요"></textarea>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="board-notice" class="mr-2">
+                        <label for="board-notice" class="text-sm text-gray-700">공지사항으로 등록</label>
+                    </div>
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" onclick="closeBoardWriteModal()" class="btn-secondary px-6 py-2 rounded-lg">
+                            취소
+                        </button>
+                        <button type="submit" class="btn-pastel-primary px-6 py-2 rounded-lg">
+                            작성하기
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     `;
+
+    // 탭 이벤트 설정
+    document.querySelectorAll('.board-tab').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            const boardType = e.target.getAttribute('data-board');
+            
+            // 탭 활성화 상태 업데이트
+            document.querySelectorAll('.board-tab').forEach(t => {
+                t.classList.remove('border-purple-600', 'text-purple-600');
+                t.classList.add('border-transparent', 'text-gray-500');
+            });
+            e.target.classList.add('border-purple-600', 'text-purple-600');
+            e.target.classList.remove('border-transparent', 'text-gray-500');
+            
+            // 게시글 목록 로드
+            loadBoardList(boardType);
+        });
+    });
+
+    // 글쓰기 폼 이벤트
+    document.getElementById('board-write-form')?.addEventListener('submit', handleBoardWrite);
+
+    // 기본 게시글 목록 로드
+    loadBoardList('all');
+    loadBoardSelect();
+}
+
+// 게시판 목록 로드
+async function loadBoardList(boardType = 'all') {
+    const container = document.getElementById('board-list');
+    container.innerHTML = '<div class="text-center py-12"><i class="fas fa-spinner fa-spin text-3xl text-gray-400"></i></div>';
+    
+    try {
+        let url = '/api/boards/posts?board_type=student';
+        if (boardType === 'notice') {
+            url += '&is_notice=1';
+        } else if (boardType === 'class') {
+            url += '&board_type=class';
+        } else if (boardType === 'club') {
+            url += '&board_type=club';
+        }
+        
+        const response = await axios.get(url, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        
+        const posts = response.data.posts || [];
+        
+        if (posts.length === 0) {
+            container.innerHTML = `
+                <div class="card-modern text-center py-12">
+                    <i class="fas fa-inbox text-4xl text-gray-300 mb-4"></i>
+                    <p class="text-gray-500">등록된 게시글이 없습니다.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = posts.map(post => `
+            <div class="card-modern hover:shadow-md transition-shadow cursor-pointer" onclick="showBoardDetail(${post.id})">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center space-x-2 mb-2">
+                            ${post.is_notice ? '<span class="badge badge-warning text-xs">공지</span>' : ''}
+                            <h3 class="text-lg font-bold text-gray-800">${escapeHtml(post.title)}</h3>
+                        </div>
+                        <p class="text-sm text-gray-600 mb-3 line-clamp-2">${escapeHtml(post.content)}</p>
+                        <div class="flex items-center space-x-4 text-xs text-gray-500">
+                            <span><i class="fas fa-user mr-1"></i>${escapeHtml(post.author_name || '익명')}</span>
+                            <span><i class="fas fa-clock mr-1"></i>${formatDate(post.created_at)}</span>
+                            <span><i class="fas fa-eye mr-1"></i>${post.view_count || 0}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('게시판 목록 로드 실패:', error);
+        container.innerHTML = '<p class="text-red-500 text-center py-12">게시글을 불러올 수 없습니다.</p>';
+    }
+}
+
+// 게시판 선택 드롭다운 로드
+async function loadBoardSelect() {
+    try {
+        const response = await axios.get('/api/boards?board_type=student', {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        
+        const boards = response.data.boards || [];
+        const select = document.getElementById('board-select');
+        
+        if (select) {
+            select.innerHTML = '<option value="">게시판을 선택하세요</option>' +
+                boards.map(board => `<option value="${board.id}">${escapeHtml(board.name)}</option>`).join('');
+        }
+    } catch (error) {
+        console.error('게시판 목록 로드 실패:', error);
+    }
+}
+
+// 게시글 상세 보기
+async function showBoardDetail(postId) {
+    const content = document.getElementById('student-content');
+    
+    content.innerHTML = `
+        <div class="max-w-4xl mx-auto">
+            <button onclick="showStudentBoard()" class="text-purple-600 hover:text-purple-700 mb-4 flex items-center">
+                <i class="fas fa-arrow-left mr-2"></i>목록으로
+            </button>
+            
+            <div id="board-detail" class="card-modern">
+                <div class="text-center py-12">
+                    <i class="fas fa-spinner fa-spin text-3xl text-gray-400"></i>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    try {
+        const response = await axios.get(`/api/boards/posts/${postId}`, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        
+        const post = response.data.post;
+        const comments = response.data.comments || [];
+        
+        const container = document.getElementById('board-detail');
+        container.innerHTML = `
+            <div class="mb-6">
+                <div class="flex items-center space-x-2 mb-4">
+                    ${post.is_notice ? '<span class="badge badge-warning">공지</span>' : ''}
+                    <h2 class="text-2xl font-bold text-gray-800">${escapeHtml(post.title)}</h2>
+                </div>
+                <div class="flex items-center space-x-4 text-sm text-gray-500 mb-6 pb-6 border-b">
+                    <span><i class="fas fa-user mr-1"></i>${escapeHtml(post.author_name || '익명')}</span>
+                    <span><i class="fas fa-clock mr-1"></i>${formatDate(post.created_at)}</span>
+                    <span><i class="fas fa-eye mr-1"></i>${post.view_count || 0}</span>
+                </div>
+                <div class="prose max-w-none text-gray-700 whitespace-pre-wrap">
+                    ${escapeHtml(post.content).replace(/\n/g, '<br>')}
+                </div>
+            </div>
+            
+            <!-- 댓글 영역 -->
+            <div class="border-t pt-6">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">댓글 (${comments.length})</h3>
+                
+                <!-- 댓글 작성 폼 -->
+                <form id="comment-form" class="mb-6">
+                    <textarea id="comment-content" rows="3" class="input-modern w-full mb-3" placeholder="댓글을 입력하세요"></textarea>
+                    <button type="submit" class="btn-pastel-primary px-4 py-2 rounded-lg">
+                        <i class="fas fa-comment mr-2"></i>댓글 작성
+                    </button>
+                </form>
+                
+                <!-- 댓글 목록 -->
+                <div id="comment-list" class="space-y-4">
+                    ${comments.length === 0 ? '<p class="text-gray-500 text-center py-4">댓글이 없습니다.</p>' : 
+                        comments.map(comment => `
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <div class="flex items-start justify-between mb-2">
+                                    <div>
+                                        <span class="font-semibold text-gray-800">${escapeHtml(comment.author_name || '익명')}</span>
+                                        <span class="text-xs text-gray-500 ml-2">${formatDate(comment.created_at)}</span>
+                                    </div>
+                                </div>
+                                <p class="text-gray-700 whitespace-pre-wrap">${escapeHtml(comment.content)}</p>
+                            </div>
+                        `).join('')}
+                </div>
+            </div>
+        `;
+        
+        // 댓글 작성 폼 이벤트
+        document.getElementById('comment-form')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const content = document.getElementById('comment-content').value;
+            if (!content.trim()) return;
+            
+            try {
+                await axios.post('/api/boards/comments', {
+                    post_id: postId,
+                    content: content
+                }, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                // 댓글 목록 새로고침
+                showBoardDetail(postId);
+            } catch (error) {
+                console.error('댓글 작성 실패:', error);
+                alert('댓글 작성에 실패했습니다.');
+            }
+        });
+    } catch (error) {
+        console.error('게시글 상세 로드 실패:', error);
+        document.getElementById('board-detail').innerHTML = 
+            '<p class="text-red-500 text-center py-12">게시글을 불러올 수 없습니다.</p>';
+    }
+}
+
+// 글쓰기 모달 제어
+function showBoardWriteModal() {
+    document.getElementById('board-write-modal').classList.remove('hidden');
+}
+
+function closeBoardWriteModal() {
+    document.getElementById('board-write-modal').classList.add('hidden');
+    document.getElementById('board-write-form').reset();
+}
+
+// 게시글 작성 처리
+async function handleBoardWrite(e) {
+    e.preventDefault();
+    
+    const boardId = document.getElementById('board-select').value;
+    const title = document.getElementById('board-title').value;
+    const content = document.getElementById('board-content').value;
+    const isNotice = document.getElementById('board-notice').checked;
+    
+    if (!boardId || !title || !content) {
+        alert('모든 필드를 입력해주세요.');
+        return;
+    }
+    
+    try {
+        await axios.post('/api/boards/posts', {
+            board_id: boardId,
+            title: title,
+            content: content,
+            is_notice: isNotice ? 1 : 0
+        }, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        
+        closeBoardWriteModal();
+        loadBoardList('all');
+        alert('게시글이 작성되었습니다.');
+    } catch (error) {
+        console.error('게시글 작성 실패:', error);
+        alert('게시글 작성에 실패했습니다.');
+    }
 }
 
 // ============================================
@@ -542,13 +851,244 @@ async function showStudentQnA() {
     
     content.innerHTML = `
         <div class="max-w-5xl mx-auto">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6">과목 Q&A</h2>
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">과목 Q&A</h2>
+                <button onclick="showQnAWriteModal()" class="btn-pastel-primary px-4 py-2 rounded-lg">
+                    <i class="fas fa-question-circle mr-2"></i>질문하기
+                </button>
+            </div>
             
-            <div class="card-modern">
-                <p class="text-gray-500 text-center py-12">Q&A 기능은 곧 추가될 예정입니다.</p>
+            <!-- 필터 -->
+            <div class="mb-6">
+                <select id="qna-course-filter" class="input-modern w-full md:w-64" onchange="loadQnAList()">
+                    <option value="">전체 과목</option>
+                </select>
+            </div>
+
+            <!-- Q&A 목록 -->
+            <div id="qna-list" class="space-y-4">
+                <div class="text-center py-12">
+                    <i class="fas fa-spinner fa-spin text-3xl text-gray-400"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- 질문 작성 모달 -->
+        <div id="qna-write-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-8 relative max-h-[90vh] overflow-y-auto">
+                <button onclick="closeQnAWriteModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+                
+                <h3 class="text-2xl font-bold text-gray-800 mb-6">질문하기</h3>
+                
+                <form id="qna-write-form" class="space-y-4">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-medium mb-2">과목 선택</label>
+                        <select id="qna-course-select" class="input-modern w-full" required>
+                            <option value="">과목을 선택하세요</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-medium mb-2">제목</label>
+                        <input type="text" id="qna-title" required class="input-modern w-full" placeholder="질문 제목을 입력하세요">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-medium mb-2">질문 내용</label>
+                        <textarea id="qna-question" required rows="10" class="input-modern w-full" placeholder="질문 내용을 입력하세요"></textarea>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="qna-private" class="mr-2">
+                        <label for="qna-private" class="text-sm text-gray-700">비공개 질문 (교사만 볼 수 있음)</label>
+                    </div>
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" onclick="closeQnAWriteModal()" class="btn-secondary px-6 py-2 rounded-lg">
+                            취소
+                        </button>
+                        <button type="submit" class="btn-pastel-primary px-6 py-2 rounded-lg">
+                            질문하기
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     `;
+
+    // 질문 작성 폼 이벤트
+    document.getElementById('qna-write-form')?.addEventListener('submit', handleQnAWrite);
+    
+    // 과목 목록 로드
+    await loadQnACourses();
+    await loadQnAList();
+}
+
+// Q&A 과목 목록 로드
+async function loadQnACourses() {
+    try {
+        // 현재 학생의 수강 과목 가져오기
+        const studentResponse = await axios.get(`/api/students/${currentUser.id}`, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        
+        const studentId = studentResponse.data.student.id;
+        
+        // 수강 과목 조회 (enrollments를 통해)
+        const enrollmentsResponse = await axios.get(`/api/courses?student_id=${studentId}`, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        
+        const courses = enrollmentsResponse.data.courses || [];
+        
+        // 필터 드롭다운
+        const filterSelect = document.getElementById('qna-course-filter');
+        if (filterSelect) {
+            filterSelect.innerHTML = '<option value="">전체 과목</option>' +
+                courses.map(course => `<option value="${course.id}">${escapeHtml(course.course_name || course.subject_name || '과목')}</option>`).join('');
+        }
+        
+        // 작성 모달 드롭다운
+        const writeSelect = document.getElementById('qna-course-select');
+        if (writeSelect) {
+            writeSelect.innerHTML = '<option value="">과목을 선택하세요</option>' +
+                courses.map(course => `<option value="${course.id}">${escapeHtml(course.course_name || course.subject_name || '과목')}</option>`).join('');
+        }
+    } catch (error) {
+        console.error('과목 목록 로드 실패:', error);
+        // 에러가 나도 기본 옵션은 표시
+        const filterSelect = document.getElementById('qna-course-filter');
+        if (filterSelect) {
+            filterSelect.innerHTML = '<option value="">전체 과목</option>';
+        }
+        const writeSelect = document.getElementById('qna-course-select');
+        if (writeSelect) {
+            writeSelect.innerHTML = '<option value="">과목을 선택하세요</option>';
+        }
+    }
+}
+
+// Q&A 목록 로드
+async function loadQnAList() {
+    const container = document.getElementById('qna-list');
+    container.innerHTML = '<div class="text-center py-12"><i class="fas fa-spinner fa-spin text-3xl text-gray-400"></i></div>';
+    
+    try {
+        const courseId = document.getElementById('qna-course-filter')?.value;
+        let url = '/api/course-qna';
+        
+        if (courseId) {
+            url += `?course_id=${courseId}`;
+        }
+        
+        const response = await axios.get(url, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        
+        const qnas = response.data.qnas || [];
+        
+        if (qnas.length === 0) {
+            container.innerHTML = `
+                <div class="card-modern text-center py-12">
+                    <i class="fas fa-inbox text-4xl text-gray-300 mb-4"></i>
+                    <p class="text-gray-500">등록된 질문이 없습니다.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = qnas.map(qna => `
+            <div class="card-modern hover:shadow-md transition-shadow">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="flex-1">
+                        <div class="flex items-center space-x-2 mb-2">
+                            <span class="badge ${getQnAStatusBadge(qna.status)}">${getQnAStatusText(qna.status)}</span>
+                            ${qna.is_private ? '<span class="badge badge-secondary text-xs">비공개</span>' : ''}
+                            <h3 class="text-lg font-bold text-gray-800">${escapeHtml(qna.title)}</h3>
+                        </div>
+                        <p class="text-sm text-gray-600 mb-3 line-clamp-2">${escapeHtml(qna.question)}</p>
+                        ${qna.answer ? `
+                            <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded mb-3">
+                                <div class="flex items-center mb-2">
+                                    <i class="fas fa-check-circle text-green-600 mr-2"></i>
+                                    <span class="font-semibold text-green-800">답변</span>
+                                </div>
+                                <p class="text-gray-700 whitespace-pre-wrap">${escapeHtml(qna.answer)}</p>
+                            </div>
+                        ` : ''}
+                        <div class="flex items-center space-x-4 text-xs text-gray-500">
+                            <span><i class="fas fa-book mr-1"></i>${escapeHtml(qna.course_name || '과목')}</span>
+                            <span><i class="fas fa-clock mr-1"></i>${formatDate(qna.created_at)}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Q&A 목록 로드 실패:', error);
+        container.innerHTML = '<p class="text-red-500 text-center py-12">질문을 불러올 수 없습니다.</p>';
+    }
+}
+
+// Q&A 상태 뱃지
+function getQnAStatusBadge(status) {
+    const badges = {
+        'pending': 'badge-warning',
+        'answered': 'badge-success',
+        'closed': 'badge-secondary'
+    };
+    return badges[status] || 'badge-secondary';
+}
+
+// Q&A 상태 텍스트
+function getQnAStatusText(status) {
+    const texts = {
+        'pending': '답변 대기',
+        'answered': '답변 완료',
+        'closed': '종료'
+    };
+    return texts[status] || status;
+}
+
+// 질문 작성 모달 제어
+function showQnAWriteModal() {
+    document.getElementById('qna-write-modal').classList.remove('hidden');
+}
+
+function closeQnAWriteModal() {
+    document.getElementById('qna-write-modal').classList.add('hidden');
+    document.getElementById('qna-write-form').reset();
+}
+
+// 질문 작성 처리
+async function handleQnAWrite(e) {
+    e.preventDefault();
+    
+    const courseId = document.getElementById('qna-course-select').value;
+    const title = document.getElementById('qna-title').value;
+    const question = document.getElementById('qna-question').value;
+    const isPrivate = document.getElementById('qna-private').checked;
+    
+    if (!courseId || !title || !question) {
+        alert('모든 필드를 입력해주세요.');
+        return;
+    }
+    
+    try {
+        await axios.post('/api/course-qna', {
+            course_id: courseId,
+            title: title,
+            question: question,
+            is_private: isPrivate ? 1 : 0
+        }, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        
+        closeQnAWriteModal();
+        loadQnAList();
+        alert('질문이 등록되었습니다.');
+    } catch (error) {
+        console.error('질문 작성 실패:', error);
+        alert('질문 작성에 실패했습니다.');
+    }
 }
 
 // ============================================
@@ -563,5 +1103,21 @@ function getStatusText(status) {
         'dropped': '자퇴'
     };
     return statusMap[status] || status;
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function formatDate(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 

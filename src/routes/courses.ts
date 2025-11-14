@@ -12,6 +12,7 @@ courses.get('/', async (c) => {
   const class_id = c.req.query('class_id');
   const teacher_id = c.req.query('teacher_id');
   const subject_id = c.req.query('subject_id');
+  const student_id = c.req.query('student_id');
   
   try {
     let query = `
@@ -31,10 +32,20 @@ courses.get('/', async (c) => {
       LEFT JOIN teachers t ON c.teacher_id = t.id
       LEFT JOIN users u ON t.user_id = u.id
       LEFT JOIN classes cl ON c.class_id = cl.id
-      WHERE 1=1
     `;
     
     const params: any[] = [];
+    
+    // 학생 ID가 있으면 enrollments 테이블과 조인
+    if (student_id) {
+      query += `
+        INNER JOIN enrollments e ON c.id = e.course_id
+        WHERE e.student_id = ?
+      `;
+      params.push(parseInt(student_id));
+    } else {
+      query += ' WHERE 1=1';
+    }
     
     if (semester_id) {
       query += ' AND c.semester_id = ?';
