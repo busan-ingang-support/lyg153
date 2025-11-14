@@ -3,8 +3,27 @@ let currentUser = null;
 let authToken = null;
 let currentView = 'dashboard';
 
-// 초기화
-document.addEventListener('DOMContentLoaded', () => {
+// 함수가 정의될 때까지 기다리는 헬퍼 함수
+function waitForFunction(functionName, intervalMs = 50, maxAttempts = 20) {
+    return new Promise((resolve, reject) => {
+        let attempts = 0;
+        const checkInterval = setInterval(() => {
+            if (typeof window[functionName] === 'function') {
+                clearInterval(checkInterval);
+                resolve();
+            } else {
+                attempts++;
+                if (attempts >= maxAttempts) {
+                    clearInterval(checkInterval);
+                    reject(new Error(`${functionName} 함수를 찾을 수 없습니다.`));
+                }
+            }
+        }, intervalMs);
+    });
+}
+
+// 초기화 함수
+async function initializeApp() {
     const savedToken = localStorage.getItem('authToken');
     const savedUser = localStorage.getItem('currentUser');
     
@@ -12,13 +31,43 @@ document.addEventListener('DOMContentLoaded', () => {
         // 이미 로그인된 상태면 대시보드로
         authToken = savedToken;
         currentUser = JSON.parse(savedUser);
+        
+        // 필요한 함수가 로드될 때까지 기다리기
+        if (currentUser.role === 'student') {
+            await waitForFunction('showStudentHome', 50, 20);
+        } else if (typeof showPublicHome === 'function') {
+            // public-home.js가 로드되었는지 확인
+            await waitForFunction('showPublicHome', 50, 10);
+        }
+        
         showDashboard();
     } else {
         // 로그인 안 되어있으면 공개 홈페이지 표시
-        showPublicHome();
+        // public-home.js가 로드될 때까지 기다리기
+        await waitForFunction('showPublicHome', 50, 20);
+        if (typeof showPublicHome === 'function') {
+            showPublicHome();
+        } else {
+            // 함수가 없으면 기본 로그인 화면 표시
+            document.getElementById('login-screen')?.classList.remove('hidden');
+        }
     }
     
     setupEventListeners();
+}
+
+// 모든 스크립트가 로드된 후 초기화
+window.addEventListener('load', () => {
+    // 약간의 지연을 두어 모든 스크립트가 완전히 로드되도록 함
+    setTimeout(initializeApp, 100);
+});
+
+// DOMContentLoaded에서도 실행 (빠른 응답을 위해)
+document.addEventListener('DOMContentLoaded', () => {
+    // 스크립트가 모두 로드되었는지 확인
+    if (document.readyState === 'complete') {
+        setTimeout(initializeApp, 100);
+    }
 });
 
 // 이벤트 리스너 설정
@@ -117,7 +166,13 @@ async function showDashboard() {
     // 역할에 따라 다른 화면으로 라우팅
     switch (currentUser.role) {
         case 'student':
-            showStudentHome();
+            // student-home.js가 로드될 때까지 기다리기
+            await waitForFunction('showStudentHome', 50, 20);
+            if (typeof showStudentHome === 'function') {
+                showStudentHome();
+            } else {
+                console.error('showStudentHome 함수를 찾을 수 없습니다. 페이지를 새로고침해주세요.');
+            }
             break;
         case 'teacher':
             showTeacherDashboard();
