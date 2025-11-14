@@ -57,29 +57,74 @@ async function showAddSubjectForm() {
     
     document.body.appendChild(modal);
     
-    document.getElementById('add-subject-form').addEventListener('submit', async (e) => {
+    const form = document.getElementById('add-subject-form');
+    if (!form) {
+        console.error('과목 추가 폼을 찾을 수 없습니다');
+        return;
+    }
+    
+    form.addEventListener('submit', async (e) => {
         e.preventDefault();
         
         const formData = new FormData(e.target);
         const data = Object.fromEntries(formData.entries());
         
+        // 필수 필드 검증
+        if (!data.name || !data.code) {
+            alert('과목명과 과목 코드는 필수입니다.');
+            return;
+        }
+        
+        // authToken 확인
+        if (!authToken) {
+            alert('로그인이 필요합니다. 페이지를 새로고침해주세요.');
+            return;
+        }
+        
+        console.log('과목 추가 시도:', data);
+        
         try {
-            await axios.post('/api/subjects', {
+            const response = await axios.post('/api/subjects', {
                 name: data.name,
                 code: data.code,
                 description: data.description || null,
-                credits: parseInt(data.credits),
-                subject_type: data.subject_type
+                credits: parseInt(data.credits) || 3,
+                subject_type: data.subject_type || 'required'
             }, {
                 headers: { 'Authorization': 'Bearer ' + authToken }
             });
             
+            console.log('과목 추가 성공:', response.data);
             alert('과목이 성공적으로 추가되었습니다!');
-            closeModal();
-            navigateToPage('courses');
+            
+            // 모달 닫기
+            const modal = document.getElementById('student-modal');
+            if (modal) {
+                modal.remove();
+            }
+            
+            // 페이지 새로고침하여 과목 목록 업데이트
+            try {
+                if (typeof navigateToPage === 'function') {
+                    navigateToPage('subjects');
+                } else if (typeof showSubjectManagement === 'function') {
+                    const contentArea = document.getElementById('main-content');
+                    if (contentArea) {
+                        await showSubjectManagement(contentArea);
+                    } else {
+                        location.reload();
+                    }
+                } else {
+                    location.reload();
+                }
+            } catch (error) {
+                console.error('페이지 새로고침 실패:', error);
+                location.reload();
+            }
         } catch (error) {
             console.error('Failed to add subject:', error);
-            alert('과목 추가에 실패했습니다: ' + (error.response?.data?.error || error.message));
+            const errorMessage = error.response?.data?.error || error.message || '알 수 없는 오류';
+            alert('과목 추가에 실패했습니다: ' + errorMessage);
         }
     });
 }

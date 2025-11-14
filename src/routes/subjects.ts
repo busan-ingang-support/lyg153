@@ -11,20 +11,31 @@ subjects.get('/', async (c) => {
   const grade = c.req.query('grade');
   const subject_type = c.req.query('subject_type');
   
-  let query = 'SELECT * FROM subjects WHERE 1=1';
+  let query = `
+    SELECT 
+      s.*,
+      t.id as teacher_table_id,
+      t.subject as teacher_subject,
+      u.name as teacher_name,
+      u.id as teacher_user_id
+    FROM subjects s
+    LEFT JOIN teachers t ON s.teacher_id = t.id
+    LEFT JOIN users u ON t.user_id = u.id
+    WHERE 1=1
+  `;
   const params: any[] = [];
   
   if (grade) {
-    query += ' AND grade = ?';
+    query += ' AND s.grade = ?';
     params.push(parseInt(grade));
   }
   
   if (subject_type) {
-    query += ' AND subject_type = ?';
+    query += ' AND s.subject_type = ?';
     params.push(subject_type);
   }
   
-  query += ' ORDER BY grade, name';
+  query += ' ORDER BY s.grade, s.name';
   
   const { results } = await db.prepare(query).bind(...params).all();
   return c.json({ subjects: results });
@@ -37,13 +48,24 @@ subjects.get('/:id', async (c) => {
   const db = c.env.DB;
   const id = c.req.param('id');
   
-  const result = await db.prepare('SELECT * FROM subjects WHERE id = ?').bind(id).first();
+  const result = await db.prepare(`
+    SELECT 
+      s.*,
+      t.id as teacher_table_id,
+      t.subject as teacher_subject,
+      u.name as teacher_name,
+      u.id as teacher_user_id
+    FROM subjects s
+    LEFT JOIN teachers t ON s.teacher_id = t.id
+    LEFT JOIN users u ON t.user_id = u.id
+    WHERE s.id = ?
+  `).bind(id).first();
   
   if (!result) {
     return c.json({ error: '과목을 찾을 수 없습니다' }, 404);
   }
   
-  return c.json(result);
+  return c.json({ subject: result });
 });
 
 // ============================================
@@ -51,7 +73,7 @@ subjects.get('/:id', async (c) => {
 // ============================================
 subjects.post('/', async (c) => {
   const db = c.env.DB;
-  const { name, code, description, credits, subject_type, grade, performance_ratio, written_ratio } = await c.req.json();
+  const { name, code, description, credits, subject_type, grade, performance_ratio, written_ratio, teacher_id } = await c.req.json();
   
   // 필수 필드 검증
   if (!name || !code) {
@@ -62,8 +84,8 @@ subjects.post('/', async (c) => {
     const result = await db.prepare(`
       INSERT INTO subjects (
         name, code, description, credits, subject_type, 
-        grade, performance_ratio, written_ratio
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        grade, performance_ratio, written_ratio, teacher_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       name, 
       code, 
@@ -72,7 +94,8 @@ subjects.post('/', async (c) => {
       subject_type || 'required',
       grade || null,
       performance_ratio || 40,
-      written_ratio || 60
+      written_ratio || 60,
+      teacher_id || null
     ).run();
     
     return c.json({ 
@@ -94,13 +117,13 @@ subjects.post('/', async (c) => {
 subjects.put('/:id', async (c) => {
   const db = c.env.DB;
   const id = c.req.param('id');
-  const { name, code, description, credits, subject_type, grade, performance_ratio, written_ratio } = await c.req.json();
+  const { name, code, description, credits, subject_type, grade, performance_ratio, written_ratio, teacher_id } = await c.req.json();
   
   try {
     const result = await db.prepare(`
       UPDATE subjects 
       SET name = ?, code = ?, description = ?, credits = ?, 
-          subject_type = ?, grade = ?, performance_ratio = ?, written_ratio = ?
+          subject_type = ?, grade = ?, performance_ratio = ?, written_ratio = ?, teacher_id = ?
       WHERE id = ?
     `).bind(
       name, 
@@ -111,6 +134,7 @@ subjects.put('/:id', async (c) => {
       grade || null,
       performance_ratio || 40,
       written_ratio || 60,
+      teacher_id || null,
       id
     ).run();
     

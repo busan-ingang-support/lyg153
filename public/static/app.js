@@ -589,12 +589,16 @@ async function loadSidebarMenu() {
         // 구분선 및 관리 메뉴
         menuHTML += `<div class="border-t border-gray-700 my-4"></div>`;
         
-        // 담임 배정은 관리자만 (교사는 절대 표시 안 함)
+        // 관리자 전용 메뉴 (담임 배정, 사용자 관리)
         if (!isTeacher) {
             menuHTML += `
                 <a href="#" data-page="homeroom" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
                     <i class="fas fa-user-tie w-5 mr-3"></i>
                     <span>담임 배정</span>
+                </a>
+                <a href="#" data-page="users" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+                    <i class="fas fa-users w-5 mr-3"></i>
+                    <span>사용자 관리</span>
                 </a>
             `;
         }
@@ -1113,6 +1117,15 @@ function navigateToPage(page) {
             break;
         case 'subjects':
             showSubjectManagement(contentArea);
+            break;
+        case 'subjects-add':
+            // 과목 추가 페이지 표시
+            if (typeof showSubjectAddPage === 'function') {
+                showSubjectAddPage(contentArea);
+            } else {
+                alert('과목 추가 기능을 불러올 수 없습니다.');
+                navigateToPage('subjects');
+            }
             break;
         case 'clubs':
             showClubManagement(contentArea);
@@ -2316,28 +2329,115 @@ async function showCourseManagement(container) {
 // 출석 관리 화면
 async function showAttendanceManagement(container) {
     try {
-        // 교사인 경우 담당 반의 학생만 조회
-        let studentsUrl = '/api/students?limit=1000';
+        let students = [];
         let classesUrl = '/api/classes';
+        let allClassIds = [];
         
         if (currentUser.role === 'teacher' && window.currentTeacher) {
-            // 담임인 반 조회
+            // 1. 담임인 반의 학생들 가져오기
             const homeroomResponse = await axios.get(`/api/teacher-homeroom?teacher_id=${window.currentTeacher.id}`, {
                 headers: { 'Authorization': 'Bearer ' + authToken }
             });
             const homeroomClasses = (homeroomResponse.data.homerooms || []).map(h => h.class_id);
-            if (homeroomClasses.length > 0) {
-                studentsUrl += `&class_id=${homeroomClasses[0]}`; // 첫 번째 담임 반
-                classesUrl += `?class_ids=${homeroomClasses.join(',')}`;
+            
+            // 2. 담당 과목의 학생들 가져오기
+            const coursesResponse = await axios.get(`/api/courses?teacher_id=${window.currentTeacher.id}`, {
+                headers: { 'Authorization': 'Bearer ' + authToken }
+            });
+            const courses = coursesResponse.data.courses || [];
+            const courseIds = courses.map(c => c.id);
+            
+            // 담당 과목의 학생 ID 수집 (enrollments 테이블 사용)
+            const studentIdsFromCourses = new Set();
+            if (courseIds.length > 0) {
+                // 각 과목의 enrollments를 통해 학생 ID 가져오기
+                for (const courseId of courseIds) {
+                    try {
+                        // enrollments는 courses API에서 student_id 파라미터로 조회 가능
+                        // 또는 직접 enrollments API가 있다면 사용
+                        // 일단 courses API의 student_id 필터를 사용할 수 없으므로
+                        // 학생 목록을 가져온 후 enrollments로 필터링
+                    } catch (error) {
+                        console.error('과목 학생 조회 실패:', error);
+                    }
+                }
             }
+            
+            // 담임 반 학생들 가져오기
+            if (homeroomClasses.length > 0) {
+                allClassIds = [...homeroomClasses];
+                for (const classId of homeroomClasses) {
+                    try {
+                        const classStudentsRes = await axios.get(`/api/students?class_id=${classId}`, {
+                            headers: { 'Authorization': 'Bearer ' + authToken }
+                        });
+                        const classStudents = classStudentsRes.data.students || [];
+                        students.push(...classStudents);
+                    } catch (error) {
+                        console.error('반 학생 조회 실패:', error);
+                    }
+                }
+            }
+            
+            // 담당 과목의 학생들 가져오기 (enrollments를 통해)
+            // enrollments API가 없으므로, 모든 학생을 가져온 후 course_id로 필터링
+            // 또는 courses API를 통해 간접적으로 가져오기
+            // 일단 모든 학생을 가져온 후, 담당 과목에 등록된 학생만 필터링
+            try {
+                const allStudentsRes = await axios.get('/api/students?limit=1000', {
+                    headers: { 'Authorization': 'Bearer ' + authToken }
+                });
+                const allStudents = allStudentsRes.data.students || [];
+                
+                // 각 학생의 enrollments 확인 (학생 상세 API 사용)
+                // 하지만 이건 너무 많은 API 호출이 필요하므로
+                // 일단 담임 반 학생들만 사용하고, 나중에 enrollments API 추가 시 확장
+                
+                // 담당 과목이 있는 반의 학생들도 포함
+                const courseClassIds = [...new Set(courses.map(c => c.class_id).filter(id => id))];
+                for (const classId of courseClassIds) {
+                    if (!allClassIds.includes(classId)) {
+                        allClassIds.push(classId);
+                        try {
+                            const courseClassStudentsRes = await axios.get(`/api/students?class_id=${classId}`, {
+                                headers: { 'Authorization': 'Bearer ' + authToken }
+                            });
+                            const courseClassStudents = courseClassStudentsRes.data.students || [];
+                            students.push(...courseClassStudents);
+                        } catch (error) {
+                            console.error('과목 반 학생 조회 실패:', error);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('학생 목록 조회 실패:', error);
+            }
+            
+            // 중복 제거 (student_id 기준)
+            const uniqueStudents = [];
+            const seenIds = new Set();
+            for (const student of students) {
+                if (!seenIds.has(student.id)) {
+                    seenIds.add(student.id);
+                    uniqueStudents.push(student);
+                }
+            }
+            students = uniqueStudents;
+            
+            if (allClassIds.length > 0) {
+                classesUrl += `?class_ids=${allClassIds.join(',')}`;
+            }
+        } else {
+            // 관리자는 전체 학생
+            const studentsRes = await axios.get('/api/students?limit=1000', {
+                headers: { 'Authorization': 'Bearer ' + authToken }
+            });
+            students = studentsRes.data.students || [];
         }
         
-        const [studentsRes, classesRes] = await Promise.all([
-            axios.get(studentsUrl, { headers: { 'Authorization': 'Bearer ' + authToken } }),
-            axios.get(classesUrl, { headers: { 'Authorization': 'Bearer ' + authToken } })
-        ]);
-        
-        let students = studentsRes.data.students || [];
+        const classesRes = await axios.get(classesUrl, {
+            headers: { 'Authorization': 'Bearer ' + authToken }
+        });
         
         // 전역 변수에 저장
         window.allAttendanceStudents = students;
@@ -2843,28 +2943,81 @@ function viewStudentAttendance(studentId, studentName) {
 // 성적 관리 화면
 async function showGradeManagement(container) {
     try {
-        // 교사인 경우 담당 반의 학생만 조회
-        let studentsUrl = '/api/students?limit=1000';
+        let students = [];
         let classesUrl = '/api/classes';
+        let allClassIds = [];
         
         if (currentUser.role === 'teacher' && window.currentTeacher) {
-            // 담임인 반 조회
+            // 1. 담임인 반의 학생들 가져오기
             const homeroomResponse = await axios.get(`/api/teacher-homeroom?teacher_id=${window.currentTeacher.id}`, {
                 headers: { 'Authorization': 'Bearer ' + authToken }
             });
             const homeroomClasses = (homeroomResponse.data.homerooms || []).map(h => h.class_id);
+            
+            // 2. 담당 과목의 학생들 가져오기
+            const coursesResponse = await axios.get(`/api/courses?teacher_id=${window.currentTeacher.id}`, {
+                headers: { 'Authorization': 'Bearer ' + authToken }
+            });
+            const courses = coursesResponse.data.courses || [];
+            
+            // 담임 반 학생들 가져오기
             if (homeroomClasses.length > 0) {
-                studentsUrl += `&class_id=${homeroomClasses[0]}`; // 첫 번째 담임 반
-                classesUrl += `?class_ids=${homeroomClasses.join(',')}`;
+                allClassIds = [...homeroomClasses];
+                for (const classId of homeroomClasses) {
+                    try {
+                        const classStudentsRes = await axios.get(`/api/students?class_id=${classId}`, {
+                            headers: { 'Authorization': 'Bearer ' + authToken }
+                        });
+                        const classStudents = classStudentsRes.data.students || [];
+                        students.push(...classStudents);
+                    } catch (error) {
+                        console.error('반 학생 조회 실패:', error);
+                    }
+                }
             }
+            
+            // 담당 과목이 있는 반의 학생들도 포함
+            const courseClassIds = [...new Set(courses.map(c => c.class_id).filter(id => id))];
+            for (const classId of courseClassIds) {
+                if (!allClassIds.includes(classId)) {
+                    allClassIds.push(classId);
+                    try {
+                        const courseClassStudentsRes = await axios.get(`/api/students?class_id=${classId}`, {
+                            headers: { 'Authorization': 'Bearer ' + authToken }
+                        });
+                        const courseClassStudents = courseClassStudentsRes.data.students || [];
+                        students.push(...courseClassStudents);
+                    } catch (error) {
+                        console.error('과목 반 학생 조회 실패:', error);
+                    }
+                }
+            }
+            
+            // 중복 제거 (student_id 기준)
+            const uniqueStudents = [];
+            const seenIds = new Set();
+            for (const student of students) {
+                if (!seenIds.has(student.id)) {
+                    seenIds.add(student.id);
+                    uniqueStudents.push(student);
+                }
+            }
+            students = uniqueStudents;
+            
+            if (allClassIds.length > 0) {
+                classesUrl += `?class_ids=${allClassIds.join(',')}`;
+            }
+        } else {
+            // 관리자는 전체 학생
+            const studentsRes = await axios.get('/api/students?limit=1000', {
+                headers: { 'Authorization': 'Bearer ' + authToken }
+            });
+            students = studentsRes.data.students || [];
         }
         
-        const [studentsRes, classesRes] = await Promise.all([
-            axios.get(studentsUrl, { headers: { 'Authorization': 'Bearer ' + authToken } }),
-            axios.get(classesUrl, { headers: { 'Authorization': 'Bearer ' + authToken } })
-        ]);
-        
-        let students = studentsRes.data.students || [];
+        const classesRes = await axios.get(classesUrl, {
+            headers: { 'Authorization': 'Bearer ' + authToken }
+        });
         
         // 전역 변수에 저장
         window.allGradeStudents = students;

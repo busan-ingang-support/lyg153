@@ -65,6 +65,12 @@ async function showSubjectManagement(container) {
                                                 <i class="fas fa-graduation-cap w-5 text-indigo-400"></i>
                                                 <span class="text-sm ml-2">${subject.credits}학점</span>
                                             </div>
+                                            ${subject.teacher_name ? `
+                                            <div class="flex items-center text-gray-600">
+                                                <i class="fas fa-chalkboard-teacher w-5 text-indigo-400"></i>
+                                                <span class="text-sm ml-2">담당: ${subject.teacher_name}</span>
+                                            </div>
+                                            ` : ''}
                                             <div class="flex items-center text-gray-600">
                                                 <i class="fas fa-chart-pie w-5 text-indigo-400"></i>
                                                 <span class="text-sm ml-2">수행 ${subject.performance_ratio}% · 지필 ${subject.written_ratio}%</span>
@@ -413,7 +419,23 @@ function closeSubjectModal() {
 // 과목 추가 페이지 (페이지 기반)
 // ============================================
 async function showSubjectAddPage(container) {
-    container.innerHTML = `
+    try {
+        // 교사 목록 가져오기
+        const teachersRes = await axios.get('/api/users?role=teacher&limit=1000', {
+            headers: { 'Authorization': 'Bearer ' + authToken }
+        });
+        
+        // 교사 상세 정보 가져오기 (teacher_id 포함)
+        const teacherDetailsPromises = teachersRes.data.users.map(async (user) => {
+            const res = await axios.get(`/api/users/${user.id}`, {
+                headers: { 'Authorization': 'Bearer ' + authToken }
+            });
+            return { ...res.data.teacher, userName: user.name, userId: user.id };
+        });
+        
+        const teachers = (await Promise.all(teacherDetailsPromises)).filter(t => t && t.id);
+        
+        container.innerHTML = `
         <div class="max-w-4xl mx-auto">
             <div class="mb-6">
                 <button onclick="navigateToPage('subjects')" class="text-indigo-600 hover:text-indigo-800 mb-4 inline-flex items-center">
@@ -486,6 +508,18 @@ async function showSubjectAddPage(container) {
                     </div>
                     
                     <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">기본 담당 교사</label>
+                        <select name="teacher_id" 
+                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="">선택 안함</option>
+                            ${teachers.map(teacher => `
+                                <option value="${teacher.id}">${teacher.userName} (${teacher.subject || '전공 미지정'})</option>
+                            `).join('')}
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">과목의 기본 담당 교사를 선택할 수 있습니다. 선택하지 않아도 됩니다.</p>
+                    </div>
+                    
+                    <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">설명</label>
                         <textarea name="description" rows="4"
                                   class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -511,6 +545,7 @@ async function showSubjectAddPage(container) {
     document.getElementById('add-subject-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const formData = new FormData(e.target);
+        const teacherId = formData.get('teacher_id');
         const data = {
             name: formData.get('name'),
             code: formData.get('code'),
@@ -519,7 +554,8 @@ async function showSubjectAddPage(container) {
             subject_type: formData.get('subject_type'),
             performance_ratio: parseInt(formData.get('performance_ratio')),
             written_ratio: parseInt(formData.get('written_ratio')),
-            description: formData.get('description')
+            description: formData.get('description'),
+            teacher_id: teacherId ? parseInt(teacherId) : null
         };
         
         try {
@@ -533,6 +569,10 @@ async function showSubjectAddPage(container) {
             alert('과목 추가에 실패했습니다: ' + (error.response?.data?.message || error.message));
         }
     });
+    } catch (error) {
+        console.error('과목 추가 페이지 로드 오류:', error);
+        container.innerHTML = `<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">과목 추가 페이지를 불러오는데 실패했습니다</div>`;
+    }
 }
 
 // ============================================
@@ -546,11 +586,26 @@ async function showSubjectEditPage(container) {
     }
     
     try {
-        const response = await axios.get(`/api/subjects/${subjectId}`, {
-            headers: { 'Authorization': 'Bearer ' + authToken }
+        const [subjectRes, teachersRes] = await Promise.all([
+            axios.get(`/api/subjects/${subjectId}`, {
+                headers: { 'Authorization': 'Bearer ' + authToken }
+            }),
+            axios.get('/api/users?role=teacher&limit=1000', {
+                headers: { 'Authorization': 'Bearer ' + authToken }
+            })
+        ]);
+        
+        const subject = subjectRes.data.subject;
+        
+        // 교사 상세 정보 가져오기
+        const teacherDetailsPromises = teachersRes.data.users.map(async (user) => {
+            const res = await axios.get(`/api/users/${user.id}`, {
+                headers: { 'Authorization': 'Bearer ' + authToken }
+            });
+            return { ...res.data.teacher, userName: user.name, userId: user.id };
         });
         
-        const subject = response.data.subject;
+        const teachers = (await Promise.all(teacherDetailsPromises)).filter(t => t && t.id);
         
         container.innerHTML = `
             <div class="max-w-4xl mx-auto">
@@ -622,6 +677,18 @@ async function showSubjectEditPage(container) {
                         </div>
                         
                         <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">기본 담당 교사</label>
+                            <select name="teacher_id" 
+                                    class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="">선택 안함</option>
+                                ${teachers.map(teacher => `
+                                    <option value="${teacher.id}" ${subject.teacher_id == teacher.id ? 'selected' : ''}>${teacher.userName} (${teacher.subject || '전공 미지정'})</option>
+                                `).join('')}
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">과목의 기본 담당 교사를 선택할 수 있습니다. 선택하지 않아도 됩니다.</p>
+                        </div>
+                        
+                        <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">설명</label>
                             <textarea name="description" rows="4"
                                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">${subject.description || ''}</textarea>
@@ -646,6 +713,7 @@ async function showSubjectEditPage(container) {
         document.getElementById('edit-subject-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const formData = new FormData(e.target);
+            const teacherId = formData.get('teacher_id');
             const data = {
                 name: formData.get('name'),
                 code: formData.get('code'),
@@ -654,7 +722,8 @@ async function showSubjectEditPage(container) {
                 subject_type: formData.get('subject_type'),
                 performance_ratio: parseInt(formData.get('performance_ratio')),
                 written_ratio: parseInt(formData.get('written_ratio')),
-                description: formData.get('description')
+                description: formData.get('description'),
+                teacher_id: teacherId ? parseInt(teacherId) : null
             };
             
             try {

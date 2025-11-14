@@ -208,6 +208,9 @@ function renderUsersList() {
                     <button onclick="manageTeacherPermissions(${user.id}, '${user.name}')" class="text-green-600 hover:text-green-800 mr-3" title="교사 권한 관리">
                         <i class="fas fa-key"></i>
                     </button>
+                    <button onclick="manageTeacherSubjects(${user.id}, '${user.name}')" class="text-indigo-600 hover:text-indigo-800 mr-3" title="담당 과목 연결">
+                        <i class="fas fa-book"></i>
+                    </button>
                 ` : ''}
                 ${user.role !== 'super_admin' && user.role !== 'student' ? `
                     <button onclick="deleteUser(${user.id}, '${user.name}', '${user.role}')" class="text-red-600 hover:text-red-800" title="삭제">
@@ -612,4 +615,257 @@ async function deleteUser(userId, userName, userRole) {
         console.error('사용자 삭제 실패:', error);
         alert('사용자 삭제에 실패했습니다: ' + (error.response?.data?.error || error.message));
     }
+}
+
+// 교사 담당 과목 연결 관리
+async function manageTeacherSubjects(userId, userName) {
+    try {
+        // 전역 변수에 저장 (모달 새로고침용)
+        window.currentTeacherUserId = userId;
+        window.currentTeacherUserName = userName;
+        
+        // 교사 정보 가져오기
+        const userResponse = await axios.get(`/api/users/${userId}`, {
+            headers: { 'Authorization': 'Bearer ' + authToken }
+        });
+        
+        let teacher = userResponse.data.user?.teacher || userResponse.data.teacher;
+        let teacherId;
+        
+        // teacher 정보가 없으면 생성 시도
+        if (!teacher) {
+            const year = new Date().getFullYear();
+            const randomNum = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+            const teacherNumber = `T${year}${randomNum}`;
+            
+            try {
+                const createResponse = await axios.post('/api/teachers', {
+                    user_id: userId,
+                    teacher_number: teacherNumber,
+                    subject: null,
+                    position: '교사',
+                    department: null
+                }, {
+                    headers: { 'Authorization': 'Bearer ' + authToken }
+                });
+                
+                teacherId = createResponse.data.id;
+                // 재조회
+                const reUserResponse = await axios.get(`/api/users/${userId}`, {
+                    headers: { 'Authorization': 'Bearer ' + authToken }
+                });
+                teacher = reUserResponse.data.user?.teacher || reUserResponse.data.teacher;
+                teacherId = teacher.id;
+            } catch (createError) {
+                if (createError.response?.status === 409) {
+                    // 이미 존재하는 경우 재조회
+                    const reUserResponse = await axios.get(`/api/users/${userId}`, {
+                        headers: { 'Authorization': 'Bearer ' + authToken }
+                    });
+                    teacher = reUserResponse.data.user?.teacher || reUserResponse.data.teacher;
+                    if (teacher) {
+                        teacherId = teacher.id;
+                    } else {
+                        alert('교사 정보를 찾을 수 없습니다.');
+                        return;
+                    }
+                } else {
+                    alert('교사 정보를 생성할 수 없습니다: ' + (createError.response?.data?.error || createError.message));
+                    return;
+                }
+            }
+        } else {
+            teacherId = teacher.id;
+        }
+        
+        // 모든 과목 목록 가져오기
+        const subjectsRes = await axios.get('/api/subjects', {
+            headers: { 'Authorization': 'Bearer ' + authToken }
+        });
+        
+        const allSubjects = subjectsRes.data.subjects || [];
+        const assignedSubjects = allSubjects.filter(s => s.teacher_id == teacherId);
+        const unassignedSubjects = allSubjects.filter(s => !s.teacher_id || s.teacher_id != teacherId);
+        
+        // 모달 생성
+        const modal = document.createElement('div');
+        modal.id = 'teacher-subjects-modal';
+        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto';
+        modal.innerHTML = `
+            <div class="bg-white rounded-lg shadow-xl p-8 max-w-4xl w-full mx-4 my-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">담당 과목 연결</h2>
+                    <button onclick="closeTeacherSubjectsModal()" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+                
+                <div class="mb-6">
+                    <p class="text-sm text-gray-600">교사: <span class="font-semibold text-lg">${escapeHtml(userName)}</span></p>
+                    ${teacher.subject ? `<p class="text-sm text-gray-600 mt-1">전공: <span class="font-medium">${escapeHtml(teacher.subject)}</span></p>` : ''}
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- 연결된 과목 -->
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">연결된 과목 (${assignedSubjects.length})</h3>
+                        <div class="space-y-2 max-h-96 overflow-y-auto">
+                            ${assignedSubjects.length > 0 ? assignedSubjects.map(subject => `
+                                <div class="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                                    <div>
+                                        <span class="font-medium text-gray-800">${escapeHtml(subject.name)}</span>
+                                        <span class="text-xs text-gray-500 ml-2">(${escapeHtml(subject.code)})</span>
+                                    </div>
+                                    <button onclick="unassignSubjectFromTeacher(${subject.id}, ${teacherId}, '${escapeHtml(subject.name)}')" 
+                                            class="text-red-600 hover:text-red-800 text-sm">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            `).join('') : `
+                                <p class="text-gray-500 text-center py-4">연결된 과목이 없습니다</p>
+                            `}
+                        </div>
+                    </div>
+                    
+                    <!-- 연결 가능한 과목 -->
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">연결 가능한 과목 (${unassignedSubjects.length})</h3>
+                        <div class="space-y-2 max-h-96 overflow-y-auto">
+                            ${unassignedSubjects.length > 0 ? unassignedSubjects.map(subject => `
+                                <div class="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100">
+                                    <div>
+                                        <span class="font-medium text-gray-800">${escapeHtml(subject.name)}</span>
+                                        <span class="text-xs text-gray-500 ml-2">(${escapeHtml(subject.code)})</span>
+                                        ${subject.teacher_name ? `<span class="text-xs text-orange-600 ml-2">[${escapeHtml(subject.teacher_name)} 담당]</span>` : ''}
+                                    </div>
+                                    <button onclick="assignSubjectToTeacher(${subject.id}, ${teacherId}, '${escapeHtml(subject.name)}')" 
+                                            class="text-green-600 hover:text-green-800 text-sm">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            `).join('') : `
+                                <p class="text-gray-500 text-center py-4">연결 가능한 과목이 없습니다</p>
+                            `}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end mt-6 pt-6 border-t border-gray-200">
+                    <button onclick="closeTeacherSubjectsModal()" 
+                            class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium text-gray-700">
+                        닫기
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+    } catch (error) {
+        console.error('담당 과목 연결 관리 실패:', error);
+        alert('담당 과목 연결 관리를 불러올 수 없습니다: ' + (error.response?.data?.error || error.message));
+    }
+}
+
+// 과목을 교사에게 연결
+async function assignSubjectToTeacher(subjectId, teacherId, subjectName) {
+    if (!confirm(`"${subjectName}" 과목을 이 교사에게 연결하시겠습니까?`)) {
+        return;
+    }
+    
+    try {
+        // 현재 과목 정보 가져오기
+        const subjectRes = await axios.get(`/api/subjects/${subjectId}`, {
+            headers: { 'Authorization': 'Bearer ' + authToken }
+        });
+        
+        const subject = subjectRes.data.subject;
+        
+        // 과목 업데이트 (teacher_id 추가)
+        await axios.put(`/api/subjects/${subjectId}`, {
+            name: subject.name,
+            code: subject.code,
+            grade: subject.grade,
+            credits: subject.credits,
+            subject_type: subject.subject_type,
+            performance_ratio: subject.performance_ratio,
+            written_ratio: subject.written_ratio,
+            description: subject.description,
+            teacher_id: teacherId
+        }, {
+            headers: { 'Authorization': 'Bearer ' + authToken }
+        });
+        
+        alert('과목이 연결되었습니다.');
+        // 모달 새로고침
+        const modal = document.getElementById('teacher-subjects-modal');
+        if (modal) {
+            modal.remove();
+            // 모달 다시 열기
+            const userId = window.currentTeacherUserId;
+            const userName = window.currentTeacherUserName;
+            if (userId && userName) {
+                manageTeacherSubjects(userId, userName);
+            }
+        }
+    } catch (error) {
+        console.error('과목 연결 실패:', error);
+        alert('과목 연결에 실패했습니다: ' + (error.response?.data?.error || error.message));
+    }
+}
+
+// 교사에서 과목 연결 해제
+async function unassignSubjectFromTeacher(subjectId, teacherId, subjectName) {
+    if (!confirm(`"${subjectName}" 과목의 연결을 해제하시겠습니까?`)) {
+        return;
+    }
+    
+    try {
+        // 현재 과목 정보 가져오기
+        const subjectRes = await axios.get(`/api/subjects/${subjectId}`, {
+            headers: { 'Authorization': 'Bearer ' + authToken }
+        });
+        
+        const subject = subjectRes.data.subject;
+        
+        // 과목 업데이트 (teacher_id 제거)
+        await axios.put(`/api/subjects/${subjectId}`, {
+            name: subject.name,
+            code: subject.code,
+            grade: subject.grade,
+            credits: subject.credits,
+            subject_type: subject.subject_type,
+            performance_ratio: subject.performance_ratio,
+            written_ratio: subject.written_ratio,
+            description: subject.description,
+            teacher_id: null
+        }, {
+            headers: { 'Authorization': 'Bearer ' + authToken }
+        });
+        
+        alert('과목 연결이 해제되었습니다.');
+        // 모달 새로고침
+        const modal = document.getElementById('teacher-subjects-modal');
+        if (modal) {
+            modal.remove();
+            // 모달 다시 열기
+            const userId = window.currentTeacherUserId;
+            const userName = window.currentTeacherUserName;
+            if (userId && userName) {
+                manageTeacherSubjects(userId, userName);
+            }
+        }
+    } catch (error) {
+        console.error('과목 연결 해제 실패:', error);
+        alert('과목 연결 해제에 실패했습니다: ' + (error.response?.data?.error || error.message));
+    }
+}
+
+// 교사 과목 연결 모달 닫기
+function closeTeacherSubjectsModal() {
+    const modal = document.getElementById('teacher-subjects-modal');
+    if (modal) {
+        modal.remove();
+    }
+    window.currentTeacherUserId = null;
+    window.currentTeacherUserName = null;
 }

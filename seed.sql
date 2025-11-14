@@ -62,17 +62,24 @@ INSERT OR IGNORE INTO parent_student (parent_user_id, student_id, relationship, 
   (6, 1, '부', 1);
 
 -- 테스트 수업 생성 (기존 데이터 삭제 후 재삽입)
+-- 교사의 전공(subject)과 subjects.name을 매칭하여 생성
+-- teacher1: 국어 전공 → 국어 과목만
+-- teacher2: 수학 전공 → 수학, 과학 과목만 (수학과 교사가 과학도 가르칠 수 있음)
 DELETE FROM courses WHERE class_id = 1 AND semester_id = 1;
 
+-- teacher1 (국어 전공)의 수업: 국어만
 INSERT INTO courses (subject_id, semester_id, teacher_id, class_id, course_name, schedule) VALUES 
-  (1, 1, 1, 1, '1학년 1반 국어', '월,수,금 1교시'),
-  (2, 1, 1, 1, '1학년 1반 영어', '월,수,금 2교시'),
+  (1, 1, 1, 1, '1학년 1반 국어', '월,수,금 1교시');
+
+-- teacher2 (수학 전공)의 수업: 수학, 과학
+INSERT INTO courses (subject_id, semester_id, teacher_id, class_id, course_name, schedule) VALUES 
   (3, 1, 2, 1, '1학년 1반 수학', '화,목 1,2교시'),
-  (4, 1, 2, 1, '1학년 1반 과학', '화,목 3교시'),
-  (5, 1, 1, 1, '1학년 1반 사회', '월,수 3교시'),
-  (6, 1, 1, 1, '1학년 1반 음악', '금 3교시'),
-  (7, 1, 1, 1, '1학년 1반 미술', '금 4교시'),
-  (8, 1, 1, 1, '1학년 1반 체육', '화,목 4교시');
+  (4, 1, 2, 1, '1학년 1반 과학', '화,목 3교시');
+
+-- 추가 교사가 필요한 과목들은 별도 교사로 생성하거나, 기존 교사에게 추가 전공 부여
+-- 예: 영어, 사회, 음악, 미술, 체육은 별도 교사 필요
+-- 여기서는 예시로 teacher1에게 추가 과목 부여 (실제로는 별도 교사 생성 권장)
+-- 주의: 실제 운영 시에는 각 과목별로 전공 교사를 배정해야 함
 
 -- 테스트 시간표 생성 (1학년 1반)
 -- 기존 시간표 삭제

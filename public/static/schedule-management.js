@@ -309,9 +309,23 @@ async function manageCourses(classId) {
         ]);
         
         const courses = coursesRes.data.courses || [];
-        const subjects = subjectsRes.data.subjects || [];
+        let subjects = subjectsRes.data.subjects || [];
         const teachers = teachersRes.data.users || [];
         const classInfo = classRes.data;
+        
+        // 교사인 경우 자신의 전공 과목만 필터링
+        let currentTeacher = null;
+        let filteredSubjects = subjects;
+        let isTeacher = false;
+        
+        if (currentUser && currentUser.role === 'teacher' && window.currentTeacher) {
+            isTeacher = true;
+            currentTeacher = window.currentTeacher;
+            // 교사의 전공(subject)과 일치하는 과목만 필터링
+            if (currentTeacher.subject) {
+                filteredSubjects = subjects.filter(s => s.name === currentTeacher.subject);
+            }
+        }
         
         const modal = document.createElement('div');
         modal.id = 'courses-modal';
@@ -373,22 +387,31 @@ async function manageCourses(classId) {
                             
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">과목 *</label>
-                                <select name="subject_id" required class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                                <select name="subject_id" required class="w-full px-3 py-2 border border-gray-300 rounded-lg" ${isTeacher ? 'disabled' : ''}>
                                     <option value="">선택하세요</option>
-                                    ${subjects.filter(s => s.grade == classInfo.grade).map(subject => `
+                                    ${filteredSubjects.filter(s => !s.grade || s.grade == classInfo.grade).map(subject => `
                                         <option value="${subject.id}">${subject.name} (${subject.code})</option>
                                     `).join('')}
                                 </select>
+                                ${isTeacher ? `<input type="hidden" name="subject_id" value="${filteredSubjects.length > 0 ? filteredSubjects[0].id : ''}">` : ''}
+                                ${isTeacher && filteredSubjects.length === 0 ? `
+                                    <p class="text-sm text-red-600 mt-1">전공 과목이 등록되지 않았습니다. 관리자에게 문의하세요.</p>
+                                ` : ''}
                             </div>
                             
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">담당 교사 *</label>
-                                <select name="teacher_id" required class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                                <select name="teacher_id" required class="w-full px-3 py-2 border border-gray-300 rounded-lg" ${isTeacher ? 'disabled' : ''}>
                                     <option value="">선택하세요</option>
-                                    ${teachers.map(teacher => `
-                                        <option value="${teacher.id}">${teacher.name}</option>
-                                    `).join('')}
+                                    ${teachers.map(teacher => {
+                                        // teacher_id는 teachers 테이블의 id
+                                        const teacherId = teacher.teacher_id;
+                                        if (!teacherId) return ''; // teacher_id가 없으면 스킵
+                                        const isCurrentTeacher = isTeacher && currentTeacher && teacherId == currentTeacher.id;
+                                        return `<option value="${teacherId}" ${isCurrentTeacher ? 'selected' : ''}>${teacher.name}</option>`;
+                                    }).filter(opt => opt).join('')}
                                 </select>
+                                ${isTeacher && currentTeacher ? `<input type="hidden" name="teacher_id" value="${currentTeacher.id}">` : ''}
                             </div>
                             
                             <div>

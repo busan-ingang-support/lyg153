@@ -833,10 +833,74 @@ async function deleteReading(id) {
 // ============================================
 async function showCounselingAddPage(container) {
     try {
-        const [studentsRes, semestersRes] = await Promise.all([
-            axios.get('/api/students', { headers: { 'Authorization': 'Bearer ' + authToken } }),
-            axios.get('/api/semesters', { headers: { 'Authorization': 'Bearer ' + authToken } })
-        ]);
+        let students = [];
+        
+        // 교사인 경우 담당 과목 학생 + 담임 반 학생만 가져오기
+        if (currentUser && currentUser.role === 'teacher' && window.currentTeacher) {
+            // 1. 담임인 반의 학생들 가져오기
+            const homeroomResponse = await axios.get(`/api/teacher-homeroom?teacher_id=${window.currentTeacher.id}`, {
+                headers: { 'Authorization': 'Bearer ' + authToken }
+            });
+            const homeroomClasses = (homeroomResponse.data.homerooms || []).map(h => h.class_id);
+            
+            // 2. 담당 과목의 학생들 가져오기
+            const coursesResponse = await axios.get(`/api/courses?teacher_id=${window.currentTeacher.id}`, {
+                headers: { 'Authorization': 'Bearer ' + authToken }
+            });
+            const courses = coursesResponse.data.courses || [];
+            
+            // 담임 반 학생들 가져오기
+            if (homeroomClasses.length > 0) {
+                for (const classId of homeroomClasses) {
+                    try {
+                        const classStudentsRes = await axios.get(`/api/students?class_id=${classId}`, {
+                            headers: { 'Authorization': 'Bearer ' + authToken }
+                        });
+                        const classStudents = classStudentsRes.data.students || [];
+                        students.push(...classStudents);
+                    } catch (error) {
+                        console.error('반 학생 조회 실패:', error);
+                    }
+                }
+            }
+            
+            // 담당 과목이 있는 반의 학생들도 포함
+            const courseClassIds = [...new Set(courses.map(c => c.class_id).filter(id => id))];
+            for (const classId of courseClassIds) {
+                if (!homeroomClasses.includes(classId)) {
+                    try {
+                        const courseClassStudentsRes = await axios.get(`/api/students?class_id=${classId}`, {
+                            headers: { 'Authorization': 'Bearer ' + authToken }
+                        });
+                        const courseClassStudents = courseClassStudentsRes.data.students || [];
+                        students.push(...courseClassStudents);
+                    } catch (error) {
+                        console.error('과목 반 학생 조회 실패:', error);
+                    }
+                }
+            }
+            
+            // 중복 제거 (student_id 기준)
+            const uniqueStudents = [];
+            const seenIds = new Set();
+            for (const student of students) {
+                if (!seenIds.has(student.id)) {
+                    seenIds.add(student.id);
+                    uniqueStudents.push(student);
+                }
+            }
+            students = uniqueStudents;
+        } else {
+            // 관리자는 전체 학생
+            const studentsRes = await axios.get('/api/students?limit=1000', {
+                headers: { 'Authorization': 'Bearer ' + authToken }
+            });
+            students = studentsRes.data.students || [];
+        }
+        
+        const semestersRes = await axios.get('/api/semesters', {
+            headers: { 'Authorization': 'Bearer ' + authToken }
+        });
         
         container.innerHTML = `
             <div>
@@ -854,7 +918,7 @@ async function showCounselingAddPage(container) {
                                 <label class="block text-sm font-medium text-gray-700 mb-2">학생 *</label>
                                 <select name="student_id" required class="w-full px-3 py-2 border border-gray-300 rounded-lg">
                                     <option value="">선택하세요</option>
-                                    ${studentsRes.data.students.map(s => `<option value="${s.id}">${s.name} (${s.student_number})</option>`).join('')}
+                                    ${students.map(s => `<option value="${s.id}">${s.name} (${s.student_number})</option>`).join('')}
                                 </select>
                             </div>
                             <div>
@@ -960,9 +1024,73 @@ async function showCounselingEditPage(container) {
     }
     
     try {
-        const [counselingRes, studentsRes, semestersRes] = await Promise.all([
+        let students = [];
+        
+        // 교사인 경우 담당 과목 학생 + 담임 반 학생만 가져오기
+        if (currentUser && currentUser.role === 'teacher' && window.currentTeacher) {
+            // 1. 담임인 반의 학생들 가져오기
+            const homeroomResponse = await axios.get(`/api/teacher-homeroom?teacher_id=${window.currentTeacher.id}`, {
+                headers: { 'Authorization': 'Bearer ' + authToken }
+            });
+            const homeroomClasses = (homeroomResponse.data.homerooms || []).map(h => h.class_id);
+            
+            // 2. 담당 과목의 학생들 가져오기
+            const coursesResponse = await axios.get(`/api/courses?teacher_id=${window.currentTeacher.id}`, {
+                headers: { 'Authorization': 'Bearer ' + authToken }
+            });
+            const courses = coursesResponse.data.courses || [];
+            
+            // 담임 반 학생들 가져오기
+            if (homeroomClasses.length > 0) {
+                for (const classId of homeroomClasses) {
+                    try {
+                        const classStudentsRes = await axios.get(`/api/students?class_id=${classId}`, {
+                            headers: { 'Authorization': 'Bearer ' + authToken }
+                        });
+                        const classStudents = classStudentsRes.data.students || [];
+                        students.push(...classStudents);
+                    } catch (error) {
+                        console.error('반 학생 조회 실패:', error);
+                    }
+                }
+            }
+            
+            // 담당 과목이 있는 반의 학생들도 포함
+            const courseClassIds = [...new Set(courses.map(c => c.class_id).filter(id => id))];
+            for (const classId of courseClassIds) {
+                if (!homeroomClasses.includes(classId)) {
+                    try {
+                        const courseClassStudentsRes = await axios.get(`/api/students?class_id=${classId}`, {
+                            headers: { 'Authorization': 'Bearer ' + authToken }
+                        });
+                        const courseClassStudents = courseClassStudentsRes.data.students || [];
+                        students.push(...courseClassStudents);
+                    } catch (error) {
+                        console.error('과목 반 학생 조회 실패:', error);
+                    }
+                }
+            }
+            
+            // 중복 제거 (student_id 기준)
+            const uniqueStudents = [];
+            const seenIds = new Set();
+            for (const student of students) {
+                if (!seenIds.has(student.id)) {
+                    seenIds.add(student.id);
+                    uniqueStudents.push(student);
+                }
+            }
+            students = uniqueStudents;
+        } else {
+            // 관리자는 전체 학생
+            const studentsRes = await axios.get('/api/students?limit=1000', {
+                headers: { 'Authorization': 'Bearer ' + authToken }
+            });
+            students = studentsRes.data.students || [];
+        }
+        
+        const [counselingRes, semestersRes] = await Promise.all([
             axios.get(`/api/counseling/${counselingId}`, { headers: { 'Authorization': 'Bearer ' + authToken } }),
-            axios.get('/api/students', { headers: { 'Authorization': 'Bearer ' + authToken } }),
             axios.get('/api/semesters', { headers: { 'Authorization': 'Bearer ' + authToken } })
         ]);
         
@@ -983,7 +1111,7 @@ async function showCounselingEditPage(container) {
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">학생 *</label>
                                 <select name="student_id" required class="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                                    ${studentsRes.data.students.map(s => `<option value="${s.id}" ${s.id == counseling.student_id ? 'selected' : ''}>${s.name} (${s.student_number})</option>`).join('')}
+                                    ${students.map(s => `<option value="${s.id}" ${s.id == counseling.student_id ? 'selected' : ''}>${s.name} (${s.student_number})</option>`).join('')}
                                 </select>
                             </div>
                             <div>
