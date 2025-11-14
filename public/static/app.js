@@ -456,7 +456,8 @@ async function loadSidebarMenu() {
                 });
                 console.log('사용자 정보 응답:', userResponse.data);
                 
-                const teacher = userResponse.data.user?.teacher;
+                // API 응답 구조: { user: {...}, teacher: {...} }
+                const teacher = userResponse.data.teacher;
                 if (teacher) {
                     teacherId = teacher.id;
                     console.log('교사 ID:', teacherId);
@@ -471,8 +472,10 @@ async function loadSidebarMenu() {
                         id: teacher.id,
                         permissions: teacherPermissions
                     };
+                    console.log('교사 정보 저장 완료:', window.currentTeacher);
                 } else {
                     console.log('교사 정보 없음 - 기본 메뉴 표시');
+                    console.log('응답 데이터 구조:', Object.keys(userResponse.data));
                 }
             } catch (error) {
                 console.error('교사 정보 로드 실패:', error);
@@ -1337,14 +1340,14 @@ async function showTeacherDashboardPage(container) {
     container.innerHTML = `
         <div class="space-y-6">
             <!-- 환영 메시지 -->
-            <div class="bg-gradient-to-r from-green-600 to-blue-600 rounded-2xl shadow-xl p-8 text-white">
+            <div class="rounded-2xl shadow-xl p-8 text-white" style="background: linear-gradient(to right, #16a34a, #2563eb);">
                 <div class="flex items-center justify-between">
                     <div>
                         <h1 class="text-3xl font-bold mb-2">환영합니다, ${currentUser.name} 선생님 👋</h1>
-                        <p class="text-green-100">오늘도 학생들과 함께 멋진 하루를 만들어가세요</p>
+                        <p class="text-white opacity-90">오늘도 학생들과 함께 멋진 하루를 만들어가세요</p>
                     </div>
                     <div class="text-right">
-                        <p class="text-sm text-green-100">현재 학기</p>
+                        <p class="text-sm text-white opacity-80">현재 학기</p>
                         <p class="text-2xl font-bold" id="teacher-stat-semester">-</p>
                     </div>
                 </div>
@@ -1440,9 +1443,60 @@ async function showTeacherDashboardPage(container) {
 
 // 교사 대시보드 데이터 로드
 async function loadTeacherDashboardData() {
-    if (!currentUser || !window.currentTeacher) {
-        console.error('교사 정보를 찾을 수 없습니다.');
+    if (!currentUser) {
+        console.error('currentUser를 찾을 수 없습니다.');
         return;
+    }
+    
+    // window.currentTeacher가 없으면 잠시 기다렸다가 다시 시도 (loadSidebarMenu 완료 대기)
+    if (!window.currentTeacher) {
+        console.log('교사 정보 대기 중... (loadSidebarMenu 완료 대기)');
+        // 최대 3초 대기 (500ms 간격으로 6번 시도)
+        for (let i = 0; i < 6; i++) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            if (window.currentTeacher) {
+                console.log('교사 정보 로드 완료:', window.currentTeacher);
+                break;
+            }
+        }
+        
+        // 여전히 없으면 교사 정보 직접 가져오기
+        if (!window.currentTeacher) {
+            console.log('교사 정보를 직접 가져오는 중...');
+            try {
+                const userResponse = await axios.get(`/api/users/${currentUser.id}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                const teacher = userResponse.data.teacher;
+                if (teacher) {
+                    const permissionsResponse = await axios.get(`/api/teacher-permissions?teacher_id=${teacher.id}`, {
+                        headers: { 'Authorization': `Bearer ${authToken}` }
+                    });
+                    const teacherPermissions = (permissionsResponse.data.permissions || []).map(p => p.permission_type);
+                    window.currentTeacher = {
+                        id: teacher.id,
+                        permissions: teacherPermissions
+                    };
+                    console.log('교사 정보 직접 로드 완료:', window.currentTeacher);
+                } else {
+                    console.error('교사 정보를 찾을 수 없습니다.');
+                    document.getElementById('teacher-homeroom-section').innerHTML = `
+                        <div class="bg-white rounded-xl shadow-lg p-6">
+                            <p class="text-red-500 text-center py-4">교사 정보를 찾을 수 없습니다.</p>
+                        </div>
+                    `;
+                    return;
+                }
+            } catch (error) {
+                console.error('교사 정보 로드 실패:', error);
+                document.getElementById('teacher-homeroom-section').innerHTML = `
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <p class="text-red-500 text-center py-4">교사 정보를 불러오는데 실패했습니다.</p>
+                    </div>
+                `;
+                return;
+            }
+        }
     }
     
     try {
