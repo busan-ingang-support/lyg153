@@ -65,7 +65,7 @@ app.route('/api/teachers', teachers);
 
 // 기본 홈페이지
 app.get('/', (c) => {
-  return c.html(`
+    return c.html(`
     <!DOCTYPE html>
     <html lang="ko">
     <head>
@@ -167,7 +167,7 @@ app.get('/', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         <script src="/static/public-home.js?v=202511141500" defer></script>
         <script src="/static/student-home.js?v=202511141500" defer></script>
-        <script src="/static/app.js?v=202511141500" defer></script>
+        <script src="/static/app.js?v=202511192325" defer></script>
         <script src="/static/add-pages-functions.js?v=202511111600"></script>
         <script src="/static/schedule-management.js?v=202511111700"></script>
         <script src="/static/subject-management.js?v=202511111700"></script>
@@ -176,7 +176,7 @@ app.get('/', (c) => {
         <script src="/static/settings.js?v=202511071013"></script>
         <script src="/static/class-detail.js?v=202511071013"></script>
         <script src="/static/student-detail.js?v=202511071013"></script>
-        <script src="/static/reports.js?v=202511071013"></script>
+        <script src="/static/reports.js?v=202511192325"></script>
         <script src="/static/attendance-improved.js?v=202511071013"></script>
         <script src="/static/teacher-management.js?v=202511071013"></script>
         <script src="/static/user-management.js?v=202511121000"></script>

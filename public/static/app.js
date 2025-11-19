@@ -1622,33 +1622,7 @@ async function loadTeacherDashboardData() {
     }
 }
 
-// 성적표 출력 페이지
-function showReportsPage(container) {
-    container.innerHTML = `
-        <div>
-            <h1 class="text-3xl font-bold text-gray-800 mb-8">성적표 출력</h1>
-            <div class="bg-white rounded-lg shadow p-8 text-center">
-                <i class="fas fa-print text-6xl text-gray-400 mb-4"></i>
-                <p class="text-lg text-gray-600 mb-2">성적표 출력 기능</p>
-                <p class="text-sm text-gray-500">추가 개발 예정</p>
-            </div>
-        </div>
-    `;
-}
 
-// 생활기록부 페이지
-function showRecordsPage(container) {
-    container.innerHTML = `
-        <div>
-            <h1 class="text-3xl font-bold text-gray-800 mb-8">학생 생활기록부</h1>
-            <div class="bg-white rounded-lg shadow p-8 text-center">
-                <i class="fas fa-file-alt text-6xl text-gray-400 mb-4"></i>
-                <p class="text-lg text-gray-600 mb-2">생활기록부 기능</p>
-                <p class="text-sm text-gray-500">추가 개발 예정</p>
-            </div>
-        </div>
-    `;
-}
 
 // 설정 페이지
 function showSettingsPage(container) {
