@@ -29,6 +29,7 @@ import courseQna from './routes/course-qna';
 import teacherPermissions from './routes/teacher-permissions';
 import teachers from './routes/teachers';
 import homepage from './routes/homepage';
+import homepageModules from './routes/homepage-modules';
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -64,6 +65,7 @@ app.route('/api/course-qna', courseQna);
 app.route('/api/teacher-permissions', teacherPermissions);
 app.route('/api/teachers', teachers);
 app.route('/api/homepage', homepage);
+app.route('/api/homepage-modules', homepageModules);
 
 // 기본 홈페이지
 app.get('/', (c) => {
@@ -167,22 +169,24 @@ app.get('/', (c) => {
         </div>
         
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
-        <script src="/static/public-home.js?v=202511141500" defer></script>
+        <script src="/static/public-home.js?v=202511201600" defer></script>
         <script src="/static/student-home.js?v=202511141500" defer></script>
-        <script src="/static/app.js?v=202511192325" defer></script>
-        <script src="/static/add-pages-functions.js?v=202511111600"></script>
-        <script src="/static/schedule-management.js?v=202511111700"></script>
-        <script src="/static/subject-management.js?v=202511111700"></script>
-        <script src="/static/admin.js?v=202511071013"></script>
-        <script src="/static/counseling.js?v=202511071013"></script>
-        <script src="/static/settings.js?v=202511071013"></script>
-        <script src="/static/class-detail.js?v=202511071013"></script>
-        <script src="/static/student-detail.js?v=202511071013"></script>
-        <script src="/static/reports.js?v=202511192325"></script>
-        <script src="/static/attendance-improved.js?v=202511071013"></script>
-        <script src="/static/teacher-management.js?v=202511071013"></script>
-        <script src="/static/user-management.js?v=202511121000"></script>
-        <script src="/static/homepage-management.js?v=202511200000"></script>
+        <script src="/static/homepage-module-management.js?v=202511201200" defer></script>
+        <script src="/static/app.js?v=202511201500" defer></script>
+        <script src="/static/add-pages-functions.js?v=202511111600" defer></script>
+        <script src="/static/schedule-management.js?v=202511111700" defer></script>
+        <script src="/static/subject-management.js?v=202511111700" defer></script>
+        <script src="/static/admin.js?v=202511071013" defer></script>
+        <script src="/static/counseling.js?v=202511071013" defer></script>
+        <script src="/static/settings.js?v=202511071013" defer></script>
+        <script src="/static/class-detail.js?v=202511071013" defer></script>
+        <script src="/static/student-detail.js?v=202511071013" defer></script>
+        <script src="/static/reports.js?v=202511192325" defer></script>
+        <script src="/static/attendance-improved.js?v=202511071013" defer></script>
+        <script src="/static/teacher-management.js?v=202511071013" defer></script>
+        <script src="/static/user-management.js?v=202511121000" defer></script>
+        <!-- homepage-management.js는 레거시 파일이므로 더 이상 사용하지 않습니다 -->
+        <!-- <script src="/static/homepage-management.js?v=202511200000" defer></script> -->
     </body>
     </html>
   `);

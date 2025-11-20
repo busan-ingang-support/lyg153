@@ -1,7 +1,9 @@
-// 홈페이지 관리 기능
+// 홈페이지 관리 기능 (레거시 - 모듈 기반으로 전환됨)
+// 이 파일은 더 이상 사용되지 않습니다. homepage-module-management.js를 사용하세요.
 
-// 홈페이지 관리 페이지 표시
-async function showHomepageManagement(container) {
+// 홈페이지 관리 페이지 표시 (모듈 기반으로 리다이렉트)
+// 주의: 이 함수는 더 이상 사용되지 않습니다. homepage-module-management.js의 showHomepageManagement를 사용하세요.
+async function showHomepageManagementLegacy(container) {
     // 권한 체크
     if (currentUser.role !== 'super_admin') {
         alert('홈페이지 관리는 최고 관리자만 접근할 수 있습니다.');

@@ -29,7 +29,6 @@ async function initializeApp() {
     
     // 중복 호출 방지
     if (window.isInitializing) {
-        console.log('initializeApp 이미 실행 중 - 건너뜀');
         return;
     }
     window.isInitializing = true;
@@ -48,12 +47,22 @@ async function initializeApp() {
         }
         
         showDashboard();
+        
+        // URL에서 페이지 확인하여 해당 페이지로 이동
+        const pageFromURL = getPageFromURL();
+        if (pageFromURL && pageFromURL !== 'dashboard') {
+            // 약간의 지연을 두어 대시보드가 먼저 로드되도록 함
+            setTimeout(() => {
+                navigateToPage(pageFromURL, false); // URL은 이미 설정되어 있으므로 업데이트하지 않음
+            }, 100);
+        }
     } else {
         // 로그인 안 되어있으면 공개 홈페이지 표시
         // public-home.js가 로드될 때까지 기다리기
         await waitForFunction('showPublicHome', 50, 20);
         if (typeof showPublicHome === 'function') {
             showPublicHome();
+            // showPublicHome 내부에서 URL 확인을 하므로 여기서는 추가 작업 불필요
         } else {
             // 함수가 없으면 기본 로그인 화면 표시
             document.getElementById('login-screen')?.classList.remove('hidden');
@@ -91,6 +100,18 @@ function setupEventListeners() {
     if (logoutBtn) {
         logoutBtn.addEventListener('click', handleLogout);
     }
+    
+    // 브라우저 뒤로가기/앞으로가기 처리
+    window.addEventListener('popstate', (e) => {
+        const page = e.state?.page || getPageFromURL();
+        navigateToPage(page, false); // URL은 이미 변경되었으므로 업데이트하지 않음
+    });
+    
+    // 해시 변경 처리 (직접 URL 입력 시)
+    window.addEventListener('hashchange', () => {
+        const page = getPageFromURL();
+        navigateToPage(page, false);
+    });
     
     // 사이드바 네비게이션 링크
     document.addEventListener('click', (e) => {
@@ -227,7 +248,6 @@ async function showAdminDashboard() {
     const needsCreation = !dashboardScreen || !sidebarNavCheck;
     
     if (needsCreation) {
-        console.log('dashboard-screen 생성 시작 (존재:', !!dashboardScreen, ', sidebar-nav 존재:', !!sidebarNavCheck, ')');
         const app = document.getElementById('app');
         app.innerHTML = `
             <!-- 대시보드 화면 -->
@@ -274,15 +294,11 @@ async function showAdminDashboard() {
             </div>
         `;
         
-        console.log('dashboard-screen HTML 설정 완료');
-        
         // 로그아웃 버튼 이벤트 재설정
         document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
         
         dashboardScreen = document.getElementById('dashboard-screen');
-        console.log('dashboard-screen 요소:', dashboardScreen);
     } else {
-        console.log('dashboard-screen 이미 존재함 - 표시');
         dashboardScreen.classList.remove('hidden');
     }
     
@@ -296,9 +312,7 @@ async function showAdminDashboard() {
     
     // DOM이 완전히 렌더링될 때까지 대기 (새로 생성된 경우)
     if (needsCreation) {
-        console.log('DOM 렌더링 대기 중...');
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-        console.log('DOM 렌더링 완료');
     }
     
     const userInfo = document.getElementById('user-info');
@@ -310,7 +324,6 @@ async function showAdminDashboard() {
     
     // 로딩 중 표시
     const sidebarNav = document.getElementById('sidebar-nav');
-    console.log('sidebarNav 로딩 스피너 표시:', sidebarNav);
     if (sidebarNav) {
         sidebarNav.innerHTML = `
             <div class="flex items-center justify-center py-8">
@@ -435,11 +448,6 @@ async function loadSidebarMenu() {
             return;
         }
         
-        // 디버깅: 역할 및 호출 스택 확인
-        console.log('===== loadSidebarMenu 호출 =====');
-        console.log('currentUser 역할:', currentUser?.role);
-        console.log('호출 스택:', new Error().stack);
-        
         // 교사인 경우 권한 정보 먼저 가져오기 (완료될 때까지 대기)
         let teacherPermissions = [];
         let isTeacher = false;
@@ -448,23 +456,18 @@ async function loadSidebarMenu() {
         // currentUser가 확실히 설정되어 있고 교사인지 확인
         if (currentUser && currentUser.role === 'teacher') {
             isTeacher = true;
-            console.log('교사 사용자 확인됨 - 권한 정보 로드 시작');
             try {
-                console.log('API 호출: /api/users/' + currentUser.id);
                 const userResponse = await axios.get(`/api/users/${currentUser.id}`, {
                     headers: { 'Authorization': `Bearer ${authToken}` }
                 });
-                console.log('사용자 정보 응답:', userResponse.data);
                 
                 // API 응답 구조: { user: {...}, teacher: {...} }
                 const teacher = userResponse.data.teacher;
                 if (teacher) {
                     teacherId = teacher.id;
-                    console.log('교사 ID:', teacherId);
                     const permissionsResponse = await axios.get(`/api/teacher-permissions?teacher_id=${teacher.id}`, {
                         headers: { 'Authorization': `Bearer ${authToken}` }
                     });
-                    console.log('권한 정보 응답:', permissionsResponse.data);
                     teacherPermissions = (permissionsResponse.data.permissions || []).map(p => p.permission_type);
                     
                     // 전역 변수에 교사 정보 저장
@@ -472,10 +475,6 @@ async function loadSidebarMenu() {
                         id: teacher.id,
                         permissions: teacherPermissions
                     };
-                    console.log('교사 정보 저장 완료:', window.currentTeacher);
-                } else {
-                    console.log('교사 정보 없음 - 기본 메뉴 표시');
-                    console.log('응답 데이터 구조:', Object.keys(userResponse.data));
                 }
             } catch (error) {
                 console.error('교사 정보 로드 실패:', error);
@@ -485,14 +484,11 @@ async function loadSidebarMenu() {
         }
         
         // 활성화된 모듈만 조회
-        console.log('모듈 설정 API 호출 시작');
         const response = await axios.get('/api/module-settings/enabled', {
             headers: { 'Authorization': 'Bearer ' + authToken }
         });
-        console.log('모듈 설정 응답:', response.data);
         
         const modules = response.data.modules || [];
-        console.log('활성화된 모듈 개수:', modules.length);
         
         // 모듈명과 페이지명 매핑
         const modulePageMap = {
@@ -508,16 +504,11 @@ async function loadSidebarMenu() {
             'counseling': 'counseling'
         };
         
-        console.log('sidebar-nav 요소 찾기 시도');
         const sidebarNav = document.getElementById('sidebar-nav');
         if (!sidebarNav) {
             console.error('sidebar-nav 요소를 찾을 수 없습니다.');
-            console.error('현재 DOM:', document.body.innerHTML.substring(0, 500));
             return;
         }
-        console.log('sidebar-nav 요소 찾음:', sidebarNav);
-        
-        console.log('메뉴 HTML 생성 시작');
         let menuHTML = `
             <!-- 고정 메뉴: 대시보드 -->
             <a href="#" data-page="dashboard" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
@@ -525,7 +516,6 @@ async function loadSidebarMenu() {
                 <span>대시보드</span>
             </a>
         `;
-        console.log('대시보드 메뉴 추가됨');
         
         // 관리자 전용 모듈 목록 (교사에게는 절대 표시 안 함)
         const adminOnlyModules = ['users', 'user-management', 'admin', 'settings', 'homeroom'];
@@ -635,16 +625,9 @@ async function loadSidebarMenu() {
             `;
         }
         
-        console.log('===== 메뉴 HTML 생성 완료 =====');
-        console.log('isTeacher:', isTeacher);
-        console.log('생성된 메뉴 개수:', menuHTML.split('nav-link').length - 1);
-        
         sidebarNav.innerHTML = menuHTML;
-        
-        console.log('===== 메뉴 렌더링 완료 =====');
     } catch (error) {
         console.error('사이드바 메뉴 로드 실패:', error);
-        console.error('오류 상세:', error);
         
         // 에러 발생 시에도 역할 기반 기본 메뉴 표시
         const sidebarNav = document.getElementById('sidebar-nav');
@@ -652,7 +635,6 @@ async function loadSidebarMenu() {
             const isTeacher = currentUser && currentUser.role === 'teacher';
             const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.role === 'super_admin');
             
-            console.log('에러 발생 - 폴백 메뉴 표시:', { isTeacher, isAdmin, role: currentUser?.role });
             
             // 역할에 맞는 기본 메뉴 표시
             if (isTeacher) {
@@ -1059,8 +1041,21 @@ async function loadGradeDistribution() {
     }
 }
 
+// URL에서 페이지 추출
+function getPageFromURL() {
+    const hash = window.location.hash.slice(1); // # 제거
+    if (hash) {
+        return hash;
+    }
+    const path = window.location.pathname;
+    if (path && path !== '/' && path !== '/index.html') {
+        return path.replace(/^\//, '').replace(/\.html$/, '');
+    }
+    return 'dashboard';
+}
+
 // 페이지 네비게이션
-function navigateToPage(page) {
+function navigateToPage(page, updateURL = true) {
     currentView = page;
     const contentArea = document.getElementById('main-content');
     
@@ -1068,6 +1063,14 @@ function navigateToPage(page) {
     if (!contentArea) {
         console.error('main-content 요소를 찾을 수 없습니다. dashboard-screen이 생성되었는지 확인하세요.');
         return;
+    }
+    
+    // URL 업데이트
+    if (updateURL) {
+        const newURL = `#${page}`;
+        if (window.location.hash !== newURL) {
+            window.history.pushState({ page }, '', newURL);
+        }
     }
     
     // 스크롤 최상단으로
@@ -1177,9 +1180,38 @@ function navigateToPage(page) {
             }
             break;
         case 'homepage':
+        case 'homepage-management':
             // 최고 관리자만 접근 가능
             if (currentUser.role === 'super_admin') {
-                showHomepageManagement(contentArea);
+                // 함수가 로드될 때까지 대기
+                if (typeof showHomepageManagement === 'function') {
+                    showHomepageManagement(contentArea);
+                } else {
+                    // 스크립트가 아직 로드되지 않았을 수 있으므로 잠시 후 재시도
+                    console.warn('showHomepageManagement 함수를 찾을 수 없습니다. 스크립트 로드를 기다립니다...');
+                    contentArea.innerHTML = `
+                        <div class="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg">
+                            <p>홈페이지 관리 기능을 로드하는 중입니다...</p>
+                        </div>
+                    `;
+                    // 최대 3초 동안 재시도
+                    let retryCount = 0;
+                    const checkFunction = setInterval(() => {
+                        retryCount++;
+                        if (typeof showHomepageManagement === 'function') {
+                            clearInterval(checkFunction);
+                            showHomepageManagement(contentArea);
+                        } else if (retryCount >= 30) {
+                            clearInterval(checkFunction);
+                            contentArea.innerHTML = `
+                                <div class="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
+                                    <p>홈페이지 관리 기능을 불러올 수 없습니다. 페이지를 새로고침해주세요.</p>
+                                    <p class="text-sm mt-2">오류: showHomepageManagement 함수가 정의되지 않았습니다.</p>
+                                </div>
+                            `;
+                        }
+                    }, 100);
+                }
             } else {
                 alert('홈페이지 관리는 최고 관리자만 접근할 수 있습니다.');
                 navigateToPage('dashboard');
@@ -1497,19 +1529,16 @@ async function loadTeacherDashboardData() {
     
     // window.currentTeacher가 없으면 잠시 기다렸다가 다시 시도 (loadSidebarMenu 완료 대기)
     if (!window.currentTeacher) {
-        console.log('교사 정보 대기 중... (loadSidebarMenu 완료 대기)');
         // 최대 3초 대기 (500ms 간격으로 6번 시도)
         for (let i = 0; i < 6; i++) {
             await new Promise(resolve => setTimeout(resolve, 500));
             if (window.currentTeacher) {
-                console.log('교사 정보 로드 완료:', window.currentTeacher);
                 break;
             }
         }
         
         // 여전히 없으면 교사 정보 직접 가져오기
         if (!window.currentTeacher) {
-            console.log('교사 정보를 직접 가져오는 중...');
             try {
                 const userResponse = await axios.get(`/api/users/${currentUser.id}`, {
                     headers: { 'Authorization': `Bearer ${authToken}` }
@@ -1524,7 +1553,6 @@ async function loadTeacherDashboardData() {
                         id: teacher.id,
                         permissions: teacherPermissions
                     };
-                    console.log('교사 정보 직접 로드 완료:', window.currentTeacher);
                 } else {
                     console.error('교사 정보를 찾을 수 없습니다.');
                     document.getElementById('teacher-homeroom-section').innerHTML = `
@@ -5138,8 +5166,6 @@ async function submitBulkTransfer() {
         // 성공/실패 카운트
         const succeeded = results.filter(r => r.status === 'fulfilled').length;
         const failed = results.filter(r => r.status === 'rejected').length;
-        
-        console.log(`성공: ${succeeded}명, 실패: ${failed}명`);
         
         if (failed > 0) {
             const failedReasons = results

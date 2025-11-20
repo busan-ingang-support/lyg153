@@ -141,15 +141,42 @@ async function showPublicHome() {
         </div>
     `;
 
-    // 기본 홈 페이지 로드
-    showPublicHomePage();
-    
     // 네비게이션 이벤트 설정
     setupPublicNavigation();
+    
+    // URL에서 페이지 확인하여 해당 페이지로 이동
+    const pageFromURL = getPublicPageFromURL();
+    if (pageFromURL && pageFromURL !== 'home') {
+        // 약간의 지연을 두어 기본 구조가 먼저 로드되도록 함
+        setTimeout(() => {
+            navigatePublicPage(pageFromURL, false); // URL은 이미 설정되어 있으므로 업데이트하지 않음
+        }, 100);
+    } else {
+        // 기본 홈 페이지 로드
+        showPublicHomePage();
+        // URL이 없으면 기본 홈으로 설정
+        if (!window.location.hash) {
+            navigatePublicPage('home', false);
+        }
+    }
+}
+
+// 공개 페이지용 URL에서 페이지 추출
+function getPublicPageFromURL() {
+    const hash = window.location.hash.slice(1); // # 제거
+    if (hash) {
+        // public- 접두사가 있으면 제거
+        if (hash.startsWith('public-')) {
+            return hash.replace('public-', '');
+        }
+        return hash;
+    }
+    return 'home';
 }
 
 // 공개 네비게이션 설정
 function setupPublicNavigation() {
+    // 네비게이션 링크 클릭 이벤트
     document.querySelectorAll('.public-nav-item').forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
@@ -166,10 +193,49 @@ function setupPublicNavigation() {
             navigatePublicPage(page);
         });
     });
+    
+    // 브라우저 뒤로가기/앞으로가기 처리
+    window.addEventListener('popstate', (e) => {
+        const page = e.state?.page || getPublicPageFromURL();
+        navigatePublicPage(page, false); // URL은 이미 변경되었으므로 업데이트하지 않음
+        updatePublicNavActive(page);
+    });
+    
+    // 해시 변경 처리 (직접 URL 입력 시)
+    window.addEventListener('hashchange', () => {
+        const page = getPublicPageFromURL();
+        navigatePublicPage(page, false);
+        updatePublicNavActive(page);
+    });
+}
+
+// 공개 네비게이션 활성 상태 업데이트
+function updatePublicNavActive(page) {
+    document.querySelectorAll('.public-nav-item').forEach(link => {
+        const linkPage = link.getAttribute('data-page');
+        if (linkPage === page) {
+            link.classList.add('text-purple-600', 'font-semibold');
+            link.classList.remove('text-gray-600');
+        } else {
+            link.classList.remove('text-purple-600', 'font-semibold');
+            link.classList.add('text-gray-600');
+        }
+    });
 }
 
 // 공개 페이지 네비게이션
-function navigatePublicPage(page) {
+function navigatePublicPage(page, updateURL = true) {
+    // URL 업데이트
+    if (updateURL) {
+        const newURL = `#public-${page}`;
+        if (window.location.hash !== newURL) {
+            window.history.pushState({ page }, '', newURL);
+        }
+    }
+    
+    // 스크롤 최상단으로
+    window.scrollTo(0, 0);
+    
     switch (page) {
         case 'home':
             showPublicHomePage();
@@ -206,139 +272,279 @@ async function showPublicHomePage() {
     `;
     
     try {
-        // 홈페이지 설정 로드
-        const response = await axios.get('/api/homepage');
-        const settings = response.data.settings || {};
+        // 홈페이지 모듈 로드
+        const response = await axios.get('/api/homepage-modules');
+        const modules = response.data.modules || [];
         
-        // 기본값 설정
-        const heroTitle = settings.hero_title || '꿈을 키우는 학교';
-        const heroSubtitle = settings.hero_subtitle || '우리 모두가 주인공이 되는 배움의 공간';
-        const value1Title = settings.value1_title || '사랑';
-        const value1Desc = settings.value1_desc || '서로를 존중하고 배려하며 사랑하는 마음';
-        const value2Title = settings.value2_title || '지혜';
-        const value2Desc = settings.value2_desc || '끊임없이 배우고 성장하는 지혜로운 사람';
-        const value3Title = settings.value3_title || '섬김';
-        const value3Desc = settings.value3_desc || '이웃과 사회를 섬기는 따뜻한 마음';
-        const feature1Title = settings.feature1_title || '소규모 학급';
-        const feature1Desc = settings.feature1_desc || '학생 개개인을 세심하게 돌보는 소규모 학급 운영';
-        const feature2Title = settings.feature2_title || '맞춤형 교육';
-        const feature2Desc = settings.feature2_desc || '학생의 흥미와 적성에 맞춘 개별화 교육';
-        const feature3Title = settings.feature3_title || '예체능 교육';
-        const feature3Desc = settings.feature3_desc || '다양한 예술과 체육 활동으로 감성 발달';
-        const feature4Title = settings.feature4_title || '체험 학습';
-        const feature4Desc = settings.feature4_desc || '현장 중심의 살아있는 배움 경험';
+        if (modules.length === 0) {
+            // 모듈이 없으면 기본 레이아웃 표시
+            content.innerHTML = `
+                <section class="relative bg-gradient-to-r from-purple-600 to-blue-600 text-white py-24">
+                    <div class="container mx-auto px-4 text-center">
+                        <h2 class="text-5xl font-bold mb-6">꿈을 키우는 학교</h2>
+                        <p class="text-2xl mb-8 text-purple-100">우리 모두가 주인공이 되는 배움의 공간</p>
+                        <div class="flex justify-center space-x-4">
+                            <button onclick="navigatePublicPage('about')" class="bg-white text-purple-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+                                학교 소개 보기
+                            </button>
+                            <button onclick="showLoginModal()" class="bg-purple-800 text-white px-8 py-3 rounded-lg font-semibold hover:bg-purple-900 transition-colors">
+                                로그인
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            `;
+            return;
+        }
         
-        content.innerHTML = `
-            <!-- 히어로 섹션 -->
-            <section class="relative bg-gradient-to-r from-purple-600 to-blue-600 text-white py-24">
-                <div class="container mx-auto px-4 text-center">
-                    <h2 class="text-5xl font-bold mb-6">${escapeHtml(heroTitle)}</h2>
-                    <p class="text-2xl mb-8 text-purple-100">${escapeHtml(heroSubtitle)}</p>
-                    <div class="flex justify-center space-x-4">
-                        <button onclick="navigatePublicPage('about')" class="bg-white text-purple-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
-                            학교 소개 보기
-                        </button>
-                        <button onclick="showLoginModal()" class="bg-purple-800 text-white px-8 py-3 rounded-lg font-semibold hover:bg-purple-900 transition-colors">
-                            로그인
-                        </button>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 학교 교훈 -->
-            <section class="py-16 bg-white">
-                <div class="container mx-auto px-4">
-                    <h3 class="text-3xl font-bold text-center text-gray-800 mb-12">교훈</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        <div class="text-center p-8 bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl">
-                            <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <i class="fas fa-heart text-3xl text-purple-600"></i>
-                            </div>
-                            <h4 class="text-xl font-bold text-gray-800 mb-3">${escapeHtml(value1Title)}</h4>
-                            <p class="text-gray-600">${escapeHtml(value1Desc)}</p>
-                        </div>
-                        <div class="text-center p-8 bg-gradient-to-br from-blue-50 to-green-50 rounded-xl">
-                            <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <i class="fas fa-lightbulb text-3xl text-blue-600"></i>
-                            </div>
-                            <h4 class="text-xl font-bold text-gray-800 mb-3">${escapeHtml(value2Title)}</h4>
-                            <p class="text-gray-600">${escapeHtml(value2Desc)}</p>
-                        </div>
-                        <div class="text-center p-8 bg-gradient-to-br from-green-50 to-yellow-50 rounded-xl">
-                            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <i class="fas fa-hands-helping text-3xl text-green-600"></i>
-                            </div>
-                            <h4 class="text-xl font-bold text-gray-800 mb-3">${escapeHtml(value3Title)}</h4>
-                            <p class="text-gray-600">${escapeHtml(value3Desc)}</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 공지사항 미리보기 -->
-            <section class="py-16 bg-gray-50">
-                <div class="container mx-auto px-4">
-                    <div class="flex justify-between items-center mb-8">
-                        <h3 class="text-3xl font-bold text-gray-800">공지사항</h3>
-                        <button onclick="navigatePublicPage('notice')" class="text-purple-600 hover:text-purple-700 font-medium">
-                            전체보기 → 
-                        </button>
-                    </div>
-                    <div id="public-notice-preview" class="bg-white rounded-xl shadow-md p-6">
-                        <p class="text-gray-500 text-center py-8">로딩 중...</p>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 특징 -->
-            <section class="py-16 bg-white">
-                <div class="container mx-auto px-4">
-                    <h3 class="text-3xl font-bold text-center text-gray-800 mb-12">우리 학교의 특징</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <div class="text-center p-6">
-                            <div class="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <i class="fas fa-users text-4xl text-purple-600"></i>
-                            </div>
-                            <h4 class="font-bold text-gray-800 mb-2">${escapeHtml(feature1Title)}</h4>
-                            <p class="text-sm text-gray-600">${escapeHtml(feature1Desc)}</p>
-                        </div>
-                        <div class="text-center p-6">
-                            <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <i class="fas fa-book-reader text-4xl text-blue-600"></i>
-                            </div>
-                            <h4 class="font-bold text-gray-800 mb-2">${escapeHtml(feature2Title)}</h4>
-                            <p class="text-sm text-gray-600">${escapeHtml(feature2Desc)}</p>
-                        </div>
-                        <div class="text-center p-6">
-                            <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <i class="fas fa-palette text-4xl text-green-600"></i>
-                            </div>
-                            <h4 class="font-bold text-gray-800 mb-2">${escapeHtml(feature3Title)}</h4>
-                            <p class="text-sm text-gray-600">${escapeHtml(feature3Desc)}</p>
-                        </div>
-                        <div class="text-center p-6">
-                            <div class="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <i class="fas fa-globe text-4xl text-yellow-600"></i>
-                            </div>
-                            <h4 class="font-bold text-gray-800 mb-2">${escapeHtml(feature4Title)}</h4>
-                            <p class="text-sm text-gray-600">${escapeHtml(feature4Desc)}</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        `;
-
-        // 공지사항 로드
-        loadPublicNoticePreview();
+        // 모듈 렌더링
+        let html = '';
+        for (const module of modules) {
+            html += renderHomepageModule(module);
+        }
+        
+        content.innerHTML = html;
+        
+        // 공지사항 모듈이 있으면 로드
+        const noticeModule = modules.find(m => m.module_type === 'notice');
+        if (noticeModule) {
+            loadPublicNoticePreview();
+        }
     } catch (error) {
-        console.error('홈페이지 설정 로드 실패:', error);
-        // 에러 발생 시 기본값으로 표시
+        console.error('홈페이지 모듈 로드 실패:', error);
         content.innerHTML = `
             <div class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg m-4">
                 홈페이지를 불러오는데 실패했습니다. 페이지를 새로고침해주세요.
             </div>
         `;
     }
+}
+
+// 홈페이지 모듈 렌더링
+function renderHomepageModule(module) {
+    const containerClass = {
+        'container': 'container mx-auto px-4',
+        'full_width': 'w-full',
+        'narrow': 'container mx-auto px-4 max-w-4xl'
+    }[module.container_type] || 'container mx-auto px-4';
+    
+    const style = [];
+    if (module.background_color) {
+        style.push(`background-color: ${module.background_color}`);
+    }
+    if (module.background_image) {
+        style.push(`background-image: url('${escapeHtml(module.background_image)}')`);
+        style.push(`background-size: cover`);
+        style.push(`background-position: center`);
+    }
+    if (module.padding_top) {
+        style.push(`padding-top: ${module.padding_top}px`);
+    }
+    if (module.padding_bottom) {
+        style.push(`padding-bottom: ${module.padding_bottom}px`);
+    }
+    if (module.margin_top) {
+        style.push(`margin-top: ${module.margin_top}px`);
+    }
+    if (module.margin_bottom) {
+        style.push(`margin-bottom: ${module.margin_bottom}px`);
+    }
+    
+    const sectionStyle = style.length > 0 ? ` style="${style.join('; ')}"` : '';
+    
+    let moduleHTML = '';
+    
+    switch (module.module_type) {
+        case 'hero':
+            moduleHTML = `
+                <section class="relative text-white py-24"${sectionStyle}>
+                    <div class="${containerClass} text-center">
+                        <h2 class="text-5xl font-bold mb-6">${escapeHtml(module.title || '꿈을 키우는 학교')}</h2>
+                        <p class="text-2xl mb-8 ${module.background_color ? '' : 'text-purple-100'}">${escapeHtml(module.subtitle || '우리 모두가 주인공이 되는 배움의 공간')}</p>
+                        <div class="flex justify-center space-x-4">
+                            <button onclick="navigatePublicPage('about')" class="bg-white text-purple-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+                                학교 소개 보기
+                            </button>
+                            <button onclick="showLoginModal()" class="bg-purple-800 text-white px-8 py-3 rounded-lg font-semibold hover:bg-purple-900 transition-colors">
+                                로그인
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            `;
+            break;
+            
+        case 'slides':
+            if (module.slides && module.slides.length > 0) {
+                moduleHTML = `
+                    <section class="py-16"${sectionStyle}>
+                        <div class="${containerClass}">
+                            <div class="relative overflow-hidden rounded-lg">
+                                <div id="slideshow-${module.id}" class="slideshow-container">
+                                    ${module.slides.map((slide, index) => `
+                                        <div class="slide ${index === 0 ? 'active' : ''}" style="display: ${index === 0 ? 'block' : 'none'};">
+                                            <img src="${escapeHtml(slide.image_url)}" alt="${escapeHtml(slide.image_alt || '')}" class="w-full h-auto object-cover" style="max-height: 600px;">
+                                            ${slide.title || slide.subtitle ? `
+                                                <div class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40">
+                                                    <div class="text-center text-white px-4">
+                                                        ${slide.title ? `<h3 class="text-4xl font-bold mb-2">${escapeHtml(slide.title)}</h3>` : ''}
+                                                        ${slide.subtitle ? `<p class="text-xl">${escapeHtml(slide.subtitle)}</p>` : ''}
+                                                        ${slide.link_url ? `<a href="${escapeHtml(slide.link_url)}" class="inline-block mt-4 bg-white text-purple-600 px-6 py-2 rounded-lg font-semibold hover:bg-gray-100">${escapeHtml(slide.link_text || '자세히 보기')}</a>` : ''}
+                                                    </div>
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                ${module.slides.length > 1 ? `
+                                    <button onclick="previousSlide(${module.id})" class="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full p-3">
+                                        <i class="fas fa-chevron-left text-gray-800"></i>
+                                    </button>
+                                    <button onclick="nextSlide(${module.id})" class="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full p-3">
+                                        <i class="fas fa-chevron-right text-gray-800"></i>
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </section>
+                `;
+            }
+            break;
+            
+        case 'values':
+            moduleHTML = `
+                <section class="py-16 bg-white"${sectionStyle}>
+                    <div class="${containerClass}">
+                        <h2 class="text-3xl font-bold text-center mb-12 text-gray-800">우리의 교훈</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            ${[1, 2, 3].map(i => {
+                                const icon = module[`value${i}_icon`];
+                                const title = module[`value${i}_title`] || '';
+                                const desc = module[`value${i}_desc`] || '';
+                                return `
+                                    <div class="text-center p-6">
+                                        ${icon ? `
+                                            <img src="${escapeHtml(icon)}" alt="${escapeHtml(title)}" class="w-20 h-20 mx-auto mb-4 object-contain">
+                                        ` : `
+                                            <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                <i class="fas fa-heart text-4xl text-red-600"></i>
+                                            </div>
+                                        `}
+                                        <h3 class="text-xl font-bold text-gray-800 mb-2">${escapeHtml(title)}</h3>
+                                        <p class="text-gray-600">${escapeHtml(desc)}</p>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                </section>
+            `;
+            break;
+            
+        case 'features':
+            moduleHTML = `
+                <section class="py-16 bg-gray-50"${sectionStyle}>
+                    <div class="${containerClass}">
+                        <h2 class="text-3xl font-bold text-center mb-12 text-gray-800">우리 학교의 특징</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            ${[1, 2, 3, 4].map(i => {
+                                const icon = module[`feature${i}_icon`];
+                                const title = module[`feature${i}_title`] || '';
+                                const desc = module[`feature${i}_desc`] || '';
+                                return `
+                                    <div class="text-center p-6">
+                                        ${icon ? `
+                                            <img src="${escapeHtml(icon)}" alt="${escapeHtml(title)}" class="w-20 h-20 mx-auto mb-4 object-contain">
+                                        ` : `
+                                            <div class="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                <i class="fas fa-users text-4xl text-purple-600"></i>
+                                            </div>
+                                        `}
+                                        <h4 class="font-bold text-gray-800 mb-2">${escapeHtml(title)}</h4>
+                                        <p class="text-sm text-gray-600">${escapeHtml(desc)}</p>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                </section>
+            `;
+            break;
+            
+        case 'text':
+            moduleHTML = `
+                <section class="py-16"${sectionStyle}>
+                    <div class="${containerClass}">
+                        ${module.title ? `<h2 class="text-3xl font-bold mb-6 text-gray-800">${escapeHtml(module.title)}</h2>` : ''}
+                        <div class="prose max-w-none">
+                            ${escapeHtml(module.content || '').replace(/\n/g, '<br>')}
+                        </div>
+                    </div>
+                </section>
+            `;
+            break;
+            
+        case 'image':
+            if (module.image_url) {
+                const imgStyle = [];
+                if (module.image_width) imgStyle.push(`width: ${module.image_width}px`);
+                if (module.image_height) imgStyle.push(`height: ${module.image_height}px`);
+                moduleHTML = `
+                    <section class="py-16"${sectionStyle}>
+                        <div class="${containerClass} text-center">
+                            <img src="${escapeHtml(module.image_url)}" 
+                                 alt="${escapeHtml(module.image_alt || '')}" 
+                                 class="mx-auto ${imgStyle.length > 0 ? '' : 'max-w-full h-auto'}"
+                                 ${imgStyle.length > 0 ? `style="${imgStyle.join('; ')}"` : ''}>
+                        </div>
+                    </section>
+                `;
+            }
+            break;
+            
+        case 'custom':
+            if (module.html_content) {
+                moduleHTML = `
+                    <section class="py-16"${sectionStyle}>
+                        <div class="${containerClass}">
+                            ${module.html_content}
+                        </div>
+                    </section>
+                `;
+            }
+            break;
+    }
+    
+    return moduleHTML || '';
+}
+
+// 슬라이드 네비게이션
+let slideIndices = {};
+
+function nextSlide(moduleId) {
+    if (!slideIndices[moduleId]) slideIndices[moduleId] = 0;
+    const container = document.querySelector(`#slideshow-${moduleId}`);
+    if (!container) return;
+    
+    const slides = container.querySelectorAll('.slide');
+    if (slides.length === 0) return;
+    
+    slides[slideIndices[moduleId]].style.display = 'none';
+    slideIndices[moduleId] = (slideIndices[moduleId] + 1) % slides.length;
+    slides[slideIndices[moduleId]].style.display = 'block';
+}
+
+function previousSlide(moduleId) {
+    if (!slideIndices[moduleId]) slideIndices[moduleId] = 0;
+    const container = document.querySelector(`#slideshow-${moduleId}`);
+    if (!container) return;
+    
+    const slides = container.querySelectorAll('.slide');
+    if (slides.length === 0) return;
+    
+    slides[slideIndices[moduleId]].style.display = 'none';
+    slideIndices[moduleId] = (slideIndices[moduleId] - 1 + slides.length) % slides.length;
+    slides[slideIndices[moduleId]].style.display = 'block';
 }
 
 // 공개 공지사항 미리보기 로드
