@@ -404,7 +404,7 @@ async function editModule(moduleId) {
     let formHTML = getModuleEditForm(module);
     
     modal.innerHTML = `
-        <div class="bg-white rounded-lg shadow-xl p-8 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="bg-white rounded-lg shadow-xl p-8 max-w-7xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-2xl font-bold text-gray-800">모듈 편집</h2>
                 <button onclick="closeEditModuleModal()" class="text-gray-500 hover:text-gray-700">
@@ -412,20 +412,53 @@ async function editModule(moduleId) {
                 </button>
             </div>
             
-            <form id="edit-module-form" class="space-y-6">
-                ${formHTML}
-            </form>
+            <div class="flex gap-6 flex-1 overflow-hidden">
+                <!-- 편집 폼 -->
+                <div class="w-1/2 overflow-y-auto pr-4">
+                    <form id="edit-module-form" class="space-y-6">
+                        ${formHTML}
+                        <div class="flex justify-end space-x-4 mt-6 pt-6 border-t">
+                            <button type="button" onclick="closeEditModuleModal()" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                                취소
+                            </button>
+                            <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                                저장
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- 실시간 미리보기 -->
+                <div class="w-1/2 border-l pl-6 overflow-y-auto">
+                    <div class="sticky top-0 bg-white pb-4 mb-4 border-b">
+                        <h3 class="text-lg font-bold text-gray-800 mb-2">
+                            <i class="fas fa-eye mr-2"></i>실시간 미리보기
+                        </h3>
+                        <p class="text-sm text-gray-600">입력한 내용이 실시간으로 표시됩니다</p>
+                    </div>
+                    <div id="module-preview" class="min-h-[400px]">
+                        ${renderModulePreview(module)}
+                    </div>
+                </div>
+            </div>
         </div>
     `;
     
     document.body.appendChild(modal);
+    
+    // 현재 편집 중인 모듈을 전역 변수에 저장 (미리보기 업데이트용)
+    window.currentEditingModule = module;
     
     // 폼 제출 이벤트
     const form = document.getElementById('edit-module-form');
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         await saveModule(moduleId, form);
+        window.currentEditingModule = null;
     });
+    
+    // 실시간 미리보기 업데이트
+    setupPreviewUpdate(module);
 }
 
 // 모듈 편집 폼 생성
@@ -666,16 +699,7 @@ function getModuleEditForm(module) {
             break;
     }
     
-    return commonSettings + typeSpecificForm + `
-        <div class="flex justify-end space-x-4">
-            <button type="button" onclick="closeEditModuleModal()" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-                취소
-            </button>
-            <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                <i class="fas fa-save mr-2"></i>저장
-            </button>
-        </div>
-    `;
+    return commonSettings + typeSpecificForm;
 }
 
 // 슬라이드 편집기 렌더링
@@ -726,6 +750,27 @@ function addSlide() {
     const index = slidesList.children.length;
     const slideHTML = renderSlideEditor({}, index);
     slidesList.insertAdjacentHTML('beforeend', slideHTML);
+    
+    // 새 슬라이드의 입력 필드에 미리보기 업데이트 이벤트 추가
+    const newSlide = slidesList.lastElementChild;
+    const inputs = newSlide.querySelectorAll('input, textarea');
+    inputs.forEach(input => {
+        input.addEventListener('input', () => {
+            const form = document.getElementById('edit-module-form');
+            const module = window.currentEditingModule;
+            if (form && module) updatePreview(form, module);
+        });
+        input.addEventListener('change', () => {
+            const form = document.getElementById('edit-module-form');
+            const module = window.currentEditingModule;
+            if (form && module) updatePreview(form, module);
+        });
+    });
+    
+    // 미리보기 업데이트
+    const form = document.getElementById('edit-module-form');
+    const module = window.currentEditingModule;
+    if (form && module) updatePreview(form, module);
 }
 
 // 슬라이드 제거
@@ -739,6 +784,11 @@ function removeSlide(index) {
             slide.setAttribute('data-slide-index', i);
             slide.querySelector('h4').textContent = `슬라이드 ${i + 1}`;
         });
+        
+        // 미리보기 업데이트
+        const form = document.getElementById('edit-module-form');
+        const module = window.currentEditingModule;
+        if (form && module) updatePreview(form, module);
     }
 }
 
@@ -887,6 +937,170 @@ function closeEditModuleModal() {
     const modal = document.getElementById('edit-module-modal');
     if (modal) {
         modal.remove();
+    }
+    window.currentEditingModule = null;
+}
+
+// 모듈 미리보기 렌더링 (public-home.js의 renderHomepageModule 재사용)
+function renderModulePreview(module) {
+    // public-home.js의 renderHomepageModule 함수가 있으면 사용
+    if (typeof renderHomepageModule === 'function') {
+        return renderHomepageModule(module);
+    }
+    
+    // 없으면 간단한 미리보기
+    return `
+        <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center text-gray-500">
+            <i class="fas fa-eye text-4xl mb-4"></i>
+            <p>미리보기를 로드하는 중...</p>
+        </div>
+    `;
+}
+
+// 실시간 미리보기 업데이트 설정
+function setupPreviewUpdate(module) {
+    const form = document.getElementById('edit-module-form');
+    const previewContainer = document.getElementById('module-preview');
+    
+    if (!form || !previewContainer) return;
+    
+    // 모든 입력 필드에 이벤트 리스너 추가
+    const addEventListeners = () => {
+        const inputs = form.querySelectorAll('input, textarea, select');
+        inputs.forEach(input => {
+            // 이미 이벤트가 추가되었는지 확인
+            if (!input.hasAttribute('data-preview-listener')) {
+                input.setAttribute('data-preview-listener', 'true');
+                input.addEventListener('input', () => updatePreview(form, module));
+                input.addEventListener('change', () => updatePreview(form, module));
+            }
+        });
+    };
+    
+    // 초기 이벤트 리스너 추가
+    addEventListeners();
+    
+    // 슬라이드 편집기가 동적으로 추가될 수 있으므로 MutationObserver 사용
+    const observer = new MutationObserver(() => {
+        addEventListeners();
+    });
+    
+    observer.observe(form, { childList: true, subtree: true });
+    
+    // 초기 미리보기
+    updatePreview(form, module);
+}
+
+// 미리보기 업데이트
+function updatePreview(form, originalModule) {
+    const previewContainer = document.getElementById('module-preview');
+    if (!previewContainer) return;
+    
+    // 폼 데이터 수집
+    const formData = new FormData(form);
+    const data = {};
+    for (const [key, value] of formData.entries()) {
+        data[key] = value;
+    }
+    
+    // 모듈 객체 생성
+    const previewModule = {
+        ...originalModule,
+        container_type: data.container_type || originalModule.container_type,
+        is_active: data.is_active === '1',
+        background_color: data.background_color || originalModule.background_color,
+        background_image: data.background_image || originalModule.background_image,
+        padding_top: parseInt(data.padding_top) || originalModule.padding_top || 0,
+        padding_bottom: parseInt(data.padding_bottom) || originalModule.padding_bottom || 0,
+        margin_top: parseInt(data.margin_top) || originalModule.margin_top || 0,
+        margin_bottom: parseInt(data.margin_bottom) || originalModule.margin_bottom || 0
+    };
+    
+    // 모듈 타입별 데이터 추가
+    switch (originalModule.module_type) {
+        case 'hero':
+            previewModule.title = data.title || '';
+            previewModule.subtitle = data.subtitle || '';
+            if (data.hero_background_image) {
+                previewModule.background_image = data.hero_background_image;
+            }
+            break;
+            
+        case 'slides':
+            // 슬라이드 데이터 수집
+            const slides = [];
+            const slideEditors = form.querySelectorAll('.slide-editor');
+            slideEditors.forEach((editor, index) => {
+                const slideData = {
+                    title: editor.querySelector(`[name="slide_title_${index}"]`)?.value || '',
+                    subtitle: editor.querySelector(`[name="slide_subtitle_${index}"]`)?.value || '',
+                    image_url: editor.querySelector(`[name="slide_image_${index}"]`)?.value || '',
+                    image_alt: editor.querySelector(`[name="slide_alt_${index}"]`)?.value || '',
+                    link_url: editor.querySelector(`[name="slide_link_${index}"]`)?.value || '',
+                    link_text: editor.querySelector(`[name="slide_link_text_${index}"]`)?.value || '',
+                    is_active: true
+                };
+                if (slideData.image_url) {
+                    slides.push(slideData);
+                }
+            });
+            previewModule.slides = slides;
+            break;
+            
+        case 'values':
+            previewModule.value1_icon = data.value1_icon || '';
+            previewModule.value1_title = data.value1_title || '';
+            previewModule.value1_desc = data.value1_desc || '';
+            previewModule.value2_icon = data.value2_icon || '';
+            previewModule.value2_title = data.value2_title || '';
+            previewModule.value2_desc = data.value2_desc || '';
+            previewModule.value3_icon = data.value3_icon || '';
+            previewModule.value3_title = data.value3_title || '';
+            previewModule.value3_desc = data.value3_desc || '';
+            break;
+            
+        case 'features':
+            previewModule.feature1_icon = data.feature1_icon || '';
+            previewModule.feature1_title = data.feature1_title || '';
+            previewModule.feature1_desc = data.feature1_desc || '';
+            previewModule.feature2_icon = data.feature2_icon || '';
+            previewModule.feature2_title = data.feature2_title || '';
+            previewModule.feature2_desc = data.feature2_desc || '';
+            previewModule.feature3_icon = data.feature3_icon || '';
+            previewModule.feature3_title = data.feature3_title || '';
+            previewModule.feature3_desc = data.feature3_desc || '';
+            previewModule.feature4_icon = data.feature4_icon || '';
+            previewModule.feature4_title = data.feature4_title || '';
+            previewModule.feature4_desc = data.feature4_desc || '';
+            break;
+            
+        case 'text':
+            previewModule.title = data.title || '';
+            previewModule.content = data.content || '';
+            break;
+            
+        case 'image':
+            previewModule.image_url = data.image_url || '';
+            previewModule.image_alt = data.image_alt || '';
+            previewModule.image_width = data.image_width ? parseInt(data.image_width) : null;
+            previewModule.image_height = data.image_height ? parseInt(data.image_height) : null;
+            break;
+            
+        case 'custom':
+            previewModule.html_content = data.html_content || '';
+            break;
+    }
+    
+    // 미리보기 렌더링
+    if (typeof renderHomepageModule === 'function') {
+        previewContainer.innerHTML = renderHomepageModule(previewModule);
+    } else {
+        previewContainer.innerHTML = `
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center text-gray-500">
+                <i class="fas fa-eye text-4xl mb-4"></i>
+                <p>미리보기 기능을 사용하려면 페이지를 새로고침해주세요.</p>
+            </div>
+        `;
     }
 }
 

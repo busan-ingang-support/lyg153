@@ -277,7 +277,7 @@ async function showPublicHomePage() {
         const modules = response.data.modules || [];
         
         if (modules.length === 0) {
-            // 모듈이 없으면 기본 레이아웃 표시
+            // 모듈이 없으면 안내 메시지 표시
             content.innerHTML = `
                 <section class="relative bg-gradient-to-r from-purple-600 to-blue-600 text-white py-24">
                     <div class="container mx-auto px-4 text-center">
@@ -291,6 +291,12 @@ async function showPublicHomePage() {
                                 로그인
                             </button>
                         </div>
+                    </div>
+                </section>
+                <section class="py-16 bg-gray-50">
+                    <div class="container mx-auto px-4 text-center">
+                        <p class="text-gray-600 mb-4">홈페이지 모듈이 아직 설정되지 않았습니다.</p>
+                        <p class="text-sm text-gray-500">최고 관리자로 로그인하여 홈페이지 모듈을 추가해주세요.</p>
                     </div>
                 </section>
             `;
