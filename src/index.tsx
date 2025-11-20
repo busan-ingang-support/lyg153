@@ -83,7 +83,7 @@ app.get('/', (c) => {
     <body class="bg-gray-50">
         <div id="app">
             <!-- 로그인 화면 -->
-            <div id="login-screen" class="min-h-screen flex items-center justify-center p-4">
+            <div id="login-screen" class="hidden min-h-screen flex items-center justify-center p-4">
                 <div class="card-modern w-full max-w-md">
                     <div class="text-center mb-8">
                         <div class="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-purple-100 mb-4">

@@ -157,6 +157,12 @@ async function handleLogin(e) {
             loginModal.classList.add('hidden');
         }
         
+        // 로그인 화면 숨기기 (있으면)
+        const loginScreen = document.getElementById('login-screen');
+        if (loginScreen) {
+            loginScreen.classList.add('hidden');
+        }
+        
         // 역할별 대시보드로 이동 (initializeApp에서 이미 호출되었으므로 건너뛰기)
         if (!window.isInitializing) {
             showDashboard();
