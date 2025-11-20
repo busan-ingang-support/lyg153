@@ -180,6 +180,20 @@ function handleLogout() {
     showPublicHome();
 }
 
+// 홈페이지 보기 처리 (로그인 상태 유지)
+function handleViewHomepage() {
+    // 공개 홈페이지로 이동하되, 로그인 상태는 유지
+    if (typeof showPublicHome === 'function') {
+        showPublicHome();
+        // URL을 홈페이지로 설정
+        if (window.location.hash) {
+            window.history.replaceState(null, '', window.location.pathname + '#public-home');
+        } else {
+            window.history.pushState(null, '', window.location.pathname + '#public-home');
+        }
+    }
+}
+
 // 역할별 메인 화면 라우팅
 async function showDashboard() {
     // 공개 홈페이지 숨기기 (있으면)
@@ -264,6 +278,9 @@ async function showAdminDashboard() {
                             </div>
                             <div class="flex items-center space-x-4">
                                 <span id="user-info" class="text-sm text-gray-600"></span>
+                                <button id="view-homepage-btn" class="px-4 py-2 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 smooth-transition font-medium text-sm">
+                                    <i class="fas fa-home mr-2"></i>홈페이지 보기
+                                </button>
                                 <button id="logout-btn" class="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 smooth-transition font-medium text-sm">
                                     <i class="fas fa-sign-out-alt mr-2"></i>로그아웃
                                 </button>
@@ -296,6 +313,9 @@ async function showAdminDashboard() {
         
         // 로그아웃 버튼 이벤트 재설정
         document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
+        
+        // 홈페이지 보기 버튼 이벤트 설정
+        document.getElementById('view-homepage-btn')?.addEventListener('click', handleViewHomepage);
         
         dashboardScreen = document.getElementById('dashboard-screen');
     } else {

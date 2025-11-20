@@ -45,9 +45,18 @@ async function showPublicHome() {
                                 <a href="#" class="public-nav-item text-gray-600 hover:text-purple-600 font-medium transition-colors" data-page="notice">공지사항</a>
                                 <a href="#" class="public-nav-item text-gray-600 hover:text-purple-600 font-medium transition-colors" data-page="location">오시는 길</a>
                             </nav>
-                            <button onclick="showLoginModal()" class="btn-pastel-primary px-6 py-2 rounded-lg font-medium">
-                                <i class="fas fa-sign-in-alt mr-2"></i>로그인
-                            </button>
+                            ${typeof currentUser !== 'undefined' && currentUser ? `
+                                <div class="flex items-center space-x-4">
+                                    <span class="text-sm text-gray-600">${escapeHtml(currentUser.name)}님</span>
+                                    <button onclick="goToDashboard()" class="btn-pastel-primary px-6 py-2 rounded-lg font-medium">
+                                        <i class="fas fa-tachometer-alt mr-2"></i>대시보드
+                                    </button>
+                                </div>
+                            ` : `
+                                <button onclick="showLoginModal()" class="btn-pastel-primary px-6 py-2 rounded-lg font-medium">
+                                    <i class="fas fa-sign-in-alt mr-2"></i>로그인
+                                </button>
+                            `}
                         </div>
                     </div>
                 </div>
@@ -949,5 +958,27 @@ function formatDate(dateString) {
         month: 'long',
         day: 'numeric'
     });
+}
+
+// 대시보드로 이동 (로그인 상태일 때)
+function goToDashboard() {
+    if (typeof showDashboard === 'function') {
+        showDashboard();
+        // URL을 대시보드로 설정
+        if (window.location.hash) {
+            window.history.replaceState(null, '', window.location.pathname + '#dashboard');
+        } else {
+            window.history.pushState(null, '', window.location.pathname + '#dashboard');
+        }
+    } else {
+        // showDashboard가 아직 로드되지 않았으면 잠시 후 재시도
+        setTimeout(() => {
+            if (typeof showDashboard === 'function') {
+                showDashboard();
+            } else {
+                alert('대시보드로 이동할 수 없습니다. 페이지를 새로고침해주세요.');
+            }
+        }, 100);
+    }
 }
 
