@@ -41,75 +41,70 @@ async function checkSuperAdminPermission(c: any): Promise<boolean> {
 modules.get('/', async (c) => {
   const { DB } = c.env
 
-  const result = await DB.prepare(`
-    SELECT 
-      m.*,
-      GROUP_CONCAT(
-        json_object('key', s.setting_key, 'value', s.setting_value, 'type', s.setting_type)
-      ) as settings_json
-    FROM homepage_modules m
-    LEFT JOIN homepage_module_settings s ON m.id = s.module_id
-    WHERE m.is_active = 1
-    GROUP BY m.id
-    ORDER BY m.display_order ASC
-  `).all()
+  try {
+    // 먼저 모듈 목록 조회
+    const result = await DB.prepare(`
+      SELECT * FROM homepage_modules
+      WHERE is_active = 1
+      ORDER BY display_order ASC
+    `).all()
 
-  // 각 모듈의 설정을 파싱하고 슬라이드 항목도 함께 조회
-  const modulesWithData = await Promise.all(
-    result.results.map(async (row: any) => {
-      const module: any = {
-        id: row.id,
-        module_type: row.module_type,
-        display_order: row.display_order,
-        container_type: row.container_type,
-        background_color: row.background_color,
-        background_image: row.background_image,
-        padding_top: row.padding_top,
-        padding_bottom: row.padding_bottom,
-        margin_top: row.margin_top,
-        margin_bottom: row.margin_bottom
-      };
+    // 각 모듈의 설정과 슬라이드 항목도 함께 조회
+    const modulesWithData = await Promise.all(
+      result.results.map(async (row: any) => {
+        const module: any = {
+          id: row.id,
+          module_type: row.module_type,
+          display_order: row.display_order,
+          container_type: row.container_type,
+          background_color: row.background_color,
+          background_image: row.background_image,
+          padding_top: row.padding_top,
+          padding_bottom: row.padding_bottom,
+          margin_top: row.margin_top,
+          margin_bottom: row.margin_bottom
+        };
 
-      // 설정 파싱
-      if (row.settings_json) {
-        const settings = row.settings_json.split(',').map((s: string) => {
-          try {
-            return JSON.parse(s);
-          } catch {
-            return null;
-          }
-        }).filter(Boolean);
+        // 설정 조회
+        const settingsResult = await DB.prepare(`
+          SELECT setting_key, setting_value, setting_type
+          FROM homepage_module_settings
+          WHERE module_id = ?
+        `).bind(row.id).all();
 
-        settings.forEach((setting: any) => {
-          let value = setting.value;
-          if (setting.type === 'json') {
+        settingsResult.results.forEach((setting: any) => {
+          let value = setting.setting_value;
+          if (setting.setting_type === 'json') {
             try {
               value = JSON.parse(value);
             } catch {}
-          } else if (setting.type === 'number') {
+          } else if (setting.setting_type === 'number') {
             value = Number(value);
-          } else if (setting.type === 'boolean') {
+          } else if (setting.setting_type === 'boolean') {
             value = value === 'true' || value === '1';
           }
-          module[setting.key] = value;
+          module[setting.setting_key] = value;
         });
-      }
 
-      // 슬라이드 모듈인 경우 슬라이드 항목 조회
-      if (row.module_type === 'slides') {
-        const slides = await DB.prepare(`
-          SELECT * FROM homepage_slides
-          WHERE module_id = ? AND is_active = 1
-          ORDER BY slide_order ASC
-        `).bind(row.id).all();
-        module.slides = slides.results;
-      }
+        // 슬라이드 모듈인 경우 슬라이드 항목 조회
+        if (row.module_type === 'slides') {
+          const slides = await DB.prepare(`
+            SELECT * FROM homepage_slides
+            WHERE module_id = ? AND is_active = 1
+            ORDER BY slide_order ASC
+          `).bind(row.id).all();
+          module.slides = slides.results;
+        }
 
-      return module;
-    })
-  );
+        return module;
+      })
+    );
 
-  return c.json({ success: true, modules: modulesWithData })
+    return c.json({ success: true, modules: modulesWithData })
+  } catch (error: any) {
+    console.error('모듈 조회 오류:', error);
+    return c.json({ success: false, message: error.message || '모듈을 불러오는 중 오류가 발생했습니다.' }, 500)
+  }
 })
 
 // 모든 모듈 조회 (관리자용 - 비활성 포함)
@@ -121,75 +116,70 @@ modules.get('/admin', async (c) => {
 
   const { DB } = c.env
 
-  const result = await DB.prepare(`
-    SELECT 
-      m.*,
-      GROUP_CONCAT(
-        json_object('key', s.setting_key, 'value', s.setting_value, 'type', s.setting_type)
-      ) as settings_json
-    FROM homepage_modules m
-    LEFT JOIN homepage_module_settings s ON m.id = s.module_id
-    GROUP BY m.id
-    ORDER BY m.display_order ASC
-  `).all()
+  try {
+    // 먼저 모듈 목록 조회
+    const result = await DB.prepare(`
+      SELECT * FROM homepage_modules
+      ORDER BY display_order ASC
+    `).all()
 
-  // 슬라이드 모듈의 경우 슬라이드 항목도 함께 조회
-  const modulesWithData = await Promise.all(
-    result.results.map(async (row: any) => {
-      const module: any = {
-        id: row.id,
-        module_type: row.module_type,
-        display_order: row.display_order,
-        is_active: row.is_active,
-        container_type: row.container_type,
-        background_color: row.background_color,
-        background_image: row.background_image,
-        padding_top: row.padding_top,
-        padding_bottom: row.padding_bottom,
-        margin_top: row.margin_top,
-        margin_bottom: row.margin_bottom
-      };
+    // 각 모듈의 설정과 슬라이드 항목도 함께 조회
+    const modulesWithData = await Promise.all(
+      result.results.map(async (row: any) => {
+        const module: any = {
+          id: row.id,
+          module_type: row.module_type,
+          display_order: row.display_order,
+          is_active: row.is_active,
+          container_type: row.container_type,
+          background_color: row.background_color,
+          background_image: row.background_image,
+          padding_top: row.padding_top,
+          padding_bottom: row.padding_bottom,
+          margin_top: row.margin_top,
+          margin_bottom: row.margin_bottom
+        };
 
-      // 설정 파싱
-      if (row.settings_json) {
-        const settings = row.settings_json.split(',').map((s: string) => {
-          try {
-            return JSON.parse(s);
-          } catch {
-            return null;
-          }
-        }).filter(Boolean);
+        // 설정 조회
+        const settingsResult = await DB.prepare(`
+          SELECT setting_key, setting_value, setting_type
+          FROM homepage_module_settings
+          WHERE module_id = ?
+        `).bind(row.id).all();
 
-        settings.forEach((setting: any) => {
-          let value = setting.value;
-          if (setting.type === 'json') {
+        settingsResult.results.forEach((setting: any) => {
+          let value = setting.setting_value;
+          if (setting.setting_type === 'json') {
             try {
               value = JSON.parse(value);
             } catch {}
-          } else if (setting.type === 'number') {
+          } else if (setting.setting_type === 'number') {
             value = Number(value);
-          } else if (setting.type === 'boolean') {
+          } else if (setting.setting_type === 'boolean') {
             value = value === 'true' || value === '1';
           }
-          module[setting.key] = value;
+          module[setting.setting_key] = value;
         });
-      }
 
-      // 슬라이드 모듈인 경우 슬라이드 항목 조회
-      if (row.module_type === 'slides') {
-        const slides = await DB.prepare(`
-          SELECT * FROM homepage_slides
-          WHERE module_id = ?
-          ORDER BY slide_order ASC
-        `).bind(row.id).all();
-        module.slides = slides.results;
-      }
+        // 슬라이드 모듈인 경우 슬라이드 항목 조회
+        if (row.module_type === 'slides') {
+          const slides = await DB.prepare(`
+            SELECT * FROM homepage_slides
+            WHERE module_id = ?
+            ORDER BY slide_order ASC
+          `).bind(row.id).all();
+          module.slides = slides.results;
+        }
 
-      return module;
-    })
-  );
+        return module;
+      })
+    );
 
-  return c.json({ success: true, modules: modulesWithData })
+    return c.json({ success: true, modules: modulesWithData })
+  } catch (error: any) {
+    console.error('모듈 조회 오류:', error);
+    return c.json({ success: false, message: error.message || '모듈을 불러오는 중 오류가 발생했습니다.' }, 500)
+  }
 })
 
 // 모듈 생성
