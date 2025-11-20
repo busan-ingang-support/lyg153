@@ -3,8 +3,23 @@
 // ============================================
 
 // 공개 홈페이지 표시
-function showPublicHome() {
+async function showPublicHome() {
     const app = document.getElementById('app');
+    
+    // 홈페이지 설정 로드 (푸터용)
+    let contactPhone = '000-0000-0000';
+    let contactEmail = 'school@example.com';
+    let contactAddress = '서울시 강남구';
+    
+    try {
+        const response = await axios.get('/api/homepage');
+        const settings = response.data.settings || {};
+        contactPhone = settings.contact_phone || contactPhone;
+        contactEmail = settings.contact_email || contactEmail;
+        contactAddress = settings.contact_address || contactAddress;
+    } catch (error) {
+        console.error('푸터 정보 로드 실패:', error);
+    }
     
     app.innerHTML = `
         <!-- 공개 학교 홈페이지 -->
@@ -66,9 +81,9 @@ function showPublicHome() {
                         <div>
                             <h4 class="font-semibold mb-4">문의</h4>
                             <ul class="space-y-2 text-sm text-gray-400">
-                                <li><i class="fas fa-phone mr-2"></i>대표전화: 000-0000-0000</li>
-                                <li><i class="fas fa-envelope mr-2"></i>이메일: school@example.com</li>
-                                <li><i class="fas fa-map-marker-alt mr-2"></i>주소: 서울시 강남구</li>
+                                <li><i class="fas fa-phone mr-2"></i>대표전화: ${escapeHtml(contactPhone)}</li>
+                                <li><i class="fas fa-envelope mr-2"></i>이메일: ${escapeHtml(contactEmail)}</li>
+                                <li><i class="fas fa-map-marker-alt mr-2"></i>주소: ${escapeHtml(contactAddress)}</li>
                             </ul>
                         </div>
                     </div>
@@ -179,111 +194,151 @@ function navigatePublicPage(page) {
 // ============================================
 // 메인 홈 페이지
 // ============================================
-function showPublicHomePage() {
+async function showPublicHomePage() {
     const content = document.getElementById('public-content');
     
+    // 로딩 표시
     content.innerHTML = `
-        <!-- 히어로 섹션 -->
-        <section class="relative bg-gradient-to-r from-purple-600 to-blue-600 text-white py-24">
-            <div class="container mx-auto px-4 text-center">
-                <h2 class="text-5xl font-bold mb-6">꿈을 키우는 학교</h2>
-                <p class="text-2xl mb-8 text-purple-100">우리 모두가 주인공이 되는 배움의 공간</p>
-                <div class="flex justify-center space-x-4">
-                    <button onclick="navigatePublicPage('about')" class="bg-white text-purple-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
-                        학교 소개 보기
-                    </button>
-                    <button onclick="showLoginModal()" class="bg-purple-800 text-white px-8 py-3 rounded-lg font-semibold hover:bg-purple-900 transition-colors">
-                        로그인
-                    </button>
-                </div>
-            </div>
-        </section>
-
-        <!-- 학교 교훈 -->
-        <section class="py-16 bg-white">
-            <div class="container mx-auto px-4">
-                <h3 class="text-3xl font-bold text-center text-gray-800 mb-12">교훈</h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <div class="text-center p-8 bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl">
-                        <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i class="fas fa-heart text-3xl text-purple-600"></i>
-                        </div>
-                        <h4 class="text-xl font-bold text-gray-800 mb-3">사랑</h4>
-                        <p class="text-gray-600">서로를 존중하고 배려하며 사랑하는 마음</p>
-                    </div>
-                    <div class="text-center p-8 bg-gradient-to-br from-blue-50 to-green-50 rounded-xl">
-                        <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i class="fas fa-lightbulb text-3xl text-blue-600"></i>
-                        </div>
-                        <h4 class="text-xl font-bold text-gray-800 mb-3">지혜</h4>
-                        <p class="text-gray-600">끊임없이 배우고 성장하는 지혜로운 사람</p>
-                    </div>
-                    <div class="text-center p-8 bg-gradient-to-br from-green-50 to-yellow-50 rounded-xl">
-                        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i class="fas fa-hands-helping text-3xl text-green-600"></i>
-                        </div>
-                        <h4 class="text-xl font-bold text-gray-800 mb-3">섬김</h4>
-                        <p class="text-gray-600">이웃과 사회를 섬기는 따뜻한 마음</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- 공지사항 미리보기 -->
-        <section class="py-16 bg-gray-50">
-            <div class="container mx-auto px-4">
-                <div class="flex justify-between items-center mb-8">
-                    <h3 class="text-3xl font-bold text-gray-800">공지사항</h3>
-                    <button onclick="navigatePublicPage('notice')" class="text-purple-600 hover:text-purple-700 font-medium">
-                        전체보기 →
-                    </button>
-                </div>
-                <div id="public-notice-preview" class="bg-white rounded-xl shadow-md p-6">
-                    <p class="text-gray-500 text-center py-8">로딩 중...</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- 특징 -->
-        <section class="py-16 bg-white">
-            <div class="container mx-auto px-4">
-                <h3 class="text-3xl font-bold text-center text-gray-800 mb-12">우리 학교의 특징</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div class="text-center p-6">
-                        <div class="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i class="fas fa-users text-4xl text-purple-600"></i>
-                        </div>
-                        <h4 class="font-bold text-gray-800 mb-2">소규모 학급</h4>
-                        <p class="text-sm text-gray-600">학생 개개인을 세심하게 돌보는 소규모 학급 운영</p>
-                    </div>
-                    <div class="text-center p-6">
-                        <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i class="fas fa-book-reader text-4xl text-blue-600"></i>
-                        </div>
-                        <h4 class="font-bold text-gray-800 mb-2">맞춤형 교육</h4>
-                        <p class="text-sm text-gray-600">학생의 흥미와 적성에 맞춘 개별화 교육</p>
-                    </div>
-                    <div class="text-center p-6">
-                        <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i class="fas fa-palette text-4xl text-green-600"></i>
-                        </div>
-                        <h4 class="font-bold text-gray-800 mb-2">예체능 교육</h4>
-                        <p class="text-sm text-gray-600">다양한 예술과 체육 활동으로 감성 발달</p>
-                    </div>
-                    <div class="text-center p-6">
-                        <div class="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i class="fas fa-globe text-4xl text-yellow-600"></i>
-                        </div>
-                        <h4 class="font-bold text-gray-800 mb-2">체험 학습</h4>
-                        <p class="text-sm text-gray-600">현장 중심의 살아있는 배움 경험</p>
-                    </div>
-                </div>
-            </div>
-        </section>
+        <div class="text-center py-24">
+            <i class="fas fa-spinner fa-spin text-4xl text-purple-600"></i>
+            <p class="text-gray-600 mt-4">로딩 중...</p>
+        </div>
     `;
+    
+    try {
+        // 홈페이지 설정 로드
+        const response = await axios.get('/api/homepage');
+        const settings = response.data.settings || {};
+        
+        // 기본값 설정
+        const heroTitle = settings.hero_title || '꿈을 키우는 학교';
+        const heroSubtitle = settings.hero_subtitle || '우리 모두가 주인공이 되는 배움의 공간';
+        const value1Title = settings.value1_title || '사랑';
+        const value1Desc = settings.value1_desc || '서로를 존중하고 배려하며 사랑하는 마음';
+        const value2Title = settings.value2_title || '지혜';
+        const value2Desc = settings.value2_desc || '끊임없이 배우고 성장하는 지혜로운 사람';
+        const value3Title = settings.value3_title || '섬김';
+        const value3Desc = settings.value3_desc || '이웃과 사회를 섬기는 따뜻한 마음';
+        const feature1Title = settings.feature1_title || '소규모 학급';
+        const feature1Desc = settings.feature1_desc || '학생 개개인을 세심하게 돌보는 소규모 학급 운영';
+        const feature2Title = settings.feature2_title || '맞춤형 교육';
+        const feature2Desc = settings.feature2_desc || '학생의 흥미와 적성에 맞춘 개별화 교육';
+        const feature3Title = settings.feature3_title || '예체능 교육';
+        const feature3Desc = settings.feature3_desc || '다양한 예술과 체육 활동으로 감성 발달';
+        const feature4Title = settings.feature4_title || '체험 학습';
+        const feature4Desc = settings.feature4_desc || '현장 중심의 살아있는 배움 경험';
+        
+        content.innerHTML = `
+            <!-- 히어로 섹션 -->
+            <section class="relative bg-gradient-to-r from-purple-600 to-blue-600 text-white py-24">
+                <div class="container mx-auto px-4 text-center">
+                    <h2 class="text-5xl font-bold mb-6">${escapeHtml(heroTitle)}</h2>
+                    <p class="text-2xl mb-8 text-purple-100">${escapeHtml(heroSubtitle)}</p>
+                    <div class="flex justify-center space-x-4">
+                        <button onclick="navigatePublicPage('about')" class="bg-white text-purple-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+                            학교 소개 보기
+                        </button>
+                        <button onclick="showLoginModal()" class="bg-purple-800 text-white px-8 py-3 rounded-lg font-semibold hover:bg-purple-900 transition-colors">
+                            로그인
+                        </button>
+                    </div>
+                </div>
+            </section>
 
-    // 공지사항 로드
-    loadPublicNoticePreview();
+            <!-- 학교 교훈 -->
+            <section class="py-16 bg-white">
+                <div class="container mx-auto px-4">
+                    <h3 class="text-3xl font-bold text-center text-gray-800 mb-12">교훈</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div class="text-center p-8 bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl">
+                            <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-heart text-3xl text-purple-600"></i>
+                            </div>
+                            <h4 class="text-xl font-bold text-gray-800 mb-3">${escapeHtml(value1Title)}</h4>
+                            <p class="text-gray-600">${escapeHtml(value1Desc)}</p>
+                        </div>
+                        <div class="text-center p-8 bg-gradient-to-br from-blue-50 to-green-50 rounded-xl">
+                            <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-lightbulb text-3xl text-blue-600"></i>
+                            </div>
+                            <h4 class="text-xl font-bold text-gray-800 mb-3">${escapeHtml(value2Title)}</h4>
+                            <p class="text-gray-600">${escapeHtml(value2Desc)}</p>
+                        </div>
+                        <div class="text-center p-8 bg-gradient-to-br from-green-50 to-yellow-50 rounded-xl">
+                            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-hands-helping text-3xl text-green-600"></i>
+                            </div>
+                            <h4 class="text-xl font-bold text-gray-800 mb-3">${escapeHtml(value3Title)}</h4>
+                            <p class="text-gray-600">${escapeHtml(value3Desc)}</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 공지사항 미리보기 -->
+            <section class="py-16 bg-gray-50">
+                <div class="container mx-auto px-4">
+                    <div class="flex justify-between items-center mb-8">
+                        <h3 class="text-3xl font-bold text-gray-800">공지사항</h3>
+                        <button onclick="navigatePublicPage('notice')" class="text-purple-600 hover:text-purple-700 font-medium">
+                            전체보기 → 
+                        </button>
+                    </div>
+                    <div id="public-notice-preview" class="bg-white rounded-xl shadow-md p-6">
+                        <p class="text-gray-500 text-center py-8">로딩 중...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 특징 -->
+            <section class="py-16 bg-white">
+                <div class="container mx-auto px-4">
+                    <h3 class="text-3xl font-bold text-center text-gray-800 mb-12">우리 학교의 특징</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div class="text-center p-6">
+                            <div class="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-users text-4xl text-purple-600"></i>
+                            </div>
+                            <h4 class="font-bold text-gray-800 mb-2">${escapeHtml(feature1Title)}</h4>
+                            <p class="text-sm text-gray-600">${escapeHtml(feature1Desc)}</p>
+                        </div>
+                        <div class="text-center p-6">
+                            <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-book-reader text-4xl text-blue-600"></i>
+                            </div>
+                            <h4 class="font-bold text-gray-800 mb-2">${escapeHtml(feature2Title)}</h4>
+                            <p class="text-sm text-gray-600">${escapeHtml(feature2Desc)}</p>
+                        </div>
+                        <div class="text-center p-6">
+                            <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-palette text-4xl text-green-600"></i>
+                            </div>
+                            <h4 class="font-bold text-gray-800 mb-2">${escapeHtml(feature3Title)}</h4>
+                            <p class="text-sm text-gray-600">${escapeHtml(feature3Desc)}</p>
+                        </div>
+                        <div class="text-center p-6">
+                            <div class="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-globe text-4xl text-yellow-600"></i>
+                            </div>
+                            <h4 class="font-bold text-gray-800 mb-2">${escapeHtml(feature4Title)}</h4>
+                            <p class="text-sm text-gray-600">${escapeHtml(feature4Desc)}</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        `;
+
+        // 공지사항 로드
+        loadPublicNoticePreview();
+    } catch (error) {
+        console.error('홈페이지 설정 로드 실패:', error);
+        // 에러 발생 시 기본값으로 표시
+        content.innerHTML = `
+            <div class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg m-4">
+                홈페이지를 불러오는데 실패했습니다. 페이지를 새로고침해주세요.
+            </div>
+        `;
+    }
 }
 
 // 공개 공지사항 미리보기 로드
@@ -323,76 +378,97 @@ async function loadPublicNoticePreview() {
 // ============================================
 // 학교 소개
 // ============================================
-function showAboutPage() {
+async function showAboutPage() {
     const content = document.getElementById('public-content');
     
+    // 로딩 표시
     content.innerHTML = `
-        <section class="py-16 bg-white">
-            <div class="container mx-auto px-4 max-w-4xl">
-                <h2 class="text-4xl font-bold text-gray-800 mb-8 text-center">학교 소개</h2>
-                
-                <div class="prose prose-lg max-w-none">
-                    <div class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-8 mb-8">
-                        <h3 class="text-2xl font-bold text-gray-800 mb-4">설립 이념</h3>
-                        <p class="text-gray-700 leading-relaxed">
-                            우리 학교는 학생 한 명 한 명의 꿈과 가능성을 소중히 여기며,
-                            서로 존중하고 배려하는 공동체를 만들어갑니다.
-                            기독교 정신을 바탕으로 사랑과 지혜, 섬김의 가치를 실천하며,
-                            미래 사회를 이끌어갈 창의적인 인재를 양성합니다.
-                        </p>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                        <div class="bg-white border-2 border-purple-100 rounded-xl p-6">
-                            <h4 class="text-xl font-bold text-gray-800 mb-3">
-                                <i class="fas fa-flag text-purple-600 mr-2"></i>교육 목표
-                            </h4>
-                            <ul class="space-y-2 text-gray-700">
-                                <li>• 자기주도적 학습 능력 함양</li>
-                                <li>• 창의적 문제해결 능력 개발</li>
-                                <li>• 공동체 의식과 협력 정신</li>
-                                <li>• 올바른 인성과 가치관 확립</li>
-                            </ul>
+        <div class="text-center py-24">
+            <i class="fas fa-spinner fa-spin text-4xl text-purple-600"></i>
+            <p class="text-gray-600 mt-4">로딩 중...</p>
+        </div>
+    `;
+    
+    try {
+        // 홈페이지 설정 로드
+        const response = await axios.get('/api/homepage');
+        const settings = response.data.settings || {};
+        
+        // 기본값 설정
+        const ideology = settings.about_ideology || '우리 학교는 학생 한 명 한 명의 꿈과 가능성을 소중히 여기며, 서로 존중하고 배려하는 공동체를 만들어갑니다. 기독교 정신을 바탕으로 사랑과 지혜, 섬김의 가치를 실천하며, 미래 사회를 이끌어갈 창의적인 인재를 양성합니다.';
+        const goals = settings.about_goals || '• 자기주도적 학습 능력 함양\n• 창의적 문제해결 능력 개발\n• 공동체 의식과 협력 정신\n• 올바른 인성과 가치관 확립';
+        const features = settings.about_features || '• 소규모 학급 운영 (학급당 15~20명)\n• 학생 맞춤형 개별화 교육\n• 현장 체험 중심 학습\n• 예체능 통합 교육과정';
+        const history = settings.history || '2020.03|학교 설립 인가\n2021.03|제1회 입학식 (신입생 30명)\n2023.02|제1회 졸업식\n2024.03|현재 재학생 100여명';
+        
+        // 교육 목표와 특징을 리스트로 변환
+        const goalsList = goals.split('\n').filter(line => line.trim());
+        const featuresList = features.split('\n').filter(line => line.trim());
+        
+        // 연혁 파싱
+        const historyList = history.split('\n')
+            .filter(line => line.trim())
+            .map(line => {
+                const parts = line.split('|');
+                return {
+                    date: parts[0]?.trim() || '',
+                    event: parts[1]?.trim() || parts[0]?.trim() || ''
+                };
+            });
+        
+        content.innerHTML = `
+            <section class="py-16 bg-white">
+                <div class="container mx-auto px-4 max-w-4xl">
+                    <h2 class="text-4xl font-bold text-gray-800 mb-8 text-center">학교 소개</h2>
+                    
+                    <div class="prose prose-lg max-w-none">
+                        <div class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-8 mb-8">
+                            <h3 class="text-2xl font-bold text-gray-800 mb-4">설립 이념</h3>
+                            <p class="text-gray-700 leading-relaxed">${escapeHtml(ideology).replace(/\n/g, '<br>')}</p>
                         </div>
 
-                        <div class="bg-white border-2 border-blue-100 rounded-xl p-6">
-                            <h4 class="text-xl font-bold text-gray-800 mb-3">
-                                <i class="fas fa-star text-blue-600 mr-2"></i>교육 특징
-                            </h4>
-                            <ul class="space-y-2 text-gray-700">
-                                <li>• 소규모 학급 운영 (학급당 15~20명)</li>
-                                <li>• 학생 맞춤형 개별화 교육</li>
-                                <li>• 현장 체험 중심 학습</li>
-                                <li>• 예체능 통합 교육과정</li>
-                            </ul>
-                        </div>
-                    </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                            <div class="bg-white border-2 border-purple-100 rounded-xl p-6">
+                                <h4 class="text-xl font-bold text-gray-800 mb-3">
+                                    <i class="fas fa-flag text-purple-600 mr-2"></i>교육 목표
+                                </h4>
+                                <ul class="space-y-2 text-gray-700">
+                                    ${goalsList.map(goal => `<li>${escapeHtml(goal)}</li>`).join('')}
+                                </ul>
+                            </div>
 
-                    <div class="bg-gray-50 rounded-xl p-8">
-                        <h3 class="text-2xl font-bold text-gray-800 mb-6 text-center">연혁</h3>
-                        <div class="space-y-4">
-                            <div class="flex">
-                                <span class="font-bold text-purple-600 w-32">2020.03</span>
-                                <span class="text-gray-700">학교 설립 인가</span>
+                            <div class="bg-white border-2 border-blue-100 rounded-xl p-6">
+                                <h4 class="text-xl font-bold text-gray-800 mb-3">
+                                    <i class="fas fa-star text-blue-600 mr-2"></i>교육 특징
+                                </h4>
+                                <ul class="space-y-2 text-gray-700">
+                                    ${featuresList.map(feature => `<li>${escapeHtml(feature)}</li>`).join('')}
+                                </ul>
                             </div>
-                            <div class="flex">
-                                <span class="font-bold text-purple-600 w-32">2021.03</span>
-                                <span class="text-gray-700">제1회 입학식 (신입생 30명)</span>
-                            </div>
-                            <div class="flex">
-                                <span class="font-bold text-purple-600 w-32">2023.02</span>
-                                <span class="text-gray-700">제1회 졸업식</span>
-                            </div>
-                            <div class="flex">
-                                <span class="font-bold text-purple-600 w-32">2024.03</span>
-                                <span class="text-gray-700">현재 재학생 100여명</span>
+                        </div>
+
+                        <div class="bg-gray-50 rounded-xl p-8">
+                            <h3 class="text-2xl font-bold text-gray-800 mb-6 text-center">연혁</h3>
+                            <div class="space-y-4">
+                                ${historyList.map(item => `
+                                    <div class="flex">
+                                        <span class="font-bold text-purple-600 w-32">${escapeHtml(item.date)}</span>
+                                        <span class="text-gray-700">${escapeHtml(item.event)}</span>
+                                    </div>
+                                `).join('')}
                             </div>
                         </div>
                     </div>
                 </div>
+            </section>
+        `;
+    } catch (error) {
+        console.error('학교 소개 페이지 로드 실패:', error);
+        content.innerHTML = `
+            <div class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg m-4">
+                학교 소개를 불러오는데 실패했습니다. 페이지를 새로고침해주세요.
             </div>
-        </section>
-    `;
+        `;
+    }
 }
 
 // ============================================
@@ -643,4 +719,23 @@ document.addEventListener('keydown', (e) => {
         closeLoginModal();
     }
 });
+
+// HTML 이스케이프 함수
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// 날짜 포맷 함수
+function formatDate(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+}
 

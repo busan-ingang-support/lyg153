@@ -102,11 +102,11 @@ function setupEventListeners() {
             
             // 활성화 상태 업데이트
             document.querySelectorAll('.nav-link').forEach(link => {
-                link.classList.remove('bg-gray-700', 'text-white');
-                link.classList.add('text-gray-300');
+                link.classList.remove('bg-gray-100', 'text-gray-900');
+                link.classList.add('text-gray-700');
             });
-            navLink.classList.add('bg-gray-700', 'text-white');
-            navLink.classList.remove('text-gray-300');
+            navLink.classList.add('bg-gray-100', 'text-gray-900');
+            navLink.classList.remove('text-gray-700');
         }
     });
 }
@@ -565,7 +565,7 @@ async function loadSidebarMenu() {
                 
                 if (shouldShow) {
                     menuHTML += `
-                        <a href="#" data-page="${pageName}" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+                        <a href="#" data-page="${pageName}" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
                             <i class="fas ${module.icon} w-5 mr-3"></i>
                             <span>${module.module_label}</span>
                         </a>
@@ -592,11 +592,11 @@ async function loadSidebarMenu() {
         // 관리자 전용 메뉴 (담임 배정, 사용자 관리)
         if (!isTeacher) {
             menuHTML += `
-                <a href="#" data-page="homeroom" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+                <a href="#" data-page="homeroom" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
                     <i class="fas fa-user-tie w-5 mr-3"></i>
                     <span>담임 배정</span>
                 </a>
-                <a href="#" data-page="users" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+                <a href="#" data-page="users" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
                     <i class="fas fa-users w-5 mr-3"></i>
                     <span>사용자 관리</span>
                 </a>
@@ -605,11 +605,11 @@ async function loadSidebarMenu() {
         
         // 성적표 출력, 생활기록부는 항상 표시
         menuHTML += `
-            <a href="#" data-page="reports" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+            <a href="#" data-page="reports" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
                 <i class="fas fa-print w-5 mr-3"></i>
                 <span>성적표 출력</span>
             </a>
-            <a href="#" data-page="records" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+            <a href="#" data-page="records" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
                 <i class="fas fa-file-alt w-5 mr-3"></i>
                 <span>생활기록부</span>
             </a>
@@ -618,9 +618,19 @@ async function loadSidebarMenu() {
         // 설정은 관리자만 (교사는 절대 표시 안 함)
         if (!isTeacher) {
             menuHTML += `
-                <a href="#" data-page="settings" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+                <a href="#" data-page="settings" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
                     <i class="fas fa-cog w-5 mr-3"></i>
                     <span>설정</span>
+                </a>
+            `;
+        }
+        
+        // 최고 관리자 전용: 홈페이지 관리
+        if (currentUser && currentUser.role === 'super_admin') {
+            menuHTML += `
+                <a href="#" data-page="homepage" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
+                    <i class="fas fa-globe w-5 mr-3"></i>
+                    <span>홈페이지 관리</span>
                 </a>
             `;
         }
@@ -659,24 +669,24 @@ async function loadSidebarMenu() {
 // 교사용 기본 메뉴
 function showDefaultTeacherMenu(sidebarNav) {
     sidebarNav.innerHTML = `
-        <a href="#" data-page="dashboard" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+        <a href="#" data-page="dashboard" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
             <i class="fas fa-home w-5 mr-3"></i>
             <span>대시보드</span>
         </a>
-        <a href="#" data-page="classes" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+        <a href="#" data-page="classes" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
             <i class="fas fa-chalkboard-teacher w-5 mr-3"></i>
             <span>반 관리</span>
         </a>
-        <a href="#" data-page="subjects" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+        <a href="#" data-page="subjects" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
             <i class="fas fa-book w-5 mr-3"></i>
             <span>과목 관리</span>
         </a>
-        <div class="border-t border-gray-700 my-4"></div>
-        <a href="#" data-page="reports" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+        <div class="border-t border-gray-200 my-4"></div>
+        <a href="#" data-page="reports" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
             <i class="fas fa-print w-5 mr-3"></i>
             <span>성적표 출력</span>
         </a>
-        <a href="#" data-page="records" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+        <a href="#" data-page="records" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
             <i class="fas fa-file-alt w-5 mr-3"></i>
             <span>생활기록부</span>
         </a>
@@ -685,48 +695,56 @@ function showDefaultTeacherMenu(sidebarNav) {
 
 // 관리자용 기본 메뉴
 function showDefaultAdminMenu(sidebarNav) {
+    const isSuperAdmin = currentUser && currentUser.role === 'super_admin';
+    
     sidebarNav.innerHTML = `
-        <a href="#" data-page="dashboard" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+        <a href="#" data-page="dashboard" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
             <i class="fas fa-home w-5 mr-3"></i>
             <span>대시보드</span>
         </a>
-        <a href="#" data-page="students" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+        <a href="#" data-page="students" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
             <i class="fas fa-user-graduate w-5 mr-3"></i>
             <span>학생 관리</span>
         </a>
-        <a href="#" data-page="classes" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+        <a href="#" data-page="classes" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
             <i class="fas fa-chalkboard-teacher w-5 mr-3"></i>
             <span>반 관리</span>
         </a>
-        <a href="#" data-page="subjects" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+        <a href="#" data-page="subjects" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
             <i class="fas fa-book w-5 mr-3"></i>
             <span>과목 관리</span>
         </a>
-        <a href="#" data-page="attendance" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+        <a href="#" data-page="attendance" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
             <i class="fas fa-clipboard-check w-5 mr-3"></i>
             <span>출석 관리</span>
         </a>
-        <a href="#" data-page="grades" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+        <a href="#" data-page="grades" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
             <i class="fas fa-chart-line w-5 mr-3"></i>
             <span>성적 관리</span>
         </a>
-        <div class="border-t border-gray-700 my-4"></div>
-        <a href="#" data-page="homeroom" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+        <div class="border-t border-gray-200 my-4"></div>
+        <a href="#" data-page="homeroom" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
             <i class="fas fa-user-tie w-5 mr-3"></i>
             <span>담임 배정</span>
         </a>
-        <a href="#" data-page="reports" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+        <a href="#" data-page="reports" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
             <i class="fas fa-print w-5 mr-3"></i>
             <span>성적표 출력</span>
         </a>
-        <a href="#" data-page="records" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+        <a href="#" data-page="records" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
             <i class="fas fa-file-alt w-5 mr-3"></i>
             <span>생활기록부</span>
         </a>
-        <a href="#" data-page="settings" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+        <a href="#" data-page="settings" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
             <i class="fas fa-cog w-5 mr-3"></i>
             <span>설정</span>
         </a>
+        ${isSuperAdmin ? `
+        <a href="#" data-page="homepage" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
+            <i class="fas fa-globe w-5 mr-3"></i>
+            <span>홈페이지 관리</span>
+        </a>
+        ` : ''}
     `;
 }
 
@@ -738,7 +756,7 @@ function showDefaultSidebarMenu() {
     const isTeacher = currentUser && currentUser.role === 'teacher';
     
     let menuHTML = `
-        <a href="#" data-page="dashboard" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+        <a href="#" data-page="dashboard" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
             <i class="fas fa-home w-5 mr-3"></i>
             <span>대시보드</span>
         </a>
@@ -747,44 +765,51 @@ function showDefaultSidebarMenu() {
     // 교사인 경우 기본 메뉴만 표시
     if (isTeacher) {
         menuHTML += `
-            <a href="#" data-page="classes" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+            <a href="#" data-page="classes" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
                 <i class="fas fa-chalkboard-teacher w-5 mr-3"></i>
                 <span>반 관리</span>
             </a>
-            <a href="#" data-page="subjects" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+            <a href="#" data-page="subjects" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
                 <i class="fas fa-book w-5 mr-3"></i>
                 <span>과목 관리</span>
             </a>
-            <div class="border-t border-gray-700 my-4"></div>
-            <a href="#" data-page="reports" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+            <div class="border-t border-gray-200 my-4"></div>
+            <a href="#" data-page="reports" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
                 <i class="fas fa-print w-5 mr-3"></i>
                 <span>성적표 출력</span>
             </a>
-            <a href="#" data-page="records" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+            <a href="#" data-page="records" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
                 <i class="fas fa-file-alt w-5 mr-3"></i>
                 <span>생활기록부</span>
             </a>
         `;
     } else {
         // 관리자용 기본 메뉴
+        const isSuperAdmin = currentUser && currentUser.role === 'super_admin';
         menuHTML += `
-            <a href="#" data-page="students" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+            <a href="#" data-page="students" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
                 <i class="fas fa-user-graduate w-5 mr-3"></i>
                 <span>학생 관리</span>
             </a>
-            <a href="#" data-page="attendance" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+            <a href="#" data-page="attendance" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
                 <i class="fas fa-clipboard-check w-5 mr-3"></i>
                 <span>출석 관리</span>
             </a>
-            <a href="#" data-page="grades" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+            <a href="#" data-page="grades" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
                 <i class="fas fa-chart-line w-5 mr-3"></i>
                 <span>성적 관리</span>
             </a>
-            <div class="border-t border-gray-700 my-4"></div>
-            <a href="#" data-page="settings" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+            <div class="border-t border-gray-200 my-4"></div>
+            <a href="#" data-page="settings" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
                 <i class="fas fa-cog w-5 mr-3"></i>
                 <span>설정</span>
             </a>
+            ${isSuperAdmin ? `
+            <a href="#" data-page="homepage" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
+                <i class="fas fa-globe w-5 mr-3"></i>
+                <span>홈페이지 관리</span>
+            </a>
+            ` : ''}
         `;
     }
     
@@ -1148,6 +1173,15 @@ function navigateToPage(page) {
                 showSystemSettings();
             } else {
                 alert('시스템 설정은 관리자만 접근할 수 있습니다.');
+                navigateToPage('dashboard');
+            }
+            break;
+        case 'homepage':
+            // 최고 관리자만 접근 가능
+            if (currentUser.role === 'super_admin') {
+                showHomepageManagement(contentArea);
+            } else {
+                alert('홈페이지 관리는 최고 관리자만 접근할 수 있습니다.');
                 navigateToPage('dashboard');
             }
             break;

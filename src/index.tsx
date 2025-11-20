@@ -28,6 +28,7 @@ import boards from './routes/boards';
 import courseQna from './routes/course-qna';
 import teacherPermissions from './routes/teacher-permissions';
 import teachers from './routes/teachers';
+import homepage from './routes/homepage';
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -62,6 +63,7 @@ app.route('/api/boards', boards);
 app.route('/api/course-qna', courseQna);
 app.route('/api/teacher-permissions', teacherPermissions);
 app.route('/api/teachers', teachers);
+app.route('/api/homepage', homepage);
 
 // 기본 홈페이지
 app.get('/', (c) => {
@@ -180,6 +182,7 @@ app.get('/', (c) => {
         <script src="/static/attendance-improved.js?v=202511071013"></script>
         <script src="/static/teacher-management.js?v=202511071013"></script>
         <script src="/static/user-management.js?v=202511121000"></script>
+        <script src="/static/homepage-management.js?v=202511200000"></script>
     </body>
     </html>
   `);
