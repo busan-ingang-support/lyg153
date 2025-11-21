@@ -40,14 +40,15 @@ async function checkSuperAdminPermission(c: any): Promise<boolean> {
 // 모든 모듈 조회 (공개 API)
 modules.get('/', async (c) => {
   const { DB } = c.env
+  const page = c.req.query('page') || 'home' // 쿼리 파라미터로 페이지 지정
 
   try {
-    // 먼저 모듈 목록 조회
+    // 먼저 모듈 목록 조회 (페이지별 필터링)
     const result = await DB.prepare(`
       SELECT * FROM homepage_modules
-      WHERE is_active = 1
+      WHERE is_active = 1 AND page = ?
       ORDER BY display_order ASC
-    `).all()
+    `).bind(page).all()
 
     // 각 모듈의 설정과 슬라이드 항목도 함께 조회
     const modulesWithData = await Promise.all(
@@ -55,6 +56,7 @@ modules.get('/', async (c) => {
         const module: any = {
           id: row.id,
           module_type: row.module_type,
+          page: row.page,
           display_order: row.display_order,
           container_type: row.container_type,
           background_color: row.background_color,
@@ -115,13 +117,23 @@ modules.get('/admin', async (c) => {
   }
 
   const { DB } = c.env
+  const page = c.req.query('page') // 페이지 파라미터 (선택)
 
   try {
     // 먼저 모듈 목록 조회
-    const result = await DB.prepare(`
-      SELECT * FROM homepage_modules
-      ORDER BY display_order ASC
-    `).all()
+    let query = 'SELECT * FROM homepage_modules';
+    let params: any[] = [];
+    
+    if (page) {
+      query += ' WHERE page = ?';
+      params.push(page);
+    }
+    
+    query += ' ORDER BY page, display_order ASC';
+    
+    const result = params.length > 0 
+      ? await DB.prepare(query).bind(...params).all()
+      : await DB.prepare(query).all()
 
     // 각 모듈의 설정과 슬라이드 항목도 함께 조회
     const modulesWithData = await Promise.all(
@@ -129,6 +141,7 @@ modules.get('/admin', async (c) => {
         const module: any = {
           id: row.id,
           module_type: row.module_type,
+          page: row.page,
           display_order: row.display_order,
           is_active: row.is_active,
           container_type: row.container_type,
@@ -197,6 +210,7 @@ modules.post('/', async (c) => {
   const data = await c.req.json()
   const {
     module_type,
+    page = 'home',
     display_order,
     is_active = 1,
     container_type = 'container',
@@ -214,13 +228,14 @@ modules.post('/', async (c) => {
     // 모듈 생성
     const result = await DB.prepare(`
       INSERT INTO homepage_modules (
-        module_type, display_order, is_active, container_type,
+        module_type, page, display_order, is_active, container_type,
         background_color, background_image,
         padding_top, padding_bottom, margin_top, margin_bottom,
         updated_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       module_type,
+      page,
       display_order || 0,
       is_active,
       container_type,
@@ -302,6 +317,7 @@ modules.put('/:id', async (c) => {
   
   const data = await c.req.json()
   const {
+    page,
     display_order,
     is_active,
     container_type,
@@ -320,6 +336,7 @@ modules.put('/:id', async (c) => {
     await DB.prepare(`
       UPDATE homepage_modules
       SET 
+        page = ?,
         display_order = ?,
         is_active = ?,
         container_type = ?,
@@ -333,6 +350,7 @@ modules.put('/:id', async (c) => {
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).bind(
+      page,
       display_order,
       is_active,
       container_type,

@@ -3,6 +3,7 @@
 let currentModules = [];
 let draggedModule = null;
 let draggedOverModule = null;
+let currentPage = 'home'; // 현재 선택된 페이지
 
 // 홈페이지 모듈 관리 페이지 표시
 async function showHomepageManagement(container) {
@@ -48,11 +49,21 @@ async function showHomepageManagement(container) {
     }
 }
 
+// 페이지 전환
+function switchPage(page) {
+    currentPage = page;
+    const container = document.getElementById('main-content');
+    renderModuleManagement(container);
+}
+
 // 모듈 관리 UI 렌더링
 function renderModuleManagement(container) {
+    // 현재 페이지의 모듈만 필터링
+    const pageModules = currentModules.filter(m => m.page === currentPage);
+    
     container.innerHTML = `
         <div class="mb-6">
-            <div class="flex justify-between items-center">
+            <div class="flex justify-between items-center mb-4">
                 <div>
                     <h2 class="text-3xl font-bold text-gray-800">
                         <i class="fas fa-globe mr-2"></i>홈페이지 모듈 관리
@@ -63,11 +74,32 @@ function renderModuleManagement(container) {
                     <i class="fas fa-plus mr-2"></i>모듈 추가
                 </button>
             </div>
+            
+            <!-- 페이지 탭 -->
+            <div class="border-b border-gray-200">
+                <nav class="flex space-x-4">
+                    <button onclick="switchPage('home')" class="page-tab ${currentPage === 'home' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600 hover:text-gray-800'} py-3 px-4 border-b-2 font-medium transition-colors">
+                        <i class="fas fa-home mr-2"></i>홈
+                    </button>
+                    <button onclick="switchPage('about')" class="page-tab ${currentPage === 'about' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600 hover:text-gray-800'} py-3 px-4 border-b-2 font-medium transition-colors">
+                        <i class="fas fa-info-circle mr-2"></i>학교소개
+                    </button>
+                    <button onclick="switchPage('education')" class="page-tab ${currentPage === 'education' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600 hover:text-gray-800'} py-3 px-4 border-b-2 font-medium transition-colors">
+                        <i class="fas fa-book mr-2"></i>교육과정
+                    </button>
+                    <button onclick="switchPage('notice')" class="page-tab ${currentPage === 'notice' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600 hover:text-gray-800'} py-3 px-4 border-b-2 font-medium transition-colors">
+                        <i class="fas fa-bullhorn mr-2"></i>공지사항
+                    </button>
+                    <button onclick="switchPage('location')" class="page-tab ${currentPage === 'location' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600 hover:text-gray-800'} py-3 px-4 border-b-2 font-medium transition-colors">
+                        <i class="fas fa-map-marker-alt mr-2"></i>오시는 길
+                    </button>
+                </nav>
+            </div>
         </div>
         
         <!-- 모듈 목록 -->
-        <div id="modules-list" class="space-y-4">
-            ${currentModules.length === 0 ? `
+        <div id="modules-list" class="space-y-4 mt-6">
+            ${pageModules.length === 0 ? `
                 <div class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
                     <i class="fas fa-puzzle-piece text-4xl text-gray-400 mb-4"></i>
                     <p class="text-gray-600 mb-4">등록된 모듈이 없습니다.</p>
@@ -75,11 +107,11 @@ function renderModuleManagement(container) {
                         첫 번째 모듈 추가하기
                     </button>
                 </div>
-            ` : currentModules.map((module, index) => renderModuleCard(module, index)).join('')}
+            ` : pageModules.map((module, index) => renderModuleCard(module, index)).join('')}
         </div>
         
         <!-- 저장 버튼 -->
-        ${currentModules.length > 0 ? `
+        ${pageModules.length > 0 ? `
             <div class="mt-6 flex justify-end">
                 <button onclick="saveModuleOrder()" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700">
                     <i class="fas fa-save mr-2"></i>순서 저장
@@ -215,7 +247,8 @@ function setupDragAndDrop() {
 // 모듈 순서 저장
 async function saveModuleOrder() {
     try {
-        const moduleOrders = currentModules.map((module, index) => ({
+        const pageModules = currentModules.filter(m => m.page === currentPage);
+        const moduleOrders = pageModules.map((module, index) => ({
             id: module.id,
             display_order: index
         }));
@@ -226,8 +259,13 @@ async function saveModuleOrder() {
         
         alert('모듈 순서가 저장되었습니다!');
         
-        // 다시 로드
-        showHomepageManagement();
+        // 다시 로드 (페이지 유지)
+        const response = await axios.get('/api/homepage-modules/admin', {
+            headers: { 'Authorization': 'Bearer ' + authToken }
+        });
+        currentModules = response.data.modules || [];
+        const container = document.getElementById('main-content');
+        renderModuleManagement(container);
     } catch (error) {
         console.error('모듈 순서 저장 실패:', error);
         alert('모듈 순서 저장에 실패했습니다.');
@@ -313,12 +351,14 @@ function showAddModuleModal() {
         }
         
         try {
-            const maxOrder = currentModules.length > 0 
-                ? Math.max(...currentModules.map(m => m.display_order)) + 1 
+            const pageModules = currentModules.filter(m => m.page === currentPage);
+            const maxOrder = pageModules.length > 0 
+                ? Math.max(...pageModules.map(m => m.display_order)) + 1 
                 : 0;
             
             const response = await axios.post('/api/homepage-modules', {
                 module_type: moduleType,
+                page: currentPage,
                 display_order: maxOrder,
                 is_active: isActive,
                 container_type: containerType,
@@ -329,6 +369,12 @@ function showAddModuleModal() {
             });
             
             closeAddModuleModal();
+            
+            // 최신 모듈 목록 로드
+            const refreshResponse = await axios.get('/api/homepage-modules/admin', {
+                headers: { 'Authorization': 'Bearer ' + authToken }
+            });
+            currentModules = refreshResponse.data.modules || [];
             
             // 편집 모달 열기
             editModule(response.data.id);
@@ -550,8 +596,8 @@ function getModuleEditForm(module) {
                             <div class="bg-white rounded-lg p-4">
                                 <h4 class="font-bold mb-2">교훈 ${i}</h4>
                                 <div class="mb-2">
-                                    <label class="block text-xs text-gray-600 mb-1">아이콘 이미지 URL</label>
-                                    <input type="text" name="value${i}_icon" value="${module[`value${i}_icon`] || ''}" placeholder="https://..." class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
+                                    <label class="block text-xs text-gray-600 mb-1">아이콘 (Font Awesome 클래스 또는 이미지 URL)</label>
+                                    <input type="text" name="value${i}_icon" value="${module[`value${i}_icon`] || ''}" placeholder="fa-heart 또는 https://..." class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
                                 </div>
                                 <div class="mb-2">
                                     <label class="block text-xs text-gray-600 mb-1">제목</label>
@@ -577,8 +623,8 @@ function getModuleEditForm(module) {
                             <div class="bg-white rounded-lg p-4">
                                 <h4 class="font-bold mb-2">특징 ${i}</h4>
                                 <div class="mb-2">
-                                    <label class="block text-xs text-gray-600 mb-1">아이콘 이미지 URL</label>
-                                    <input type="text" name="feature${i}_icon" value="${module[`feature${i}_icon`] || ''}" placeholder="https://..." class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
+                                    <label class="block text-xs text-gray-600 mb-1">아이콘 (Font Awesome 클래스 또는 이미지 URL)</label>
+                                    <input type="text" name="feature${i}_icon" value="${module[`feature${i}_icon`] || ''}" placeholder="fa-users 또는 https://..." class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
                                 </div>
                                 <div class="mb-2">
                                     <label class="block text-xs text-gray-600 mb-1">제목</label>
@@ -799,8 +845,10 @@ async function saveModule(moduleId, form) {
         const data = Object.fromEntries(formData.entries());
         
         // 공통 설정
+        const module = currentModules.find(m => m.id === moduleId);
         const moduleData = {
-            display_order: currentModules.find(m => m.id === moduleId)?.display_order || 0,
+            page: module?.page || currentPage,
+            display_order: module?.display_order || 0,
             is_active: parseInt(data.is_active),
             container_type: data.container_type,
             background_color: data.background_color || null,
@@ -813,7 +861,6 @@ async function saveModule(moduleId, form) {
         };
         
         // 모듈 타입별 설정 추출
-        const module = currentModules.find(m => m.id === moduleId);
         if (module) {
             switch (module.module_type) {
                 case 'hero':
@@ -923,8 +970,13 @@ async function saveModule(moduleId, form) {
         alert('모듈이 저장되었습니다!');
         closeEditModuleModal();
         
-        // 목록 새로고침
-        showHomepageManagement();
+        // 목록 새로고침 (페이지 유지)
+        const refreshResponse = await axios.get('/api/homepage-modules/admin', {
+            headers: { 'Authorization': 'Bearer ' + authToken }
+        });
+        currentModules = refreshResponse.data.modules || [];
+        const container = document.getElementById('main-content');
+        renderModuleManagement(container);
         
     } catch (error) {
         console.error('모듈 저장 실패:', error);
@@ -1139,8 +1191,13 @@ async function deleteModule(moduleId) {
         
         alert('모듈이 삭제되었습니다.');
         
-        // 목록 새로고침
-        showHomepageManagement();
+        // 목록 새로고침 (페이지 유지)
+        const refreshResponse = await axios.get('/api/homepage-modules/admin', {
+            headers: { 'Authorization': 'Bearer ' + authToken }
+        });
+        currentModules = refreshResponse.data.modules || [];
+        const container = document.getElementById('main-content');
+        renderModuleManagement(container);
         
     } catch (error) {
         console.error('모듈 삭제 실패:', error);

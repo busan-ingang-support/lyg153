@@ -436,11 +436,19 @@ function renderHomepageModule(module) {
                                 const icon = module[`value${i}_icon`];
                                 const title = module[`value${i}_title`] || '';
                                 const desc = module[`value${i}_desc`] || '';
+                                const isFontAwesome = icon && (icon.startsWith('fa-') || icon.startsWith('fas ') || icon.startsWith('far ') || icon.startsWith('fab ') || icon.startsWith('fal ') || icon.startsWith('fad '));
+                                const iconClass = isFontAwesome ? (icon.startsWith('fa-') ? `fas ${icon}` : icon) : '';
                                 return `
                                     <div class="text-center p-6">
-                                        ${icon ? `
-                                            <img src="${escapeHtml(icon)}" alt="${escapeHtml(title)}" class="w-20 h-20 mx-auto mb-4 object-contain">
-                                        ` : `
+                                        ${icon ? (
+                                            isFontAwesome ? `
+                                                <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                    <i class="${iconClass} text-4xl text-red-600"></i>
+                                                </div>
+                                            ` : `
+                                                <img src="${escapeHtml(icon)}" alt="${escapeHtml(title)}" class="w-20 h-20 mx-auto mb-4 object-contain">
+                                            `
+                                        ) : `
                                             <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                                 <i class="fas fa-heart text-4xl text-red-600"></i>
                                             </div>
@@ -466,11 +474,19 @@ function renderHomepageModule(module) {
                                 const icon = module[`feature${i}_icon`];
                                 const title = module[`feature${i}_title`] || '';
                                 const desc = module[`feature${i}_desc`] || '';
+                                const isFontAwesome = icon && (icon.startsWith('fa-') || icon.startsWith('fas ') || icon.startsWith('far ') || icon.startsWith('fab ') || icon.startsWith('fal ') || icon.startsWith('fad '));
+                                const iconClass = isFontAwesome ? (icon.startsWith('fa-') ? `fas ${icon}` : icon) : '';
                                 return `
                                     <div class="text-center p-6">
-                                        ${icon ? `
-                                            <img src="${escapeHtml(icon)}" alt="${escapeHtml(title)}" class="w-20 h-20 mx-auto mb-4 object-contain">
-                                        ` : `
+                                        ${icon ? (
+                                            isFontAwesome ? `
+                                                <div class="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                    <i class="${iconClass} text-4xl text-purple-600"></i>
+                                                </div>
+                                            ` : `
+                                                <img src="${escapeHtml(icon)}" alt="${escapeHtml(title)}" class="w-20 h-20 mx-auto mb-4 object-contain">
+                                            `
+                                        ) : `
                                             <div class="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                                 <i class="fas fa-users text-4xl text-purple-600"></i>
                                             </div>
@@ -611,6 +627,44 @@ async function showAboutPage() {
     `;
     
     try {
+        // 학교소개 페이지 모듈 로드
+        const response = await axios.get('/api/homepage-modules?page=about');
+        const modules = response.data.modules || [];
+        
+        if (modules.length === 0) {
+            // 기본 내용 표시
+            content.innerHTML = `
+                <section class="py-16 bg-white">
+                    <div class="container mx-auto px-4 text-center">
+                        <h2 class="text-4xl font-bold text-gray-800 mb-8">학교 소개</h2>
+                        <p class="text-gray-600">학교 소개 내용을 추가해주세요.</p>
+                    </div>
+                </section>
+            `;
+            return;
+        }
+        
+        // 모듈 렌더링
+        let html = '';
+        for (const module of modules) {
+            html += renderHomepageModule(module);
+        }
+        content.innerHTML = html;
+    } catch (error) {
+        console.error('학교소개 페이지 로드 실패:', error);
+        content.innerHTML = `
+            <div class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg m-4">
+                페이지를 불러오는데 실패했습니다. 페이지를 새로고침해주세요.
+            </div>
+        `;
+    }
+}
+
+// 이전 버전 (참고용, 사용 안 함)
+async function showAboutPageOld() {
+    const content = document.getElementById('public-content');
+    
+    try {
         // 홈페이지 설정 로드
         const response = await axios.get('/api/homepage');
         const settings = response.data.settings || {};
@@ -683,19 +737,60 @@ async function showAboutPage() {
             </section>
         `;
     } catch (error) {
-        console.error('학교 소개 페이지 로드 실패:', error);
-        content.innerHTML = `
-            <div class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg m-4">
-                학교 소개를 불러오는데 실패했습니다. 페이지를 새로고침해주세요.
-            </div>
-        `;
+        console.error('구버전 학교 소개 페이지 로드 실패:', error);
     }
 }
 
 // ============================================
 // 교육과정
 // ============================================
-function showEducationPage() {
+async function showEducationPage() {
+    const content = document.getElementById('public-content');
+    
+    // 로딩 표시
+    content.innerHTML = `
+        <div class="text-center py-24">
+            <i class="fas fa-spinner fa-spin text-4xl text-purple-600"></i>
+            <p class="text-gray-600 mt-4">로딩 중...</p>
+        </div>
+    `;
+    
+    try {
+        // 교육과정 페이지 모듈 로드
+        const response = await axios.get('/api/homepage-modules?page=education');
+        const modules = response.data.modules || [];
+        
+        if (modules.length === 0) {
+            // 기본 내용 표시
+            content.innerHTML = `
+                <section class="py-16 bg-white">
+                    <div class="container mx-auto px-4 text-center">
+                        <h2 class="text-4xl font-bold text-gray-800 mb-8">교육 과정</h2>
+                        <p class="text-gray-600">교육 과정 내용을 추가해주세요.</p>
+                    </div>
+                </section>
+            `;
+            return;
+        }
+        
+        // 모듈 렌더링
+        let html = '';
+        for (const module of modules) {
+            html += renderHomepageModule(module);
+        }
+        content.innerHTML = html;
+    } catch (error) {
+        console.error('교육과정 페이지 로드 실패:', error);
+        content.innerHTML = `
+            <div class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg m-4">
+                페이지를 불러오는데 실패했습니다. 페이지를 새로고침해주세요.
+            </div>
+        `;
+    }
+}
+
+// 이전 버전 (참고용, 사용 안 함)
+function showEducationPageOld() {
     const content = document.getElementById('public-content');
     
     content.innerHTML = `
@@ -826,7 +921,53 @@ async function loadPublicNoticeList() {
 // ============================================
 // 오시는 길
 // ============================================
-function showLocationPage() {
+async function showLocationPage() {
+    const content = document.getElementById('public-content');
+    
+    // 로딩 표시
+    content.innerHTML = `
+        <div class="text-center py-24">
+            <i class="fas fa-spinner fa-spin text-4xl text-purple-600"></i>
+            <p class="text-gray-600 mt-4">로딩 중...</p>
+        </div>
+    `;
+    
+    try {
+        // 오시는 길 페이지 모듈 로드
+        const response = await axios.get('/api/homepage-modules?page=location');
+        const modules = response.data.modules || [];
+        
+        if (modules.length === 0) {
+            // 기본 내용 표시
+            content.innerHTML = `
+                <section class="py-16 bg-white">
+                    <div class="container mx-auto px-4 text-center">
+                        <h2 class="text-4xl font-bold text-gray-800 mb-8">오시는 길</h2>
+                        <p class="text-gray-600">오시는 길 내용을 추가해주세요.</p>
+                    </div>
+                </section>
+            `;
+            return;
+        }
+        
+        // 모듈 렌더링
+        let html = '';
+        for (const module of modules) {
+            html += renderHomepageModule(module);
+        }
+        content.innerHTML = html;
+    } catch (error) {
+        console.error('오시는 길 페이지 로드 실패:', error);
+        content.innerHTML = `
+            <div class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg m-4">
+                페이지를 불러오는데 실패했습니다. 페이지를 새로고침해주세요.
+            </div>
+        `;
+    }
+}
+
+// 이전 버전 (참고용, 사용 안 함)
+function showLocationPageOld() {
     const content = document.getElementById('public-content');
     
     content.innerHTML = `
