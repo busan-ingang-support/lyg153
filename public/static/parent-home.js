@@ -567,9 +567,12 @@ async function loadAttendanceData(studentId) {
         if (listSection) {
             if (records.length === 0) {
                 listSection.innerHTML = `
-                    <div class="text-center py-8 text-gray-500">
-                        <i class="fas fa-inbox text-4xl mb-2"></i>
-                        <p>최근 출석 기록이 없습니다.</p>
+                    <div class="text-center py-12">
+                        <div class="w-20 h-20 rounded-full bg-gray-100 mx-auto mb-4 flex items-center justify-center">
+                            <i class="fas fa-calendar-check text-gray-400 text-3xl"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-700 mb-2">최근 출석 기록이 없습니다</h3>
+                        <p class="text-sm text-gray-500">최근 30일간 출석 기록이 없습니다.</p>
                     </div>
                 `;
             } else {
@@ -615,10 +618,19 @@ async function loadAttendanceData(studentId) {
         console.error('출석 데이터 로드 실패:', error);
         const listSection = document.getElementById('recent-attendance-list');
         if (listSection) {
+            const errorMessage = error.response?.status === 404
+                ? '출석 정보를 찾을 수 없습니다.'
+                : error.response?.status === 403
+                ? '출석 조회 권한이 없습니다.'
+                : '출석 데이터를 불러오는데 실패했습니다.';
+
             listSection.innerHTML = `
-                <div class="text-center py-8 text-red-600">
-                    <i class="fas fa-exclamation-circle text-3xl mb-2"></i>
-                    <p>출석 데이터를 불러오는데 실패했습니다.</p>
+                <div class="text-center py-12">
+                    <div class="w-20 h-20 rounded-full bg-red-50 mx-auto mb-4 flex items-center justify-center">
+                        <i class="fas fa-exclamation-circle text-red-500 text-3xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">${errorMessage}</h3>
+                    <p class="text-sm text-gray-500">문제가 계속되면 관리자에게 문의해주세요.</p>
                 </div>
             `;
         }

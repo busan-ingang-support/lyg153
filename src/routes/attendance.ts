@@ -283,12 +283,88 @@ attendance.post('/bulk-simple', requireRole('teacher', 'admin', 'super_admin'), 
     }
   }
   
-  return c.json({ 
-    success: true, 
+  return c.json({
+    success: true,
     message: `${successCount} records saved, ${errorCount} errors`,
     successCount,
     errorCount
   });
+});
+
+// 학생별 출석 요약 (학부모용)
+attendance.get('/student/:student_id/summary', async (c) => {
+  const db = c.env.DB;
+  const studentId = c.req.param('student_id');
+
+  try {
+    // 출석 통계 계산
+    const stats = await db.prepare(`
+      SELECT
+        COUNT(*) as total,
+        SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present,
+        SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent,
+        SUM(CASE WHEN status = 'late' THEN 1 ELSE 0 END) as late,
+        SUM(CASE WHEN status = 'excused' THEN 1 ELSE 0 END) as excused
+      FROM attendance a
+      JOIN enrollments e ON a.enrollment_id = e.id
+      WHERE e.student_id = ?
+    `).bind(studentId).first();
+
+    return c.json({
+      summary: {
+        total: stats?.total || 0,
+        present: stats?.present || 0,
+        absent: stats?.absent || 0,
+        late: stats?.late || 0,
+        excused: stats?.excused || 0
+      }
+    });
+  } catch (error: any) {
+    console.error('출석 요약 조회 실패:', error);
+    return c.json({ error: 'Internal server error' }, 500);
+  }
+});
+
+// 학생별 출석 기록 조회 (날짜 범위)
+attendance.get('/student/:student_id', async (c) => {
+  const db = c.env.DB;
+  const studentId = c.req.param('student_id');
+  const { start_date, end_date } = c.req.query();
+
+  try {
+    let query = `
+      SELECT
+        a.*,
+        e.student_id,
+        c.course_name,
+        sub.name as subject_name
+      FROM attendance a
+      JOIN enrollments e ON a.enrollment_id = e.id
+      JOIN courses c ON e.course_id = c.id
+      LEFT JOIN subjects sub ON c.subject_id = sub.id
+      WHERE e.student_id = ?
+    `;
+    const params: any[] = [studentId];
+
+    if (start_date) {
+      query += ' AND a.attendance_date >= ?';
+      params.push(start_date);
+    }
+
+    if (end_date) {
+      query += ' AND a.attendance_date <= ?';
+      params.push(end_date);
+    }
+
+    query += ' ORDER BY a.attendance_date DESC';
+
+    const { results } = await db.prepare(query).bind(...params).all();
+
+    return c.json({ records: results });
+  } catch (error: any) {
+    console.error('출석 기록 조회 실패:', error);
+    return c.json({ error: 'Internal server error' }, 500);
+  }
 });
 
 export default attendance;
