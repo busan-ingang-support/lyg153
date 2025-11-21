@@ -442,11 +442,8 @@ async function filterTeacherMenu(teacherId, permissions) {
 
 // 부모 대시보드 표시 (자녀 정보만)
 async function showParentDashboard() {
-    // 부모는 기본 대시보드 사용 (제한된 메뉴)
-    await showAdminDashboard();
-    
-    // TODO: 부모용 메뉴 구성
-    // - 자녀의 출석/성적 조회만
+    // 학부모 전용 대시보드 표시
+    await showParentHome();
 }
 
 // 사이드바 메뉴 동적 로드 (모듈 설정 기반)

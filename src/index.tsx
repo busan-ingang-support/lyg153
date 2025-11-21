@@ -171,6 +171,7 @@ app.get('/', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         <script src="/static/public-home.js?v=202511211100" defer></script>
         <script src="/static/student-home.js?v=202511141500" defer></script>
+        <script src="/static/parent-home.js?v=202511211400" defer></script>
         <script src="/static/homepage-module-management.js?v=202511211100" defer></script>
         <script src="/static/app.js?v=202511201800" defer></script>
         <script src="/static/add-pages-functions.js?v=202511111600" defer></script>
