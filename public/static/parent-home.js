@@ -67,17 +67,59 @@ function setupParentNavigation() {
             e.preventDefault();
             const page = e.target.getAttribute('data-page');
 
+            // URL 업데이트
+            window.history.pushState({ parentPage: page }, '', `#parent/${page}`);
+
             // 활성 메뉴 표시
-            document.querySelectorAll('.parent-nav-item').forEach(i => {
-                i.classList.remove('text-blue-600', 'font-medium');
-                i.classList.add('text-gray-600');
-            });
-            e.target.classList.add('text-blue-600', 'font-medium');
-            e.target.classList.remove('text-gray-600');
+            updateParentNavActive(page);
 
             // 페이지 이동
-            navigateParentPage(page);
+            await navigateParentPage(page);
         });
+    });
+
+    // 브라우저 뒤로가기/앞으로가기 지원
+    window.addEventListener('popstate', handleParentPopState);
+
+    // 초기 URL 확인 (직접 접근)
+    handleParentPopState();
+}
+
+// 팝스테이트 핸들러
+function handleParentPopState() {
+    const hash = window.location.hash;
+    if (hash.startsWith('#parent/')) {
+        const parts = hash.replace('#parent/', '').split('/');
+        const page = parts[0];
+        const id = parts[1];
+
+        updateParentNavActive(page);
+
+        // 페이지에 따라 ID와 함께 라우팅
+        if (page === 'attendance' && id) {
+            navigateParentPage('attendance');
+            // 자동으로 해당 학생 선택 (나중에 구현)
+        } else if (page === 'grades' && id) {
+            navigateParentPage('grades');
+            // 자동으로 해당 학생 선택 (나중에 구현)
+        } else {
+            navigateParentPage(page);
+        }
+    } else if (hash === '#parent' || hash === '') {
+        updateParentNavActive('home');
+        navigateParentPage('home');
+    }
+}
+
+// 활성 네비게이션 업데이트
+function updateParentNavActive(page) {
+    document.querySelectorAll('.parent-nav-item').forEach(i => {
+        i.classList.remove('text-blue-600', 'font-medium');
+        i.classList.add('text-gray-600');
+        if (i.getAttribute('data-page') === page) {
+            i.classList.add('text-blue-600', 'font-medium');
+            i.classList.remove('text-gray-600');
+        }
     });
 }
 
@@ -180,15 +222,11 @@ async function showParentMainHome() {
             e.preventDefault();
             const page = e.target.closest('.parent-quick-menu').getAttribute('data-page');
 
+            // URL 업데이트
+            window.history.pushState({ parentPage: page }, '', `#parent/${page}`);
+
             // 상단 네비게이션도 업데이트
-            document.querySelectorAll('.parent-nav-item').forEach(navItem => {
-                navItem.classList.remove('text-blue-600', 'font-medium');
-                navItem.classList.add('text-gray-600');
-                if (navItem.getAttribute('data-page') === page) {
-                    navItem.classList.add('text-blue-600', 'font-medium');
-                    navItem.classList.remove('text-gray-600');
-                }
-            });
+            updateParentNavActive(page);
 
             await navigateParentPage(page);
         });
@@ -311,34 +349,28 @@ async function loadChildrenInfo() {
         document.querySelectorAll('.view-child-attendance').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const studentId = e.target.closest('.view-child-attendance').getAttribute('data-student-id');
-                await showParentAttendance(studentId);
+
+                // URL 업데이트
+                window.history.pushState({ parentPage: 'attendance', studentId }, '', `#parent/attendance/${studentId}`);
 
                 // 상단 네비게이션 업데이트
-                document.querySelectorAll('.parent-nav-item').forEach(navItem => {
-                    navItem.classList.remove('text-blue-600', 'font-medium');
-                    navItem.classList.add('text-gray-600');
-                    if (navItem.getAttribute('data-page') === 'attendance') {
-                        navItem.classList.add('text-blue-600', 'font-medium');
-                        navItem.classList.remove('text-gray-600');
-                    }
-                });
+                updateParentNavActive('attendance');
+
+                await showParentAttendance(studentId);
             });
         });
 
         document.querySelectorAll('.view-child-grades').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const studentId = e.target.closest('.view-child-grades').getAttribute('data-student-id');
-                await showParentGrades(studentId);
+
+                // URL 업데이트
+                window.history.pushState({ parentPage: 'grades', studentId }, '', `#parent/grades/${studentId}`);
 
                 // 상단 네비게이션 업데이트
-                document.querySelectorAll('.parent-nav-item').forEach(navItem => {
-                    navItem.classList.remove('text-blue-600', 'font-medium');
-                    navItem.classList.add('text-gray-600');
-                    if (navItem.getAttribute('data-page') === 'grades') {
-                        navItem.classList.add('text-blue-600', 'font-medium');
-                        navItem.classList.remove('text-gray-600');
-                    }
-                });
+                updateParentNavActive('grades');
+
+                await showParentGrades(studentId);
             });
         });
 
@@ -685,9 +717,12 @@ async function loadGradesData(studentId) {
 
         if (grades.length === 0) {
             listSection.innerHTML = `
-                <div class="text-center py-8 text-gray-500">
-                    <i class="fas fa-inbox text-4xl mb-2"></i>
-                    <p>등록된 성적이 없습니다.</p>
+                <div class="text-center py-12">
+                    <div class="w-20 h-20 rounded-full bg-gray-100 mx-auto mb-4 flex items-center justify-center">
+                        <i class="fas fa-chart-bar text-gray-400 text-3xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">등록된 성적이 없습니다</h3>
+                    <p class="text-sm text-gray-500">아직 이 학생의 성적이 입력되지 않았습니다.</p>
                 </div>
             `;
             return;
@@ -747,10 +782,19 @@ async function loadGradesData(studentId) {
         console.error('성적 데이터 로드 실패:', error);
         const listSection = document.getElementById('grades-list');
         if (listSection) {
+            const errorMessage = error.response?.status === 404
+                ? '성적 정보를 찾을 수 없습니다.'
+                : error.response?.status === 403
+                ? '성적 조회 권한이 없습니다.'
+                : '성적 데이터를 불러오는데 실패했습니다.';
+
             listSection.innerHTML = `
-                <div class="text-center py-8 text-red-600">
-                    <i class="fas fa-exclamation-circle text-3xl mb-2"></i>
-                    <p>성적 데이터를 불러오는데 실패했습니다.</p>
+                <div class="text-center py-12">
+                    <div class="w-20 h-20 rounded-full bg-red-50 mx-auto mb-4 flex items-center justify-center">
+                        <i class="fas fa-exclamation-circle text-red-500 text-3xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">${errorMessage}</h3>
+                    <p class="text-sm text-gray-500">문제가 계속되면 관리자에게 문의해주세요.</p>
                 </div>
             `;
         }
@@ -798,9 +842,12 @@ async function loadScheduleData() {
 
         if (schedules.length === 0) {
             calendarSection.innerHTML = `
-                <div class="text-center py-8 text-gray-500">
-                    <i class="fas fa-calendar-times text-4xl mb-2"></i>
-                    <p>등록된 일정이 없습니다.</p>
+                <div class="text-center py-12">
+                    <div class="w-20 h-20 rounded-full bg-gray-100 mx-auto mb-4 flex items-center justify-center">
+                        <i class="fas fa-calendar-times text-gray-400 text-3xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">등록된 일정이 없습니다</h3>
+                    <p class="text-sm text-gray-500">학사 일정이 아직 등록되지 않았습니다.</p>
                 </div>
             `;
             return;
@@ -969,9 +1016,12 @@ async function loadCounselingData(children) {
 
         if (allCounselings.length === 0) {
             listSection.innerHTML = `
-                <div class="text-center py-8 text-gray-500">
-                    <i class="fas fa-inbox text-4xl mb-2"></i>
-                    <p>상담 내역이 없습니다.</p>
+                <div class="text-center py-12">
+                    <div class="w-20 h-20 rounded-full bg-gray-100 mx-auto mb-4 flex items-center justify-center">
+                        <i class="fas fa-comments text-gray-400 text-3xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">상담 내역이 없습니다</h3>
+                    <p class="text-sm text-gray-500">아직 등록된 상담 기록이 없습니다.</p>
                 </div>
             `;
             return;
