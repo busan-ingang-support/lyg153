@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import type { CloudflareBindings } from '../types';
+import { requireRole } from '../middleware/auth';
 
 const attendance = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -42,8 +43,8 @@ attendance.get('/', async (c) => {
   return c.json({ attendance: results });
 });
 
-// 출석 체크
-attendance.post('/', async (c) => {
+// 출석 체크 (교사, 관리자만 가능)
+attendance.post('/', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
   const db = c.env.DB;
   const { enrollment_id, attendance_date, status, note, recorded_by } = await c.req.json();
   
@@ -57,8 +58,8 @@ attendance.post('/', async (c) => {
   return c.json({ message: 'Attendance recorded', id: result.meta.last_row_id });
 });
 
-// 일괄 출석 체크 (반 전체)
-attendance.post('/bulk', async (c) => {
+// 일괄 출석 체크 (반 전체, 교사/관리자만 가능)
+attendance.post('/bulk', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
   const db = c.env.DB;
   const { course_id, attendance_date, records, recorded_by } = await c.req.json();
   
@@ -136,27 +137,33 @@ attendance.get('/by-date', async (c) => {
   return c.json({ success: true, attendance: results });
 });
 
-// 학생별 출석 저장 (간단 버전)
-attendance.post('/simple', async (c) => {
+// 학생별 출석 저장 (간단 버전, 교사/관리자만 가능)
+attendance.post('/simple', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
   const db = c.env.DB;
   const { student_id, attendance_date, status, notes } = await c.req.json();
-  
+
   if (!student_id || !attendance_date || !status) {
     return c.json({ error: 'student_id, attendance_date, and status are required' }, 400);
   }
-  
+
+  // 로그인한 사용자 ID 가져오기
+  const recordedBy = c.get('userId');
+  if (!recordedBy) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
   // 현재 학생의 enrollment 찾기 (아무 과목이나)
   const enrollment = await db.prepare(`
-    SELECT id FROM enrollments 
-    WHERE student_id = ? 
+    SELECT id FROM enrollments
+    WHERE student_id = ?
     LIMIT 1
   `).bind(student_id).first();
-  
+
   if (!enrollment) {
     // enrollment가 없으면 임시로 하나 생성 (나중에 제대로 처리 필요)
     return c.json({ error: 'Student has no enrollments' }, 400);
   }
-  
+
   // 출석 저장
   const result = await db.prepare(`
     INSERT INTO attendance (enrollment_id, attendance_date, status, note, recorded_by)
@@ -168,26 +175,32 @@ attendance.post('/simple', async (c) => {
     attendance_date,
     status,
     notes || null,
-    1, // TODO: 실제 로그인한 사용자 ID
+    recordedBy,
     status,
     notes || null
   ).run();
-  
+
   return c.json({ success: true, message: 'Attendance recorded' });
 });
 
-// 일괄 출석 저장 (날짜별 전체 학생)
-attendance.post('/bulk-simple', async (c) => {
+// 일괄 출석 저장 (날짜별 전체 학생, 교사/관리자만 가능)
+attendance.post('/bulk-simple', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
   const db = c.env.DB;
   const { attendance_date, records } = await c.req.json();
-  
+
   if (!attendance_date || !records || !Array.isArray(records)) {
     return c.json({ error: 'attendance_date and records array are required' }, 400);
   }
-  
+
+  // 로그인한 사용자 ID 가져오기
+  const recordedBy = c.get('userId');
+  if (!recordedBy) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
   let successCount = 0;
   let errorCount = 0;
-  
+
   for (const record of records) {
     try {
       const { student_id, status, notes } = record;
@@ -259,7 +272,7 @@ attendance.post('/bulk-simple', async (c) => {
         attendance_date,
         status,
         notes || null,
-        1, // TODO: 실제 로그인한 사용자 ID
+        recordedBy,
         status,
         notes || null
       ).run();

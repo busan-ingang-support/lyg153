@@ -1,10 +1,11 @@
 import { Hono } from 'hono';
 import type { CloudflareBindings } from '../types';
+import { requireRole } from '../middleware/auth';
 
 const students = new Hono<{ Bindings: CloudflareBindings }>();
 
-// 모든 학생 조회
-students.get('/', async (c) => {
+// 모든 학생 조회 (교사, 관리자만 가능)
+students.get('/', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
   try {
     const db = c.env.DB;
     const { grade, class_id, semester_id, status, search, limit = 50, offset = 0 } = c.req.query();
@@ -217,7 +218,7 @@ students.get('/:id', async (c) => {
 });
 
 // 학생 생성 (관리자 전용)
-students.post('/', async (c) => {
+students.post('/', requireRole('admin', 'super_admin'), async (c) => {
   try {
     const db = c.env.DB;
     const data = await c.req.json();
@@ -322,8 +323,8 @@ students.post('/', async (c) => {
   }
 });
 
-// 학생 정보 수정
-students.put('/:id', async (c) => {
+// 학생 정보 수정 (관리자 전용)
+students.put('/:id', requireRole('admin', 'super_admin'), async (c) => {
   try {
     const db = c.env.DB;
     const id = c.req.param('id');
@@ -408,8 +409,8 @@ students.put('/:id', async (c) => {
   }
 });
 
-// 학부모-학생 연결
-students.post('/:id/parents', async (c) => {
+// 학부모-학생 연결 (관리자 전용)
+students.post('/:id/parents', requireRole('admin', 'super_admin'), async (c) => {
   try {
     const db = c.env.DB;
     const studentId = c.req.param('id');

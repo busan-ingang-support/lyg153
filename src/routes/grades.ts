@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import type { CloudflareBindings } from '../types';
+import { requireRole } from '../middleware/auth';
 
 const grades = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -40,8 +41,8 @@ grades.get('/', async (c) => {
   return c.json({ grades: results });
 });
 
-// 성적 입력
-grades.post('/', async (c) => {
+// 성적 입력 (교사, 관리자만 가능)
+grades.post('/', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
   const db = c.env.DB;
   const { enrollment_id, exam_type, score, max_score, weight, exam_date, note, recorded_by } = await c.req.json();
   
@@ -62,8 +63,8 @@ grades.post('/', async (c) => {
   return c.json({ message: 'Grade recorded', gradeId: result.meta.last_row_id }, 201);
 });
 
-// 최종 성적 계산 및 저장
-grades.post('/final', async (c) => {
+// 최종 성적 계산 및 저장 (교사, 관리자만 가능)
+grades.post('/final', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
   const db = c.env.DB;
   const { enrollment_id, approved_by } = await c.req.json();
   
