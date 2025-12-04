@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+
 import type { CloudflareBindings } from '../types';
 import { requireRole } from '../middleware/auth';
 
@@ -9,7 +10,8 @@ const assignments = new Hono<{ Bindings: CloudflareBindings }>();
 // /student/:student_id 라우트를 /:id 라우트보다 먼저 정의
 // ============================================
 
-// Bug 3 Fix: 학생별 과제 목록 - 적절한 권한 검증 추가
+// 학생별 과제 목록 (학부모용 + 학생 본인 + 교사/관리자)
+// Bug 3 Fix: 적절한 권한 검증 추가
 assignments.get('/student/:student_id', async (c) => {
   const db = c.env.DB;
   const studentId = c.req.param('student_id');
@@ -45,6 +47,7 @@ assignments.get('/student/:student_id', async (c) => {
       return c.json({ error: 'Teacher not found' }, 404);
     }
 
+    // 해당 학생이 교사의 담당 반 또는 담당 과목에 속해 있는지 확인
     const hasAccess = await db.prepare(`
       SELECT 1 FROM enrollments e
       JOIN courses c ON e.course_id = c.id
@@ -58,6 +61,7 @@ assignments.get('/student/:student_id', async (c) => {
       return c.json({ error: 'Forbidden: You can only view assignments of students in your classes' }, 403);
     }
   } else if (userRole !== 'admin' && userRole !== 'super_admin') {
+    // 관리자/최고관리자가 아닌 경우 거부
     return c.json({ error: 'Forbidden: Insufficient permissions' }, 403);
   }
 
@@ -85,7 +89,7 @@ assignments.get('/student/:student_id', async (c) => {
 // 과제 목록 조회
 assignments.get('/', async (c) => {
   const db = c.env.DB;
-  const { course_id, teacher_id, is_published } = c.req.query();
+  const { course_id, teacher_id, is_published, status } = c.req.query();
   const userId = c.get('userId');
   const userRole = c.get('userRole');
   
@@ -120,6 +124,7 @@ assignments.get('/', async (c) => {
     params.push(Number(is_published));
   }
 
+  // 학생인 경우: 본인이 수강하는 과목의 공개된 과제만
   if (userRole === 'student') {
     const student = await db.prepare(`
       SELECT id FROM students WHERE user_id = ?
@@ -133,6 +138,7 @@ assignments.get('/', async (c) => {
     }
   }
 
+  // 학부모인 경우: 자녀가 수강하는 과목의 공개된 과제만
   if (userRole === 'parent') {
     query += ` AND a.course_id IN (
       SELECT e.course_id 
@@ -143,6 +149,7 @@ assignments.get('/', async (c) => {
     params.push(userId);
   }
 
+  // 교사인 경우: 본인이 담당하는 과목의 과제만
   if (userRole === 'teacher') {
     const teacher = await db.prepare(`
       SELECT id FROM teachers WHERE user_id = ?
@@ -160,7 +167,7 @@ assignments.get('/', async (c) => {
   return c.json({ assignments: results });
 });
 
-// Bug 2 Fix: /:id 라우트는 /student/:student_id 보다 뒤에 정의
+// 과제 상세 조회 (/:id 라우트는 /student/:student_id 보다 뒤에 정의)
 assignments.get('/:id', async (c) => {
   const db = c.env.DB;
   const assignmentId = c.req.param('id');
@@ -185,7 +192,7 @@ assignments.get('/:id', async (c) => {
   return c.json({ assignment });
 });
 
-// 과제 생성
+// 과제 생성 (교사, 관리자만)
 assignments.post('/', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
   const db = c.env.DB;
   const userId = c.get('userId');
@@ -231,6 +238,7 @@ assignments.post('/', requireRole('teacher', 'admin', 'super_admin'), async (c) 
 
     const assignmentId = result.meta.last_row_id;
 
+    // 공개된 과제인 경우 알림 발송
     if (is_published && (notify_students || notify_parents)) {
       await sendAssignmentNotifications(db, assignmentId, course_id, title, due_date, notify_students, notify_parents);
     }
@@ -246,7 +254,7 @@ assignments.post('/', requireRole('teacher', 'admin', 'super_admin'), async (c) 
   }
 });
 
-// 과제 수정
+// 과제 수정 (교사, 관리자만)
 assignments.put('/:id', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
   const db = c.env.DB;
   const userId = c.get('userId');
@@ -254,6 +262,7 @@ assignments.put('/:id', requireRole('teacher', 'admin', 'super_admin'), async (c
   const assignmentId = c.req.param('id');
   const data = await c.req.json();
 
+  // 과제 존재 확인 및 권한 확인
   const existing = await db.prepare(`
     SELECT a.*, c.teacher_id
     FROM assignments a
@@ -265,6 +274,7 @@ assignments.put('/:id', requireRole('teacher', 'admin', 'super_admin'), async (c
     return c.json({ error: 'Assignment not found' }, 404);
   }
 
+  // 교사인 경우 본인 과제만 수정 가능
   if (userRole === 'teacher') {
     const teacher = await db.prepare(`
       SELECT id FROM teachers WHERE user_id = ?
@@ -288,6 +298,7 @@ assignments.put('/:id', requireRole('teacher', 'admin', 'super_admin'), async (c
     notify_parents = false
   } = data;
 
+  // 비공개 → 공개로 변경 시 알림 발송 여부
   const wasPublished = existing.is_published;
   const willBePublished = is_published !== undefined ? is_published : wasPublished;
   const justPublished = !wasPublished && willBePublished;
@@ -319,6 +330,7 @@ assignments.put('/:id', requireRole('teacher', 'admin', 'super_admin'), async (c
       assignmentId
     ).run();
 
+    // 방금 공개된 경우 알림 발송
     if (justPublished && (notify_students || notify_parents)) {
       await sendAssignmentNotifications(
         db, 
@@ -345,6 +357,7 @@ assignments.delete('/:id', requireRole('teacher', 'admin', 'super_admin'), async
   const userRole = c.get('userRole');
   const assignmentId = c.req.param('id');
 
+  // 과제 존재 확인 및 권한 확인
   const existing = await db.prepare(`
     SELECT a.*, c.teacher_id
     FROM assignments a
@@ -356,6 +369,7 @@ assignments.delete('/:id', requireRole('teacher', 'admin', 'super_admin'), async
     return c.json({ error: 'Assignment not found' }, 404);
   }
 
+  // 교사인 경우 본인 과제만 삭제 가능
   if (userRole === 'teacher') {
     const teacher = await db.prepare(`
       SELECT id FROM teachers WHERE user_id = ?
@@ -366,6 +380,7 @@ assignments.delete('/:id', requireRole('teacher', 'admin', 'super_admin'), async
     }
   }
 
+  // Soft Delete
   await db.prepare(`
     UPDATE assignments SET status = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?
   `).bind(assignmentId).run();
@@ -382,6 +397,7 @@ assignments.post('/:id/submit', requireRole('student'), async (c) => {
 
   const { content, file_url } = data;
 
+  // 학생 ID 조회
   const student = await db.prepare(`
     SELECT id FROM students WHERE user_id = ?
   `).bind(userId).first() as any;
@@ -390,6 +406,7 @@ assignments.post('/:id/submit', requireRole('student'), async (c) => {
     return c.json({ error: 'Student not found' }, 404);
   }
 
+  // 과제 존재 및 수강 확인
   const assignment = await db.prepare(`
     SELECT a.* 
     FROM assignments a
@@ -403,6 +420,7 @@ assignments.post('/:id/submit', requireRole('student'), async (c) => {
   }
 
   try {
+    // UPSERT
     await db.prepare(`
       INSERT INTO assignment_submissions (assignment_id, student_id, content, file_url, status)
       VALUES (?, ?, ?, ?, 1)
@@ -424,7 +442,7 @@ assignments.post('/:id/submit', requireRole('student'), async (c) => {
   }
 });
 
-// 과제 제출 목록 조회
+// 과제 제출 목록 조회 (교사, 관리자)
 assignments.get('/:id/submissions', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
   const db = c.env.DB;
   const assignmentId = c.req.param('id');
@@ -446,7 +464,7 @@ assignments.get('/:id/submissions', requireRole('teacher', 'admin', 'super_admin
   return c.json({ submissions: results });
 });
 
-// 과제 채점
+// 과제 채점 (교사, 관리자)
 assignments.put('/:id/submissions/:submission_id/grade', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
   const db = c.env.DB;
   const userId = c.get('userId');
@@ -471,6 +489,7 @@ assignments.put('/:id/submissions/:submission_id/grade', requireRole('teacher', 
       WHERE id = ?
     `).bind(score, feedback || null, userId, submissionId).run();
 
+    // 학생에게 알림 발송
     const submission = await db.prepare(`
       SELECT asub.*, a.title as assignment_title, s.user_id as student_user_id
       FROM assignment_submissions asub
@@ -509,6 +528,7 @@ async function sendAssignmentNotifications(
   notifyParents: boolean
 ) {
   try {
+    // 수강 학생 조회
     const { results: enrollments } = await db.prepare(`
       SELECT e.student_id, s.user_id as student_user_id
       FROM enrollments e
@@ -519,6 +539,7 @@ async function sendAssignmentNotifications(
     const dueDateStr = dueDate ? ` (마감: ${new Date(dueDate).toLocaleDateString('ko-KR')})` : '';
     const message = `새로운 과제가 등록되었습니다: "${title}"${dueDateStr}`;
 
+    // 학생에게 알림
     if (notifyStudents) {
       for (const enrollment of enrollments) {
         await db.prepare(`
@@ -533,8 +554,10 @@ async function sendAssignmentNotifications(
       }
     }
 
+    // 학부모에게 알림
     if (notifyParents) {
       for (const enrollment of enrollments) {
+        // 해당 학생의 학부모 조회
         const { results: parents } = await db.prepare(`
           SELECT parent_user_id FROM parent_student WHERE student_id = ? AND COALESCE(status, 1) = 1
         `).bind(enrollment.student_id).all();
@@ -554,6 +577,7 @@ async function sendAssignmentNotifications(
     }
   } catch (error) {
     console.error('알림 발송 실패:', error);
+    // 알림 실패해도 과제 생성은 성공으로 처리
   }
 }
 
