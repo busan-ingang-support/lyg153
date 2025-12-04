@@ -1,79 +1,130 @@
 // ============================================
-// 공개 홈페이지 (로그인 전)
+// 공개 홈페이지 (로그인 전) - 학교 홈페이지 스타일
 // ============================================
+
+// 홈페이지 설정 전역 변수
+let homepageSettings = {
+    school_name: '대안학교',
+    school_slogan: '꿈을 키우는 학교',
+    contact_phone: '000-0000-0000',
+    contact_email: 'school@example.com',
+    contact_address: '서울시 강남구',
+    primary_color: '#1e40af'
+};
 
 // 공개 홈페이지 표시
 async function showPublicHome() {
     const app = document.getElementById('app');
     
-    // 홈페이지 설정 로드 (푸터용)
-    let contactPhone = '000-0000-0000';
-    let contactEmail = 'school@example.com';
-    let contactAddress = '서울시 강남구';
-    
+    // 홈페이지 설정 로드
     try {
         const response = await axios.get('/api/homepage');
         const settings = response.data.settings || {};
-        contactPhone = settings.contact_phone || contactPhone;
-        contactEmail = settings.contact_email || contactEmail;
-        contactAddress = settings.contact_address || contactAddress;
+        homepageSettings = { ...homepageSettings, ...settings };
     } catch (error) {
-        console.error('푸터 정보 로드 실패:', error);
+        console.error('홈페이지 설정 로드 실패:', error);
     }
     
+    const primaryColor = homepageSettings.primary_color || '#1e40af';
+    
     app.innerHTML = `
-        <!-- 공개 학교 홈페이지 -->
-        <div id="public-home" class="min-h-screen bg-white">
-            <!-- 헤더 -->
-            <header class="bg-white/95 backdrop-blur-md shadow-lg sticky top-0 z-50 border-b border-gray-100">
-                <div class="container mx-auto px-4 py-5">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center space-x-4 cursor-pointer group" onclick="navigatePublicPage('home')">
-                            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 flex items-center justify-center shadow-lg transform transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
+        <!-- 학교 공개 홈페이지 -->
+        <div id="public-home" class="min-h-screen bg-gray-50">
+            <!-- 최상단 바 -->
+            <div class="bg-slate-800 text-white text-sm py-2">
+                <div class="container mx-auto px-4 flex justify-between items-center">
+                    <div class="flex items-center space-x-4">
+                        <span><i class="fas fa-phone mr-1"></i>${escapeHtml(homepageSettings.contact_phone)}</span>
+                        <span class="hidden sm:inline"><i class="fas fa-envelope mr-1"></i>${escapeHtml(homepageSettings.contact_email)}</span>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        ${typeof currentUser !== 'undefined' && currentUser ? `
+                            <span class="text-gray-300">${escapeHtml(currentUser.name)}님</span>
+                            <button onclick="goToDashboard()" class="hover:text-blue-300 transition-colors">
+                                <i class="fas fa-tachometer-alt mr-1"></i>대시보드
+                            </button>
+                        ` : `
+                            <button onclick="showLoginModal()" class="hover:text-blue-300 transition-colors">
+                                <i class="fas fa-sign-in-alt mr-1"></i>로그인
+                            </button>
+                        `}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 메인 헤더 -->
+            <header class="bg-white shadow-md sticky top-0 z-50">
+                <div class="container mx-auto px-4">
+                    <!-- 로고 영역 -->
+                    <div class="py-4 flex items-center justify-between border-b border-gray-100">
+                        <div class="flex items-center space-x-4 cursor-pointer" onclick="navigatePublicPage('home')">
+                            <div class="w-16 h-16 rounded-full bg-blue-800 flex items-center justify-center shadow-md">
                                 <i class="fas fa-graduation-cap text-white text-2xl"></i>
                             </div>
                             <div>
-                                <h1 class="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">대안학교</h1>
-                                <p class="text-sm text-gray-500 font-medium">꿈을 키우는 학교</p>
+                                <h1 class="text-2xl font-bold text-gray-800">${escapeHtml(homepageSettings.school_name)}</h1>
+                                <p class="text-sm text-blue-600 font-medium">${escapeHtml(homepageSettings.school_slogan)}</p>
                             </div>
                         </div>
-                        <div class="flex items-center space-x-8">
-                            <nav class="hidden md:flex space-x-6">
-                                <a href="#" class="public-nav-item text-gray-700 hover:text-indigo-600 font-semibold transition-all duration-300 relative group" data-page="home">
-                                    홈
-                                    <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-indigo-600 transition-all duration-300 group-hover:w-full"></span>
-                                </a>
-                                <a href="#" class="public-nav-item text-gray-700 hover:text-indigo-600 font-semibold transition-all duration-300 relative group" data-page="about">
-                                    학교소개
-                                    <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-indigo-600 transition-all duration-300 group-hover:w-full"></span>
-                                </a>
-                                <a href="#" class="public-nav-item text-gray-700 hover:text-indigo-600 font-semibold transition-all duration-300 relative group" data-page="education">
-                                    교육과정
-                                    <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-indigo-600 transition-all duration-300 group-hover:w-full"></span>
-                                </a>
-                                <a href="#" class="public-nav-item text-gray-700 hover:text-indigo-600 font-semibold transition-all duration-300 relative group" data-page="notice">
-                                    공지사항
-                                    <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-indigo-600 transition-all duration-300 group-hover:w-full"></span>
-                                </a>
-                                <a href="#" class="public-nav-item text-gray-700 hover:text-indigo-600 font-semibold transition-all duration-300 relative group" data-page="location">
-                                    오시는 길
-                                    <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-indigo-600 transition-all duration-300 group-hover:w-full"></span>
-                                </a>
-                            </nav>
-                            ${typeof currentUser !== 'undefined' && currentUser ? `
-                                <div class="flex items-center space-x-4">
-                                    <span class="text-sm text-gray-600 font-medium">${escapeHtml(currentUser.name)}님</span>
-                                    <button onclick="goToDashboard()" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-2.5 rounded-xl font-semibold shadow-lg hover:shadow-xl transform transition-all duration-300 hover:scale-105">
-                                        <i class="fas fa-tachometer-alt mr-2"></i>대시보드
-                                    </button>
-                                </div>
-                            ` : `
-                                <button onclick="showLoginModal()" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-2.5 rounded-xl font-semibold shadow-lg hover:shadow-xl transform transition-all duration-300 hover:scale-105">
-                                    <i class="fas fa-sign-in-alt mr-2"></i>로그인
-                                </button>
-                            `}
+                        <div class="hidden lg:flex items-center space-x-2">
+                            <a href="#" onclick="navigatePublicPage('about')" class="px-3 py-2 text-sm text-gray-600 hover:text-blue-600">
+                                <i class="fas fa-info-circle mr-1"></i>학교소개
+                            </a>
+                            <a href="#" onclick="navigatePublicPage('notice')" class="px-3 py-2 text-sm text-gray-600 hover:text-blue-600">
+                                <i class="fas fa-bullhorn mr-1"></i>공지사항
+                            </a>
+                            <a href="#" onclick="navigatePublicPage('location')" class="px-3 py-2 text-sm text-gray-600 hover:text-blue-600">
+                                <i class="fas fa-map-marker-alt mr-1"></i>오시는 길
+                            </a>
                         </div>
                     </div>
+                    
+                    <!-- 메인 네비게이션 -->
+                    <nav class="hidden md:block">
+                        <ul class="flex">
+                            <li class="relative group">
+                                <a href="#" class="public-nav-item flex items-center px-6 py-4 text-gray-700 hover:text-blue-700 hover:bg-blue-50 font-medium transition-colors" data-page="home">
+                                    <i class="fas fa-home mr-2"></i>홈
+                                </a>
+                            </li>
+                            <li class="relative group">
+                                <a href="#" class="public-nav-item flex items-center px-6 py-4 text-gray-700 hover:text-blue-700 hover:bg-blue-50 font-medium transition-colors" data-page="about">
+                                    <i class="fas fa-school mr-2"></i>학교소개
+                                </a>
+                            </li>
+                            <li class="relative group">
+                                <a href="#" class="public-nav-item flex items-center px-6 py-4 text-gray-700 hover:text-blue-700 hover:bg-blue-50 font-medium transition-colors" data-page="education">
+                                    <i class="fas fa-book-open mr-2"></i>교육과정
+                                </a>
+                            </li>
+                            <li class="relative group">
+                                <a href="#" class="public-nav-item flex items-center px-6 py-4 text-gray-700 hover:text-blue-700 hover:bg-blue-50 font-medium transition-colors" data-page="notice">
+                                    <i class="fas fa-clipboard-list mr-2"></i>공지사항
+                                </a>
+                            </li>
+                            <li class="relative group">
+                                <a href="#" class="public-nav-item flex items-center px-6 py-4 text-gray-700 hover:text-blue-700 hover:bg-blue-50 font-medium transition-colors" data-page="location">
+                                    <i class="fas fa-directions mr-2"></i>오시는 길
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                    
+                    <!-- 모바일 메뉴 버튼 -->
+                    <button class="md:hidden py-4 text-gray-700" onclick="toggleMobileMenu()">
+                        <i class="fas fa-bars text-2xl"></i>
+                    </button>
+                </div>
+                
+                <!-- 모바일 메뉴 -->
+                <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-gray-200">
+                    <nav class="container mx-auto px-4 py-2">
+                        <a href="#" class="public-nav-item block px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-700" data-page="home">홈</a>
+                        <a href="#" class="public-nav-item block px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-700" data-page="about">학교소개</a>
+                        <a href="#" class="public-nav-item block px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-700" data-page="education">교육과정</a>
+                        <a href="#" class="public-nav-item block px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-700" data-page="notice">공지사항</a>
+                        <a href="#" class="public-nav-item block px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-700" data-page="location">오시는 길</a>
+                    </nav>
                 </div>
             </header>
 
@@ -83,56 +134,45 @@ async function showPublicHome() {
             </main>
 
             <!-- 푸터 -->
-            <footer class="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white py-16 mt-24 relative overflow-hidden">
-                <div class="absolute inset-0 bg-gradient-to-r from-indigo-600/10 via-purple-600/10 to-pink-600/10"></div>
-                <div class="container mx-auto px-4 relative z-10">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
-                        <div>
-                            <div class="flex items-center space-x-3 mb-6">
-                                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg">
+            <footer class="bg-slate-800 text-white mt-12">
+                <div class="container mx-auto px-4 py-10">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                        <div class="md:col-span-2">
+                            <div class="flex items-center space-x-3 mb-4">
+                                <div class="w-12 h-12 rounded-full bg-blue-700 flex items-center justify-center">
                                     <i class="fas fa-graduation-cap text-white text-xl"></i>
                                 </div>
-                                <h3 class="text-2xl font-bold">대안학교</h3>
+                                <div>
+                                    <h3 class="text-xl font-bold">${escapeHtml(homepageSettings.school_name)}</h3>
+                                    <p class="text-sm text-gray-400">${escapeHtml(homepageSettings.school_slogan)}</p>
+                                </div>
                             </div>
-                            <p class="text-gray-300 text-sm leading-relaxed">
-                                꿈을 키우고 가능성을 발견하는<br>
-                                행복한 배움의 공간
-                            </p>
+                            <div class="text-sm text-gray-400 space-y-2">
+                                <p><i class="fas fa-map-marker-alt mr-2 w-5"></i>${escapeHtml(homepageSettings.contact_address)}</p>
+                                <p><i class="fas fa-phone mr-2 w-5"></i>${escapeHtml(homepageSettings.contact_phone)}</p>
+                                <p><i class="fas fa-envelope mr-2 w-5"></i>${escapeHtml(homepageSettings.contact_email)}</p>
+                            </div>
                         </div>
                         <div>
-                            <h4 class="font-bold text-lg mb-6 text-indigo-300">바로가기</h4>
-                            <ul class="space-y-3 text-sm">
-                                <li><a href="#" onclick="navigatePublicPage('about')" class="text-gray-300 hover:text-white transition-colors duration-300 flex items-center group">
-                                    <i class="fas fa-chevron-right text-xs mr-2 text-indigo-400 group-hover:translate-x-1 transition-transform"></i>학교소개
-                                </a></li>
-                                <li><a href="#" onclick="navigatePublicPage('education')" class="text-gray-300 hover:text-white transition-colors duration-300 flex items-center group">
-                                    <i class="fas fa-chevron-right text-xs mr-2 text-indigo-400 group-hover:translate-x-1 transition-transform"></i>교육과정
-                                </a></li>
-                                <li><a href="#" onclick="navigatePublicPage('notice')" class="text-gray-300 hover:text-white transition-colors duration-300 flex items-center group">
-                                    <i class="fas fa-chevron-right text-xs mr-2 text-indigo-400 group-hover:translate-x-1 transition-transform"></i>공지사항
-                                </a></li>
-                                <li><a href="#" onclick="navigatePublicPage('location')" class="text-gray-300 hover:text-white transition-colors duration-300 flex items-center group">
-                                    <i class="fas fa-chevron-right text-xs mr-2 text-indigo-400 group-hover:translate-x-1 transition-transform"></i>오시는 길
-                                </a></li>
+                            <h4 class="font-bold mb-4 text-gray-200">바로가기</h4>
+                            <ul class="space-y-2 text-sm text-gray-400">
+                                <li><a href="#" onclick="navigatePublicPage('about')" class="hover:text-white transition-colors">학교소개</a></li>
+                                <li><a href="#" onclick="navigatePublicPage('education')" class="hover:text-white transition-colors">교육과정</a></li>
+                                <li><a href="#" onclick="navigatePublicPage('notice')" class="hover:text-white transition-colors">공지사항</a></li>
+                                <li><a href="#" onclick="navigatePublicPage('location')" class="hover:text-white transition-colors">오시는 길</a></li>
                             </ul>
                         </div>
                         <div>
-                            <h4 class="font-bold text-lg mb-6 text-indigo-300">문의</h4>
-                            <ul class="space-y-3 text-sm text-gray-300">
-                                <li class="flex items-center">
-                                    <i class="fas fa-phone mr-3 text-indigo-400 w-5"></i>대표전화: ${escapeHtml(contactPhone)}
-                                </li>
-                                <li class="flex items-center">
-                                    <i class="fas fa-envelope mr-3 text-indigo-400 w-5"></i>이메일: ${escapeHtml(contactEmail)}
-                                </li>
-                                <li class="flex items-center">
-                                    <i class="fas fa-map-marker-alt mr-3 text-indigo-400 w-5"></i>주소: ${escapeHtml(contactAddress)}
-                                </li>
+                            <h4 class="font-bold mb-4 text-gray-200">이용안내</h4>
+                            <ul class="space-y-2 text-sm text-gray-400">
+                                <li><a href="#" onclick="showLoginModal()" class="hover:text-white transition-colors">로그인</a></li>
+                                <li><a href="#" class="hover:text-white transition-colors">개인정보처리방침</a></li>
+                                <li><a href="#" class="hover:text-white transition-colors">이용약관</a></li>
                             </ul>
                         </div>
                     </div>
-                    <div class="border-t border-gray-700/50 mt-12 pt-8 text-center">
-                        <p class="text-gray-400 text-sm">&copy; 2024 대안학교. All rights reserved.</p>
+                    <div class="border-t border-slate-700 mt-8 pt-6 text-center text-sm text-gray-500">
+                        <p>&copy; ${new Date().getFullYear()} ${escapeHtml(homepageSettings.school_name)}. All rights reserved.</p>
                     </div>
                 </div>
             </footer>
@@ -140,33 +180,33 @@ async function showPublicHome() {
 
         <!-- 로그인 모달 -->
         <div id="login-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 relative">
+            <div class="bg-white rounded-lg shadow-2xl w-full max-w-md p-8 relative">
                 <button onclick="closeLoginModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
                     <i class="fas fa-times text-2xl"></i>
                 </button>
                 
                 <div class="text-center mb-8">
-                    <div class="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-purple-100 mb-4">
-                        <i class="fas fa-graduation-cap text-2xl text-purple-600"></i>
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-4">
+                        <i class="fas fa-graduation-cap text-3xl text-blue-700"></i>
                     </div>
                     <h2 class="text-2xl font-bold text-gray-800 mb-1">로그인</h2>
-                    <p class="text-gray-500 text-sm">학적 관리 시스템</p>
+                    <p class="text-gray-500 text-sm">${escapeHtml(homepageSettings.school_name)} 통합 관리 시스템</p>
                 </div>
                 
-                <div id="login-error" class="hidden bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl mb-4">
+                <div id="login-error" class="hidden bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-4">
                     <span id="error-message"></span>
                 </div>
                 
                 <form id="login-form" class="space-y-5">
                     <div>
                         <label class="block text-gray-700 text-sm font-medium mb-2">아이디</label>
-                        <input type="text" id="username" required class="input-modern w-full">
+                        <input type="text" id="username" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     </div>
                     <div>
                         <label class="block text-gray-700 text-sm font-medium mb-2">비밀번호</label>
-                        <input type="password" id="password" required class="input-modern w-full">
+                        <input type="password" id="password" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     </div>
-                    <button type="submit" class="btn-pastel-primary w-full py-3 rounded-lg font-medium">
+                    <button type="submit" class="w-full py-3 bg-blue-700 text-white rounded-lg font-medium hover:bg-blue-800 transition-colors">
                         로그인
                     </button>
                 </form>
@@ -191,17 +231,22 @@ async function showPublicHome() {
     // URL에서 페이지 확인하여 해당 페이지로 이동
     const pageFromURL = getPublicPageFromURL();
     if (pageFromURL && pageFromURL !== 'home') {
-        // 약간의 지연을 두어 기본 구조가 먼저 로드되도록 함
         setTimeout(() => {
-            navigatePublicPage(pageFromURL, false); // URL은 이미 설정되어 있으므로 업데이트하지 않음
+            navigatePublicPage(pageFromURL, false);
         }, 100);
     } else {
-        // 기본 홈 페이지 로드
         showPublicHomePage();
-        // URL이 없으면 기본 홈으로 설정
         if (!window.location.hash) {
             navigatePublicPage('home', false);
         }
+    }
+}
+
+// 모바일 메뉴 토글
+function toggleMobileMenu() {
+    const menu = document.getElementById('mobile-menu');
+    if (menu) {
+        menu.classList.toggle('hidden');
     }
 }
 
@@ -395,7 +440,7 @@ async function showPublicHomePage() {
     }
 }
 
-// 홈페이지 모듈 렌더링
+// 홈페이지 모듈 렌더링 (학교 스타일)
 function renderHomepageModule(module) {
     const containerClass = {
         'container': 'container mx-auto px-4',
@@ -404,7 +449,7 @@ function renderHomepageModule(module) {
     }[module.container_type] || 'container mx-auto px-4';
     
     const style = [];
-    if (module.background_color) {
+    if (module.background_color && module.background_color !== '#ffffff') {
         style.push(`background-color: ${module.background_color}`);
     }
     if (module.background_image) {
@@ -412,18 +457,10 @@ function renderHomepageModule(module) {
         style.push(`background-size: cover`);
         style.push(`background-position: center`);
     }
-    if (module.padding_top) {
-        style.push(`padding-top: ${module.padding_top}px`);
-    }
-    if (module.padding_bottom) {
-        style.push(`padding-bottom: ${module.padding_bottom}px`);
-    }
-    if (module.margin_top) {
-        style.push(`margin-top: ${module.margin_top}px`);
-    }
-    if (module.margin_bottom) {
-        style.push(`margin-bottom: ${module.margin_bottom}px`);
-    }
+    if (module.padding_top) style.push(`padding-top: ${module.padding_top}px`);
+    if (module.padding_bottom) style.push(`padding-bottom: ${module.padding_bottom}px`);
+    if (module.margin_top) style.push(`margin-top: ${module.margin_top}px`);
+    if (module.margin_bottom) style.push(`margin-bottom: ${module.margin_bottom}px`);
     
     const sectionStyle = style.length > 0 ? ` style="${style.join('; ')}"` : '';
     
@@ -431,31 +468,31 @@ function renderHomepageModule(module) {
     
     switch (module.module_type) {
         case 'hero':
-            const heroBgStyle = module.background_image ? '' : 'bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600';
+        case 'banner':
+            // 메인 배너 슬라이드
+            const hasBgImage = module.background_image || module.hero_background_image;
             moduleHTML = `
-                <section class="relative text-white py-32 overflow-hidden"${sectionStyle}>
-                    ${!module.background_image ? `<div class="absolute inset-0 ${heroBgStyle}"></div>` : ''}
-                    <div class="absolute inset-0 bg-black/20"></div>
-                    <div class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/30"></div>
-                    <div class="${containerClass} text-center relative z-10">
-                        <div class="animate-fade-in-up">
-                            <h2 class="text-6xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-white to-purple-100 bg-clip-text text-transparent drop-shadow-2xl">
-                                ${escapeHtml(module.title || '꿈을 키우는 학교')}
+                <section class="relative bg-blue-800 text-white overflow-hidden"${sectionStyle}>
+                    ${hasBgImage ? '' : '<div class="absolute inset-0 bg-gradient-to-r from-blue-900 to-blue-700"></div>'}
+                    <div class="absolute inset-0 bg-black/30"></div>
+                    <div class="${containerClass} relative z-10 py-20 md:py-32">
+                        <div class="max-w-3xl">
+                            <h2 class="text-4xl md:text-5xl font-bold mb-4 leading-tight">
+                                ${escapeHtml(module.title || homepageSettings.school_name)}
                             </h2>
-                            <p class="text-xl md:text-2xl mb-12 text-white/90 font-light max-w-3xl mx-auto leading-relaxed">
-                                ${escapeHtml(module.subtitle || '우리 모두가 주인공이 되는 배움의 공간')}
+                            <p class="text-xl md:text-2xl mb-8 text-blue-100 leading-relaxed">
+                                ${escapeHtml(module.subtitle || homepageSettings.school_slogan)}
                             </p>
-                            <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
-                                <button onclick="navigatePublicPage('about')" class="bg-white text-indigo-600 px-10 py-4 rounded-xl font-bold text-lg shadow-2xl hover:shadow-3xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1">
-                                    <i class="fas fa-info-circle mr-2"></i>학교 소개 보기
+                            <div class="flex flex-wrap gap-4">
+                                <button onclick="navigatePublicPage('about')" class="bg-white text-blue-800 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors shadow-lg">
+                                    <i class="fas fa-info-circle mr-2"></i>학교소개
                                 </button>
-                                <button onclick="showLoginModal()" class="bg-indigo-600/90 backdrop-blur-sm text-white px-10 py-4 rounded-xl font-bold text-lg border-2 border-white/30 shadow-2xl hover:shadow-3xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1">
-                                    <i class="fas fa-sign-in-alt mr-2"></i>로그인
+                                <button onclick="navigatePublicPage('notice')" class="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-500 transition-colors border border-blue-400">
+                                    <i class="fas fa-bullhorn mr-2"></i>공지사항
                                 </button>
                             </div>
                         </div>
                     </div>
-                    <div class="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white to-transparent"></div>
                 </section>
             `;
             break;
@@ -463,84 +500,125 @@ function renderHomepageModule(module) {
         case 'slides':
             if (module.slides && module.slides.length > 0) {
                 moduleHTML = `
-                    <section class="py-16"${sectionStyle}>
-                        <div class="${containerClass}">
-                            <div class="relative overflow-hidden rounded-lg">
-                                <div id="slideshow-${module.id}" class="slideshow-container">
-                                    ${module.slides.map((slide, index) => `
-                                        <div class="slide ${index === 0 ? 'active' : ''}" style="display: ${index === 0 ? 'block' : 'none'};">
-                                            <img src="${escapeHtml(slide.image_url)}" alt="${escapeHtml(slide.image_alt || '')}" class="w-full h-auto object-cover" style="max-height: 600px;">
-                                            ${slide.title || slide.subtitle ? `
-                                                <div class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40">
-                                                    <div class="text-center text-white px-4">
-                                                        ${slide.title ? `<h3 class="text-4xl font-bold mb-2">${escapeHtml(slide.title)}</h3>` : ''}
-                                                        ${slide.subtitle ? `<p class="text-xl">${escapeHtml(slide.subtitle)}</p>` : ''}
-                                                        ${slide.link_url ? `<a href="${escapeHtml(slide.link_url)}" class="inline-block mt-4 bg-white text-purple-600 px-6 py-2 rounded-lg font-semibold hover:bg-gray-100">${escapeHtml(slide.link_text || '자세히 보기')}</a>` : ''}
-                                                    </div>
-                                                </div>
-                                            ` : ''}
+                    <section class="relative"${sectionStyle}>
+                        <div id="slideshow-${module.id}" class="relative overflow-hidden" style="height: 450px;">
+                            ${module.slides.map((slide, index) => `
+                                <div class="slide absolute inset-0 transition-opacity duration-500 ${index === 0 ? 'opacity-100' : 'opacity-0'}" style="${index === 0 ? '' : 'pointer-events: none;'}">
+                                    <img src="${escapeHtml(slide.image_url)}" alt="${escapeHtml(slide.image_alt || '')}" class="w-full h-full object-cover">
+                                    <div class="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent flex items-center">
+                                        <div class="container mx-auto px-4">
+                                            <div class="max-w-xl text-white">
+                                                ${slide.title ? `<h3 class="text-3xl md:text-4xl font-bold mb-3">${escapeHtml(slide.title)}</h3>` : ''}
+                                                ${slide.subtitle ? `<p class="text-lg text-gray-200 mb-4">${escapeHtml(slide.subtitle)}</p>` : ''}
+                                                ${slide.link_url ? `<a href="${escapeHtml(slide.link_url)}" class="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700">${escapeHtml(slide.link_text || '자세히 보기')}</a>` : ''}
+                                            </div>
                                         </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                            ${module.slides.length > 1 ? `
+                                <button onclick="previousSlide(${module.id})" class="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/80 hover:bg-white rounded-full flex items-center justify-center shadow-lg z-10">
+                                    <i class="fas fa-chevron-left text-gray-700"></i>
+                                </button>
+                                <button onclick="nextSlide(${module.id})" class="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/80 hover:bg-white rounded-full flex items-center justify-center shadow-lg z-10">
+                                    <i class="fas fa-chevron-right text-gray-700"></i>
+                                </button>
+                                <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2 z-10">
+                                    ${module.slides.map((_, idx) => `
+                                        <button onclick="goToSlide(${module.id}, ${idx})" class="slide-dot w-3 h-3 rounded-full ${idx === 0 ? 'bg-white' : 'bg-white/50'} hover:bg-white transition-colors"></button>
                                     `).join('')}
                                 </div>
-                                ${module.slides.length > 1 ? `
-                                    <button onclick="previousSlide(${module.id})" class="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full p-3">
-                                        <i class="fas fa-chevron-left text-gray-800"></i>
-                                    </button>
-                                    <button onclick="nextSlide(${module.id})" class="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full p-3">
-                                        <i class="fas fa-chevron-right text-gray-800"></i>
-                                    </button>
-                                ` : ''}
-                            </div>
+                            ` : ''}
                         </div>
                     </section>
                 `;
+                // 자동 슬라이드 시작
+                setTimeout(() => startAutoSlide(module.id, module.slides.length), 100);
             }
             break;
             
-        case 'values':
-            const valueColors = [
-                { bg: 'from-red-500 to-pink-500', icon: 'from-red-100 to-pink-100', text: 'text-red-600' },
-                { bg: 'from-blue-500 to-indigo-500', icon: 'from-blue-100 to-indigo-100', text: 'text-blue-600' },
-                { bg: 'from-green-500 to-emerald-500', icon: 'from-green-100 to-emerald-100', text: 'text-green-600' }
+        case 'quick_links':
+            // 바로가기 메뉴
+            const links = module.links || [
+                { icon: 'fa-user-graduate', title: '입학안내', url: '#', color: 'blue' },
+                { icon: 'fa-calendar-alt', title: '학사일정', url: '#', color: 'green' },
+                { icon: 'fa-utensils', title: '급식안내', url: '#', color: 'orange' },
+                { icon: 'fa-file-alt', title: '가정통신문', url: '#', color: 'purple' }
             ];
+            const colorMap = {
+                blue: 'bg-blue-600 hover:bg-blue-700',
+                green: 'bg-green-600 hover:bg-green-700',
+                orange: 'bg-orange-500 hover:bg-orange-600',
+                purple: 'bg-purple-600 hover:bg-purple-700',
+                red: 'bg-red-600 hover:bg-red-700',
+                teal: 'bg-teal-600 hover:bg-teal-700'
+            };
             moduleHTML = `
-                <section class="py-20 bg-gradient-to-br from-gray-50 to-white"${sectionStyle}>
+                <section class="py-8 bg-gray-100"${sectionStyle}>
                     <div class="${containerClass}">
-                        <div class="text-center mb-16">
-                            <h2 class="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">우리의 교훈</h2>
-                            <p class="text-gray-600 text-lg">가치 있는 교육을 위한 우리의 약속</p>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            ${(Array.isArray(links) ? links : []).map((link, idx) => {
+                                const bgColor = colorMap[link.color] || colorMap.blue;
+                                return `
+                                    <a href="${escapeHtml(link.url || '#')}" class="${bgColor} text-white rounded-xl p-6 text-center transition-all hover:shadow-lg hover:-translate-y-1">
+                                        <i class="fas ${escapeHtml(link.icon || 'fa-link')} text-3xl mb-3"></i>
+                                        <p class="font-semibold">${escapeHtml(link.title || '')}</p>
+                                    </a>
+                                `;
+                            }).join('')}
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            ${[1, 2, 3].map((i, idx) => {
+                    </div>
+                </section>
+            `;
+            break;
+            
+        case 'notice':
+        case 'notice_board':
+            // 공지사항 게시판
+            moduleHTML = `
+                <section class="py-10"${sectionStyle}>
+                    <div class="${containerClass}">
+                        <div class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
+                            <div class="bg-blue-800 text-white px-6 py-4 flex justify-between items-center">
+                                <h3 class="text-lg font-bold"><i class="fas fa-bullhorn mr-2"></i>공지사항</h3>
+                                <a href="#" onclick="navigatePublicPage('notice')" class="text-sm text-blue-200 hover:text-white">
+                                    더보기 <i class="fas fa-chevron-right ml-1"></i>
+                                </a>
+                            </div>
+                            <div id="public-notice-preview" class="divide-y divide-gray-100">
+                                <p class="text-gray-500 text-center py-8">로딩 중...</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            `;
+            break;
+            
+        case 'values':
+            // 교훈/핵심가치 (학교 스타일)
+            moduleHTML = `
+                <section class="py-12 bg-white"${sectionStyle}>
+                    <div class="${containerClass}">
+                        <div class="text-center mb-10">
+                            <h2 class="text-3xl font-bold text-gray-800 mb-2">${escapeHtml(module.section_title || '교훈')}</h2>
+                            <div class="w-20 h-1 bg-blue-600 mx-auto"></div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            ${[1, 2, 3].map((i) => {
                                 const icon = module[`value${i}_icon`];
                                 const title = module[`value${i}_title`] || '';
                                 const desc = module[`value${i}_desc`] || '';
-                                const colors = valueColors[idx] || valueColors[0];
-                                const isFontAwesome = icon && (icon.startsWith('fa-') || icon.startsWith('fas ') || icon.startsWith('far ') || icon.startsWith('fab ') || icon.startsWith('fal ') || icon.startsWith('fad '));
-                                const iconClass = isFontAwesome ? (icon.startsWith('fa-') ? `fas ${icon}` : icon) : '';
-                                return `
-                                    <div class="group bg-white rounded-2xl p-8 shadow-lg hover:shadow-2xl transform transition-all duration-300 hover:-translate-y-2 border border-gray-100">
-                                        <div class="text-center">
-                                            ${icon ? (
-                                                isFontAwesome ? `
-                                                    <div class="w-24 h-24 bg-gradient-to-br ${colors.icon} rounded-2xl flex items-center justify-center mx-auto mb-6 transform transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-lg">
-                                                        <i class="${iconClass} text-5xl ${colors.text}"></i>
-                                                    </div>
-                                                ` : `
-                                                    <div class="w-24 h-24 bg-gradient-to-br ${colors.icon} rounded-2xl flex items-center justify-center mx-auto mb-6 transform transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-lg p-4">
-                                                        <img src="${escapeHtml(icon)}" alt="${escapeHtml(title)}" class="w-full h-full object-contain">
-                                                    </div>
-                                                `
-                                            ) : `
-                                                <div class="w-24 h-24 bg-gradient-to-br ${colors.icon} rounded-2xl flex items-center justify-center mx-auto mb-6 transform transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-lg">
-                                                    <i class="fas fa-heart text-5xl ${colors.text}"></i>
-                                                </div>
-                                            `}
-                                            <h3 class="text-2xl font-bold text-gray-800 mb-3">${escapeHtml(title)}</h3>
-                                            <p class="text-gray-600 leading-relaxed">${escapeHtml(desc)}</p>
+                                const colors = ['blue', 'green', 'orange'][i-1];
+                                const iconClass = icon && icon.startsWith('fa-') ? `fas ${icon}` : (icon || 'fas fa-star');
+                                return title ? `
+                                    <div class="bg-gray-50 rounded-xl p-8 text-center border border-gray-200 hover:shadow-lg transition-shadow">
+                                        <div class="w-20 h-20 bg-${colors}-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <i class="${iconClass} text-3xl text-${colors}-600"></i>
                                         </div>
+                                        <h3 class="text-xl font-bold text-gray-800 mb-2">${escapeHtml(title)}</h3>
+                                        <p class="text-gray-600">${escapeHtml(desc)}</p>
                                     </div>
-                                `;
+                                ` : '';
                             }).join('')}
                         </div>
                     </div>
@@ -549,51 +627,137 @@ function renderHomepageModule(module) {
             break;
             
         case 'features':
-            const featureColors = [
-                { bg: 'from-indigo-500 to-purple-500', icon: 'from-indigo-100 to-purple-100', text: 'text-indigo-600' },
-                { bg: 'from-blue-500 to-cyan-500', icon: 'from-blue-100 to-cyan-100', text: 'text-blue-600' },
-                { bg: 'from-purple-500 to-pink-500', icon: 'from-purple-100 to-pink-100', text: 'text-purple-600' },
-                { bg: 'from-green-500 to-teal-500', icon: 'from-green-100 to-teal-100', text: 'text-green-600' }
-            ];
+            // 학교 특징 (학교 스타일)
             moduleHTML = `
-                <section class="py-20 bg-white"${sectionStyle}>
+                <section class="py-12 bg-gray-50"${sectionStyle}>
                     <div class="${containerClass}">
-                        <div class="text-center mb-16">
-                            <h2 class="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">우리 학교의 특징</h2>
-                            <p class="text-gray-600 text-lg">차별화된 교육 프로그램과 시설</p>
+                        <div class="text-center mb-10">
+                            <h2 class="text-3xl font-bold text-gray-800 mb-2">${escapeHtml(module.section_title || '학교 특징')}</h2>
+                            <div class="w-20 h-1 bg-blue-600 mx-auto"></div>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                            ${[1, 2, 3, 4].map((i, idx) => {
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                            ${[1, 2, 3, 4].map((i) => {
                                 const icon = module[`feature${i}_icon`];
                                 const title = module[`feature${i}_title`] || '';
                                 const desc = module[`feature${i}_desc`] || '';
-                                const colors = featureColors[idx] || featureColors[0];
-                                const isFontAwesome = icon && (icon.startsWith('fa-') || icon.startsWith('fas ') || icon.startsWith('far ') || icon.startsWith('fab ') || icon.startsWith('fal ') || icon.startsWith('fad '));
-                                const iconClass = isFontAwesome ? (icon.startsWith('fa-') ? `fas ${icon}` : icon) : '';
-                                return `
-                                    <div class="group bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 shadow-md hover:shadow-2xl transform transition-all duration-300 hover:-translate-y-2 border border-gray-100">
-                                        <div class="text-center">
-                                            ${icon ? (
-                                                isFontAwesome ? `
-                                                    <div class="w-20 h-20 bg-gradient-to-br ${colors.icon} rounded-2xl flex items-center justify-center mx-auto mb-6 transform transition-all duration-300 group-hover:scale-110 group-hover:rotate-6 shadow-lg">
-                                                        <i class="${iconClass} text-4xl ${colors.text}"></i>
-                                                    </div>
-                                                ` : `
-                                                    <div class="w-20 h-20 bg-gradient-to-br ${colors.icon} rounded-2xl flex items-center justify-center mx-auto mb-6 transform transition-all duration-300 group-hover:scale-110 group-hover:rotate-6 shadow-lg p-4">
-                                                        <img src="${escapeHtml(icon)}" alt="${escapeHtml(title)}" class="w-full h-full object-contain">
-                                                    </div>
-                                                `
-                                            ) : `
-                                                <div class="w-20 h-20 bg-gradient-to-br ${colors.icon} rounded-2xl flex items-center justify-center mx-auto mb-6 transform transition-all duration-300 group-hover:scale-110 group-hover:rotate-6 shadow-lg">
-                                                    <i class="fas fa-users text-4xl ${colors.text}"></i>
-                                                </div>
-                                            `}
-                                            <h4 class="font-bold text-lg text-gray-800 mb-3">${escapeHtml(title)}</h4>
-                                            <p class="text-sm text-gray-600 leading-relaxed">${escapeHtml(desc)}</p>
+                                const iconClass = icon && icon.startsWith('fa-') ? `fas ${icon}` : (icon || 'fas fa-check');
+                                return title ? `
+                                    <div class="bg-white rounded-xl p-6 text-center border border-gray-200 hover:shadow-lg transition-all hover:-translate-y-1">
+                                        <div class="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                                            <i class="${iconClass} text-2xl text-blue-600"></i>
+                                        </div>
+                                        <h4 class="font-bold text-gray-800 mb-2">${escapeHtml(title)}</h4>
+                                        <p class="text-sm text-gray-600">${escapeHtml(desc)}</p>
+                                    </div>
+                                ` : '';
+                            }).join('')}
+                        </div>
+                    </div>
+                </section>
+            `;
+            break;
+            
+        case 'stats':
+            // 학교 현황 통계
+            moduleHTML = `
+                <section class="py-10 bg-blue-800 text-white"${sectionStyle}>
+                    <div class="${containerClass}">
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                            <div>
+                                <div class="text-4xl font-bold mb-2">${escapeHtml(module.stat1_value || '100')}${escapeHtml(module.stat1_suffix || '명')}</div>
+                                <div class="text-blue-200">${escapeHtml(module.stat1_label || '재학생')}</div>
+                            </div>
+                            <div>
+                                <div class="text-4xl font-bold mb-2">${escapeHtml(module.stat2_value || '15')}${escapeHtml(module.stat2_suffix || '명')}</div>
+                                <div class="text-blue-200">${escapeHtml(module.stat2_label || '교원')}</div>
+                            </div>
+                            <div>
+                                <div class="text-4xl font-bold mb-2">${escapeHtml(module.stat3_value || '6')}${escapeHtml(module.stat3_suffix || '개')}</div>
+                                <div class="text-blue-200">${escapeHtml(module.stat3_label || '학급')}</div>
+                            </div>
+                            <div>
+                                <div class="text-4xl font-bold mb-2">${escapeHtml(module.stat4_value || '2020')}${escapeHtml(module.stat4_suffix || '년')}</div>
+                                <div class="text-blue-200">${escapeHtml(module.stat4_label || '설립')}</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            `;
+            break;
+            
+        case 'gallery':
+            // 학교 갤러리
+            const images = module.images || [];
+            moduleHTML = `
+                <section class="py-12 bg-white"${sectionStyle}>
+                    <div class="${containerClass}">
+                        <div class="text-center mb-10">
+                            <h2 class="text-3xl font-bold text-gray-800 mb-2">${escapeHtml(module.section_title || '학교 갤러리')}</h2>
+                            <div class="w-20 h-1 bg-blue-600 mx-auto"></div>
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            ${images.length > 0 ? images.map((img, idx) => `
+                                <div class="aspect-square rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow cursor-pointer" onclick="openGalleryImage('${escapeHtml(img.url)}')">
+                                    <img src="${escapeHtml(img.url)}" alt="${escapeHtml(img.alt || '')}" class="w-full h-full object-cover hover:scale-105 transition-transform">
+                                </div>
+                            `).join('') : `
+                                <div class="col-span-full text-center py-12 bg-gray-100 rounded-lg">
+                                    <i class="fas fa-images text-4xl text-gray-400 mb-2"></i>
+                                    <p class="text-gray-500">갤러리 이미지를 추가해주세요</p>
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                </section>
+            `;
+            break;
+            
+        case 'contact':
+        case 'map':
+            // 연락처/오시는 길
+            moduleHTML = `
+                <section class="py-12 bg-gray-50"${sectionStyle}>
+                    <div class="${containerClass}">
+                        <div class="text-center mb-10">
+                            <h2 class="text-3xl font-bold text-gray-800 mb-2">${escapeHtml(module.section_title || '오시는 길')}</h2>
+                            <div class="w-20 h-1 bg-blue-600 mx-auto"></div>
+                        </div>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <div class="bg-white rounded-xl p-8 shadow-md border border-gray-200">
+                                <h3 class="text-xl font-bold text-gray-800 mb-6"><i class="fas fa-school mr-2 text-blue-600"></i>학교 정보</h3>
+                                <div class="space-y-4">
+                                    <div class="flex items-start">
+                                        <i class="fas fa-map-marker-alt text-blue-600 w-6 mt-1"></i>
+                                        <div class="ml-3">
+                                            <p class="font-semibold text-gray-800">주소</p>
+                                            <p class="text-gray-600">${escapeHtml(module.address || homepageSettings.contact_address)}</p>
                                         </div>
                                     </div>
-                                `;
-                            }).join('')}
+                                    <div class="flex items-start">
+                                        <i class="fas fa-phone text-blue-600 w-6 mt-1"></i>
+                                        <div class="ml-3">
+                                            <p class="font-semibold text-gray-800">전화</p>
+                                            <p class="text-gray-600">${escapeHtml(module.phone || homepageSettings.contact_phone)}</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start">
+                                        <i class="fas fa-envelope text-blue-600 w-6 mt-1"></i>
+                                        <div class="ml-3">
+                                            <p class="font-semibold text-gray-800">이메일</p>
+                                            <p class="text-gray-600">${escapeHtml(module.email || homepageSettings.contact_email)}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-gray-300 rounded-xl h-80 flex items-center justify-center">
+                                ${module.map_embed ? module.map_embed : `
+                                    <div class="text-center text-gray-500">
+                                        <i class="fas fa-map text-5xl mb-3"></i>
+                                        <p>지도 영역</p>
+                                        <p class="text-sm">관리자에서 지도 코드를 입력해주세요</p>
+                                    </div>
+                                `}
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -602,11 +766,17 @@ function renderHomepageModule(module) {
             
         case 'text':
             moduleHTML = `
-                <section class="py-16"${sectionStyle}>
+                <section class="py-10"${sectionStyle}>
                     <div class="${containerClass}">
-                        ${module.title ? `<h2 class="text-3xl font-bold mb-6 text-gray-800">${escapeHtml(module.title)}</h2>` : ''}
-                        <div class="prose max-w-none">
-                            ${escapeHtml(module.content || '').replace(/\n/g, '<br>')}
+                        <div class="bg-white rounded-xl p-8 shadow-md border border-gray-200">
+                            ${module.title ? `
+                                <h2 class="text-2xl font-bold text-gray-800 mb-4 pb-4 border-b border-gray-200">
+                                    <i class="fas fa-file-alt mr-2 text-blue-600"></i>${escapeHtml(module.title)}
+                                </h2>
+                            ` : ''}
+                            <div class="prose max-w-none text-gray-700 leading-relaxed">
+                                ${(module.content || '').replace(/\n/g, '<br>')}
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -616,14 +786,14 @@ function renderHomepageModule(module) {
         case 'image':
             if (module.image_url) {
                 const imgStyle = [];
-                if (module.image_width) imgStyle.push(`width: ${module.image_width}px`);
-                if (module.image_height) imgStyle.push(`height: ${module.image_height}px`);
+                if (module.image_width) imgStyle.push(`max-width: ${module.image_width}px`);
+                if (module.image_height) imgStyle.push(`max-height: ${module.image_height}px`);
                 moduleHTML = `
-                    <section class="py-16"${sectionStyle}>
+                    <section class="py-10"${sectionStyle}>
                         <div class="${containerClass} text-center">
                             <img src="${escapeHtml(module.image_url)}" 
                                  alt="${escapeHtml(module.image_alt || '')}" 
-                                 class="mx-auto ${imgStyle.length > 0 ? '' : 'max-w-full h-auto'}"
+                                 class="mx-auto rounded-lg shadow-md ${imgStyle.length > 0 ? '' : 'max-w-full h-auto'}"
                                  ${imgStyle.length > 0 ? `style="${imgStyle.join('; ')}"` : ''}>
                         </div>
                     </section>
@@ -634,7 +804,7 @@ function renderHomepageModule(module) {
         case 'custom':
             if (module.html_content) {
                 moduleHTML = `
-                    <section class="py-16"${sectionStyle}>
+                    <section class="py-10"${sectionStyle}>
                         <div class="${containerClass}">
                             ${module.html_content}
                         </div>
@@ -647,33 +817,125 @@ function renderHomepageModule(module) {
     return moduleHTML || '';
 }
 
+// 갤러리 이미지 열기
+function openGalleryImage(url) {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4';
+    modal.onclick = () => modal.remove();
+    modal.innerHTML = `
+        <img src="${escapeHtml(url)}" class="max-w-full max-h-full rounded-lg">
+        <button class="absolute top-4 right-4 text-white text-3xl hover:text-gray-300">&times;</button>
+    `;
+    document.body.appendChild(modal);
+}
+
 // 슬라이드 네비게이션
 let slideIndices = {};
+let slideIntervals = {};
 
 function nextSlide(moduleId) {
-    if (!slideIndices[moduleId]) slideIndices[moduleId] = 0;
+    if (slideIndices[moduleId] === undefined) slideIndices[moduleId] = 0;
     const container = document.querySelector(`#slideshow-${moduleId}`);
     if (!container) return;
     
     const slides = container.querySelectorAll('.slide');
     if (slides.length === 0) return;
     
-    slides[slideIndices[moduleId]].style.display = 'none';
+    // 현재 슬라이드 숨기기
+    slides[slideIndices[moduleId]].classList.remove('opacity-100');
+    slides[slideIndices[moduleId]].classList.add('opacity-0');
+    slides[slideIndices[moduleId]].style.pointerEvents = 'none';
+    
+    // 다음 슬라이드로
     slideIndices[moduleId] = (slideIndices[moduleId] + 1) % slides.length;
-    slides[slideIndices[moduleId]].style.display = 'block';
+    
+    // 다음 슬라이드 보이기
+    slides[slideIndices[moduleId]].classList.remove('opacity-0');
+    slides[slideIndices[moduleId]].classList.add('opacity-100');
+    slides[slideIndices[moduleId]].style.pointerEvents = 'auto';
+    
+    // 인디케이터 업데이트
+    updateSlideIndicators(moduleId);
 }
 
 function previousSlide(moduleId) {
-    if (!slideIndices[moduleId]) slideIndices[moduleId] = 0;
+    if (slideIndices[moduleId] === undefined) slideIndices[moduleId] = 0;
     const container = document.querySelector(`#slideshow-${moduleId}`);
     if (!container) return;
     
     const slides = container.querySelectorAll('.slide');
     if (slides.length === 0) return;
     
-    slides[slideIndices[moduleId]].style.display = 'none';
+    // 현재 슬라이드 숨기기
+    slides[slideIndices[moduleId]].classList.remove('opacity-100');
+    slides[slideIndices[moduleId]].classList.add('opacity-0');
+    slides[slideIndices[moduleId]].style.pointerEvents = 'none';
+    
+    // 이전 슬라이드로
     slideIndices[moduleId] = (slideIndices[moduleId] - 1 + slides.length) % slides.length;
-    slides[slideIndices[moduleId]].style.display = 'block';
+    
+    // 이전 슬라이드 보이기
+    slides[slideIndices[moduleId]].classList.remove('opacity-0');
+    slides[slideIndices[moduleId]].classList.add('opacity-100');
+    slides[slideIndices[moduleId]].style.pointerEvents = 'auto';
+    
+    // 인디케이터 업데이트
+    updateSlideIndicators(moduleId);
+}
+
+function goToSlide(moduleId, index) {
+    if (slideIndices[moduleId] === undefined) slideIndices[moduleId] = 0;
+    const container = document.querySelector(`#slideshow-${moduleId}`);
+    if (!container) return;
+    
+    const slides = container.querySelectorAll('.slide');
+    if (slides.length === 0 || index >= slides.length) return;
+    
+    // 현재 슬라이드 숨기기
+    slides[slideIndices[moduleId]].classList.remove('opacity-100');
+    slides[slideIndices[moduleId]].classList.add('opacity-0');
+    slides[slideIndices[moduleId]].style.pointerEvents = 'none';
+    
+    // 선택한 슬라이드로
+    slideIndices[moduleId] = index;
+    
+    // 슬라이드 보이기
+    slides[slideIndices[moduleId]].classList.remove('opacity-0');
+    slides[slideIndices[moduleId]].classList.add('opacity-100');
+    slides[slideIndices[moduleId]].style.pointerEvents = 'auto';
+    
+    // 인디케이터 업데이트
+    updateSlideIndicators(moduleId);
+}
+
+function updateSlideIndicators(moduleId) {
+    const container = document.querySelector(`#slideshow-${moduleId}`);
+    if (!container) return;
+    
+    const dots = container.querySelectorAll('.slide-dot');
+    dots.forEach((dot, idx) => {
+        if (idx === slideIndices[moduleId]) {
+            dot.classList.remove('bg-white/50');
+            dot.classList.add('bg-white');
+        } else {
+            dot.classList.remove('bg-white');
+            dot.classList.add('bg-white/50');
+        }
+    });
+}
+
+function startAutoSlide(moduleId, slideCount) {
+    if (slideCount <= 1) return;
+    
+    // 기존 인터벌 정리
+    if (slideIntervals[moduleId]) {
+        clearInterval(slideIntervals[moduleId]);
+    }
+    
+    slideIndices[moduleId] = 0;
+    slideIntervals[moduleId] = setInterval(() => {
+        nextSlide(moduleId);
+    }, 5000); // 5초마다 자동 전환
 }
 
 // 공개 공지사항 미리보기 로드
@@ -683,6 +945,8 @@ async function loadPublicNoticePreview() {
         const response = await axios.get('/api/boards/posts?board_type=student&is_notice=1&limit=5');
         
         const container = document.getElementById('public-notice-preview');
+        if (!container) return;
+        
         const notices = response.data.posts || [];
         
         if (notices.length === 0) {
@@ -690,24 +954,37 @@ async function loadPublicNoticePreview() {
             return;
         }
         
-        container.innerHTML = `
-            <div class="space-y-3">
-                ${notices.map(notice => `
-                    <div class="flex items-center justify-between p-4 hover:bg-gray-50 rounded-lg transition-colors">
-                        <div class="flex items-center space-x-3 flex-1">
-                            <i class="fas fa-bullhorn text-purple-600"></i>
-                            <span class="font-medium text-gray-800">${escapeHtml(notice.title)}</span>
-                        </div>
-                        <span class="text-sm text-gray-500">${formatDate(notice.created_at)}</span>
-                    </div>
-                `).join('')}
+        container.innerHTML = notices.map((notice, idx) => `
+            <div class="flex items-center justify-between px-6 py-4 hover:bg-blue-50 transition-colors cursor-pointer ${idx < notices.length - 1 ? 'border-b border-gray-100' : ''}">
+                <div class="flex items-center space-x-3 flex-1 min-w-0">
+                    <span class="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-600 rounded text-xs flex items-center justify-center font-bold">${idx + 1}</span>
+                    <span class="font-medium text-gray-800 truncate">${escapeHtml(notice.title)}</span>
+                </div>
+                <span class="flex-shrink-0 text-sm text-gray-500 ml-4">${formatDateShort(notice.created_at)}</span>
             </div>
-        `;
+        `).join('');
     } catch (error) {
         console.error('공지사항 로드 실패:', error);
-        document.getElementById('public-notice-preview').innerHTML = 
-            '<p class="text-gray-500 text-center py-8">공지사항을 불러올 수 없습니다.</p>';
+        const container = document.getElementById('public-notice-preview');
+        if (container) {
+            container.innerHTML = '<p class="text-gray-500 text-center py-8">공지사항을 불러올 수 없습니다.</p>';
+        }
     }
+}
+
+// 짧은 날짜 포맷
+function formatDateShort(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now - date;
+    const dayDiff = Math.floor(diff / (1000 * 60 * 60 * 24));
+    
+    if (dayDiff === 0) return '오늘';
+    if (dayDiff === 1) return '어제';
+    if (dayDiff < 7) return `${dayDiff}일 전`;
+    
+    return `${date.getMonth() + 1}.${date.getDate()}`;
 }
 
 // ============================================
@@ -1220,4 +1497,5 @@ function goToDashboard() {
         }, 100);
     }
 }
+
 

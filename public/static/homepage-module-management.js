@@ -127,13 +127,19 @@ function renderModuleManagement(container) {
 // 모듈 카드 렌더링
 function renderModuleCard(module, index) {
     const moduleTypeNames = {
-        'hero': '히어로 섹션',
-        'values': '교훈 섹션',
-        'features': '특징 섹션',
-        'slides': '슬라이드 섹션',
-        'notice': '공지사항 섹션',
-        'about': '학교 소개 섹션',
-        'contact': '연락처 섹션',
+        'hero': '메인 배너',
+        'banner': '메인 배너',
+        'slides': '슬라이드 배너',
+        'quick_links': '바로가기 메뉴',
+        'values': '교훈/핵심가치',
+        'features': '학교 특징',
+        'notice': '공지사항',
+        'notice_board': '공지사항 게시판',
+        'stats': '학교 현황 통계',
+        'gallery': '학교 갤러리',
+        'about': '학교 소개',
+        'contact': '연락처/오시는 길',
+        'map': '오시는 길',
         'text': '텍스트 섹션',
         'image': '이미지 섹션',
         'video': '비디오 섹션',
@@ -291,17 +297,26 @@ function showAddModuleModal() {
                     <label class="block text-sm font-medium text-gray-700 mb-2">모듈 타입 *</label>
                     <select id="module-type" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <option value="">선택하세요</option>
-                        <option value="hero">히어로 섹션</option>
-                        <option value="slides">슬라이드 섹션</option>
-                        <option value="values">교훈 섹션</option>
-                        <option value="features">특징 섹션</option>
-                        <option value="notice">공지사항 섹션</option>
-                        <option value="about">학교 소개 섹션</option>
-                        <option value="contact">연락처 섹션</option>
-                        <option value="text">텍스트 섹션</option>
-                        <option value="image">이미지 섹션</option>
-                        <option value="video">비디오 섹션</option>
-                        <option value="custom">커스텀 HTML</option>
+                        <optgroup label="배너">
+                            <option value="hero">메인 배너</option>
+                            <option value="slides">슬라이드 배너</option>
+                        </optgroup>
+                        <optgroup label="주요 섹션">
+                            <option value="quick_links">바로가기 메뉴</option>
+                            <option value="notice">공지사항</option>
+                            <option value="values">교훈/핵심가치</option>
+                            <option value="features">학교 특징</option>
+                        </optgroup>
+                        <optgroup label="정보">
+                            <option value="stats">학교 현황 통계</option>
+                            <option value="gallery">학교 갤러리</option>
+                            <option value="contact">연락처/오시는 길</option>
+                        </optgroup>
+                        <optgroup label="콘텐츠">
+                            <option value="text">텍스트 섹션</option>
+                            <option value="image">이미지 섹션</option>
+                            <option value="custom">커스텀 HTML</option>
+                        </optgroup>
                     </select>
                 </div>
                 
@@ -398,36 +413,68 @@ function closeAddModuleModal() {
 function getDefaultModuleSettings(moduleType) {
     const defaults = {
         'hero': {
-            title: '꿈을 키우는 학교',
-            subtitle: '우리 모두가 주인공이 되는 배움의 공간'
+            title: '대안학교',
+            subtitle: '꿈을 키우는 학교'
         },
         'values': {
+            section_title: '교훈',
+            value1_icon: 'fa-heart',
             value1_title: '사랑',
-            value1_desc: '서로를 존중하고 배려하며 사랑하는 마음',
+            value1_desc: '서로를 존중하고 배려하는 마음',
+            value2_icon: 'fa-book',
             value2_title: '지혜',
-            value2_desc: '끊임없이 배우고 성장하는 지혜로운 사람',
+            value2_desc: '올바른 판단과 지식을 추구',
+            value3_icon: 'fa-hands-helping',
             value3_title: '섬김',
-            value3_desc: '이웃과 사회를 섬기는 따뜻한 마음'
+            value3_desc: '공동체를 위해 봉사하는 정신'
         },
         'features': {
+            section_title: '학교 특징',
+            feature1_icon: 'fa-users',
             feature1_title: '소규모 학급',
-            feature1_desc: '학생 개개인을 세심하게 돌보는 소규모 학급 운영',
+            feature1_desc: '학급당 15~20명의 소규모 학급 운영',
+            feature2_icon: 'fa-chalkboard-teacher',
             feature2_title: '맞춤형 교육',
-            feature2_desc: '학생의 흥미와 적성에 맞춘 개별화 교육',
-            feature3_title: '예체능 교육',
-            feature3_desc: '다양한 예술과 체육 활동으로 감성 발달',
-            feature4_title: '체험 학습',
-            feature4_desc: '현장 중심의 살아있는 배움 경험'
+            feature2_desc: '학생 개개인의 특성에 맞춘 교육',
+            feature3_icon: 'fa-hiking',
+            feature3_title: '현장 체험',
+            feature3_desc: '다양한 현장 체험을 통한 실천적 학습',
+            feature4_icon: 'fa-palette',
+            feature4_title: '예체능 교육',
+            feature4_desc: '음악, 미술, 체육 등 다양한 프로그램'
         },
-        'about': {
-            ideology: '우리 학교는 학생 한 명 한 명의 꿈과 가능성을 소중히 여기며, 서로 존중하고 배려하는 공동체를 만들어갑니다.',
-            goals: '• 자기주도적 학습 능력 함양\n• 창의적 문제해결 능력 개발\n• 공동체 의식과 협력 정신\n• 올바른 인성과 가치관 확립',
-            features: '• 소규모 학급 운영 (학급당 15~20명)\n• 학생 맞춤형 개별화 교육\n• 현장 체험 중심 학습\n• 예체능 통합 교육과정'
+        'quick_links': {
+            links: JSON.stringify([
+                { icon: 'fa-user-graduate', title: '입학안내', url: '#', color: 'blue' },
+                { icon: 'fa-calendar-alt', title: '학사일정', url: '#', color: 'green' },
+                { icon: 'fa-utensils', title: '급식안내', url: '#', color: 'orange' },
+                { icon: 'fa-file-alt', title: '가정통신문', url: '#', color: 'purple' }
+            ])
+        },
+        'stats': {
+            stat1_label: '재학생',
+            stat1_value: '100',
+            stat1_suffix: '명',
+            stat2_label: '교원',
+            stat2_value: '15',
+            stat2_suffix: '명',
+            stat3_label: '학급',
+            stat3_value: '6',
+            stat3_suffix: '개',
+            stat4_label: '설립',
+            stat4_value: '2020',
+            stat4_suffix: '년'
+        },
+        'gallery': {
+            section_title: '학교 갤러리',
+            images: JSON.stringify([])
         },
         'contact': {
+            section_title: '오시는 길',
             phone: '000-0000-0000',
             email: 'school@example.com',
-            address: '서울시 강남구'
+            address: '서울시 강남구',
+            map_embed: ''
         }
     };
     
@@ -664,23 +711,145 @@ function getModuleEditForm(module) {
             break;
             
         case 'contact':
+        case 'map':
             typeSpecificForm = `
                 <div class="bg-teal-50 rounded-lg p-4 mb-6">
-                    <h3 class="text-lg font-bold mb-4">연락처 설정</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <h3 class="text-lg font-bold mb-4">연락처/오시는 길 설정</h3>
+                    <div class="space-y-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">전화번호</label>
-                            <input type="text" name="phone" value="${module.phone || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">섹션 제목</label>
+                            <input type="text" name="section_title" value="${module.section_title || '오시는 길'}" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">전화번호</label>
+                                <input type="text" name="phone" value="${module.phone || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">이메일</label>
+                                <input type="email" name="email" value="${module.email || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                            </div>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">이메일</label>
-                            <input type="email" name="email" value="${module.email || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                        </div>
-                        <div class="md:col-span-2">
                             <label class="block text-sm font-medium text-gray-700 mb-2">주소</label>
                             <input type="text" name="address" value="${module.address || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
                         </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">지도 임베드 코드 (iframe 또는 HTML)</label>
+                            <textarea name="map_embed" rows="4" class="w-full px-3 py-2 border border-gray-300 rounded-lg font-mono text-sm">${module.map_embed || ''}</textarea>
+                            <p class="text-xs text-gray-500 mt-1">카카오맵, 네이버지도 등의 공유 임베드 코드를 붙여넣으세요</p>
+                        </div>
                     </div>
+                </div>
+            `;
+            break;
+            
+        case 'quick_links':
+            const links = typeof module.links === 'string' ? JSON.parse(module.links || '[]') : (module.links || []);
+            typeSpecificForm = `
+                <div class="bg-cyan-50 rounded-lg p-4 mb-6">
+                    <h3 class="text-lg font-bold mb-4">바로가기 메뉴 설정</h3>
+                    <div id="quick-links-list" class="space-y-4">
+                        ${links.map((link, idx) => `
+                            <div class="quick-link-item bg-white rounded-lg p-4 border border-gray-300" data-index="${idx}">
+                                <div class="flex justify-between items-center mb-3">
+                                    <h4 class="font-bold">바로가기 ${idx + 1}</h4>
+                                    <button type="button" onclick="removeQuickLink(${idx})" class="text-red-600 hover:text-red-800">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-xs text-gray-600 mb-1">아이콘 (Font Awesome)</label>
+                                        <input type="text" name="link_icon_${idx}" value="${link.icon || ''}" placeholder="fa-link" class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-600 mb-1">제목</label>
+                                        <input type="text" name="link_title_${idx}" value="${link.title || ''}" class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-600 mb-1">URL</label>
+                                        <input type="text" name="link_url_${idx}" value="${link.url || ''}" placeholder="https://..." class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-600 mb-1">색상</label>
+                                        <select name="link_color_${idx}" class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
+                                            <option value="blue" ${link.color === 'blue' ? 'selected' : ''}>파랑</option>
+                                            <option value="green" ${link.color === 'green' ? 'selected' : ''}>초록</option>
+                                            <option value="orange" ${link.color === 'orange' ? 'selected' : ''}>주황</option>
+                                            <option value="purple" ${link.color === 'purple' ? 'selected' : ''}>보라</option>
+                                            <option value="red" ${link.color === 'red' ? 'selected' : ''}>빨강</option>
+                                            <option value="teal" ${link.color === 'teal' ? 'selected' : ''}>청록</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button type="button" onclick="addQuickLink()" class="mt-4 bg-cyan-600 text-white px-4 py-2 rounded-lg hover:bg-cyan-700">
+                        <i class="fas fa-plus mr-2"></i>바로가기 추가
+                    </button>
+                </div>
+            `;
+            break;
+            
+        case 'stats':
+            typeSpecificForm = `
+                <div class="bg-indigo-50 rounded-lg p-4 mb-6">
+                    <h3 class="text-lg font-bold mb-4">학교 현황 통계 설정</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        ${[1, 2, 3, 4].map(i => `
+                            <div class="bg-white rounded-lg p-4 border border-gray-300">
+                                <h4 class="font-bold mb-3">통계 ${i}</h4>
+                                <div class="space-y-2">
+                                    <div>
+                                        <label class="block text-xs text-gray-600 mb-1">라벨</label>
+                                        <input type="text" name="stat${i}_label" value="${module[`stat${i}_label`] || ''}" placeholder="재학생" class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label class="block text-xs text-gray-600 mb-1">값</label>
+                                            <input type="text" name="stat${i}_value" value="${module[`stat${i}_value`] || ''}" placeholder="100" class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs text-gray-600 mb-1">단위</label>
+                                            <input type="text" name="stat${i}_suffix" value="${module[`stat${i}_suffix`] || ''}" placeholder="명" class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            break;
+            
+        case 'gallery':
+            const images = typeof module.images === 'string' ? JSON.parse(module.images || '[]') : (module.images || []);
+            typeSpecificForm = `
+                <div class="bg-pink-50 rounded-lg p-4 mb-6">
+                    <h3 class="text-lg font-bold mb-4">학교 갤러리 설정</h3>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">섹션 제목</label>
+                        <input type="text" name="section_title" value="${module.section_title || '학교 갤러리'}" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div id="gallery-images-list" class="grid grid-cols-2 gap-4 mb-4">
+                        ${images.map((img, idx) => `
+                            <div class="gallery-image-item bg-white rounded-lg p-3 border border-gray-300" data-index="${idx}">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-sm font-medium">이미지 ${idx + 1}</span>
+                                    <button type="button" onclick="removeGalleryImage(${idx})" class="text-red-600 hover:text-red-800">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                                <input type="text" name="gallery_url_${idx}" value="${img.url || ''}" placeholder="이미지 URL" class="w-full px-2 py-1 text-sm border border-gray-300 rounded mb-2">
+                                <input type="text" name="gallery_alt_${idx}" value="${img.alt || ''}" placeholder="이미지 설명" class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button type="button" onclick="addGalleryImage()" class="bg-pink-600 text-white px-4 py-2 rounded-lg hover:bg-pink-700">
+                        <i class="fas fa-plus mr-2"></i>이미지 추가
+                    </button>
                 </div>
             `;
             break;
@@ -838,6 +1007,119 @@ function removeSlide(index) {
     }
 }
 
+// 바로가기 추가
+function addQuickLink() {
+    const list = document.getElementById('quick-links-list');
+    if (!list) return;
+    
+    const index = list.children.length;
+    const html = `
+        <div class="quick-link-item bg-white rounded-lg p-4 border border-gray-300" data-index="${index}">
+            <div class="flex justify-between items-center mb-3">
+                <h4 class="font-bold">바로가기 ${index + 1}</h4>
+                <button type="button" onclick="removeQuickLink(${index})" class="text-red-600 hover:text-red-800">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs text-gray-600 mb-1">아이콘 (Font Awesome)</label>
+                    <input type="text" name="link_icon_${index}" value="" placeholder="fa-link" class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-600 mb-1">제목</label>
+                    <input type="text" name="link_title_${index}" value="" class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-600 mb-1">URL</label>
+                    <input type="text" name="link_url_${index}" value="" placeholder="https://..." class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-600 mb-1">색상</label>
+                    <select name="link_color_${index}" class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
+                        <option value="blue">파랑</option>
+                        <option value="green">초록</option>
+                        <option value="orange">주황</option>
+                        <option value="purple">보라</option>
+                        <option value="red">빨강</option>
+                        <option value="teal">청록</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    `;
+    list.insertAdjacentHTML('beforeend', html);
+    
+    // 미리보기 업데이트
+    const form = document.getElementById('edit-module-form');
+    const module = window.currentEditingModule;
+    if (form && module) updatePreview(form, module);
+}
+
+// 바로가기 제거
+function removeQuickLink(index) {
+    const item = document.querySelector(`.quick-link-item[data-index="${index}"]`);
+    if (item) {
+        item.remove();
+        // 인덱스 재정렬
+        const items = document.querySelectorAll('.quick-link-item');
+        items.forEach((item, i) => {
+            item.setAttribute('data-index', i);
+            item.querySelector('h4').textContent = `바로가기 ${i + 1}`;
+        });
+        
+        // 미리보기 업데이트
+        const form = document.getElementById('edit-module-form');
+        const module = window.currentEditingModule;
+        if (form && module) updatePreview(form, module);
+    }
+}
+
+// 갤러리 이미지 추가
+function addGalleryImage() {
+    const list = document.getElementById('gallery-images-list');
+    if (!list) return;
+    
+    const index = list.children.length;
+    const html = `
+        <div class="gallery-image-item bg-white rounded-lg p-3 border border-gray-300" data-index="${index}">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-sm font-medium">이미지 ${index + 1}</span>
+                <button type="button" onclick="removeGalleryImage(${index})" class="text-red-600 hover:text-red-800">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+            <input type="text" name="gallery_url_${index}" value="" placeholder="이미지 URL" class="w-full px-2 py-1 text-sm border border-gray-300 rounded mb-2">
+            <input type="text" name="gallery_alt_${index}" value="" placeholder="이미지 설명" class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
+        </div>
+    `;
+    list.insertAdjacentHTML('beforeend', html);
+    
+    // 미리보기 업데이트
+    const form = document.getElementById('edit-module-form');
+    const module = window.currentEditingModule;
+    if (form && module) updatePreview(form, module);
+}
+
+// 갤러리 이미지 제거
+function removeGalleryImage(index) {
+    const item = document.querySelector(`.gallery-image-item[data-index="${index}"]`);
+    if (item) {
+        item.remove();
+        // 인덱스 재정렬
+        const items = document.querySelectorAll('.gallery-image-item');
+        items.forEach((item, i) => {
+            item.setAttribute('data-index', i);
+            item.querySelector('.text-sm.font-medium').textContent = `이미지 ${i + 1}`;
+        });
+        
+        // 미리보기 업데이트
+        const form = document.getElementById('edit-module-form');
+        const module = window.currentEditingModule;
+        if (form && module) updatePreview(form, module);
+    }
+}
+
 // 모듈 저장
 async function saveModule(moduleId, form) {
     try {
@@ -932,10 +1214,69 @@ async function saveModule(moduleId, form) {
                     break;
                     
                 case 'contact':
+                case 'map':
                     moduleData.settings = {
+                        section_title: data.section_title || '오시는 길',
                         phone: data.phone || '',
                         email: data.email || '',
-                        address: data.address || ''
+                        address: data.address || '',
+                        map_embed: data.map_embed || ''
+                    };
+                    break;
+                    
+                case 'quick_links':
+                    // 바로가기 데이터 수집
+                    const links = [];
+                    const linkItems = document.querySelectorAll('.quick-link-item');
+                    linkItems.forEach((item, index) => {
+                        const linkData = {
+                            icon: item.querySelector(`[name="link_icon_${index}"]`)?.value || '',
+                            title: item.querySelector(`[name="link_title_${index}"]`)?.value || '',
+                            url: item.querySelector(`[name="link_url_${index}"]`)?.value || '',
+                            color: item.querySelector(`[name="link_color_${index}"]`)?.value || 'blue'
+                        };
+                        if (linkData.title) {
+                            links.push(linkData);
+                        }
+                    });
+                    moduleData.settings = {
+                        links: JSON.stringify(links)
+                    };
+                    break;
+                    
+                case 'stats':
+                    moduleData.settings = {
+                        stat1_label: data.stat1_label || '',
+                        stat1_value: data.stat1_value || '',
+                        stat1_suffix: data.stat1_suffix || '',
+                        stat2_label: data.stat2_label || '',
+                        stat2_value: data.stat2_value || '',
+                        stat2_suffix: data.stat2_suffix || '',
+                        stat3_label: data.stat3_label || '',
+                        stat3_value: data.stat3_value || '',
+                        stat3_suffix: data.stat3_suffix || '',
+                        stat4_label: data.stat4_label || '',
+                        stat4_value: data.stat4_value || '',
+                        stat4_suffix: data.stat4_suffix || ''
+                    };
+                    break;
+                    
+                case 'gallery':
+                    // 갤러리 이미지 데이터 수집
+                    const images = [];
+                    const imageItems = document.querySelectorAll('.gallery-image-item');
+                    imageItems.forEach((item, index) => {
+                        const imgData = {
+                            url: item.querySelector(`[name="gallery_url_${index}"]`)?.value || '',
+                            alt: item.querySelector(`[name="gallery_alt_${index}"]`)?.value || ''
+                        };
+                        if (imgData.url) {
+                            images.push(imgData);
+                        }
+                    });
+                    moduleData.settings = {
+                        section_title: data.section_title || '학교 갤러리',
+                        images: JSON.stringify(images)
                     };
                     break;
                     
@@ -1140,6 +1481,65 @@ function updatePreview(form, originalModule) {
             
         case 'custom':
             previewModule.html_content = data.html_content || '';
+            break;
+            
+        case 'quick_links':
+            // 바로가기 데이터 수집
+            const links = [];
+            const linkItems = form.querySelectorAll('.quick-link-item');
+            linkItems.forEach((item, index) => {
+                const linkData = {
+                    icon: item.querySelector(`[name="link_icon_${index}"]`)?.value || '',
+                    title: item.querySelector(`[name="link_title_${index}"]`)?.value || '',
+                    url: item.querySelector(`[name="link_url_${index}"]`)?.value || '',
+                    color: item.querySelector(`[name="link_color_${index}"]`)?.value || 'blue'
+                };
+                if (linkData.title) {
+                    links.push(linkData);
+                }
+            });
+            previewModule.links = links;
+            break;
+            
+        case 'stats':
+            previewModule.stat1_label = data.stat1_label || '';
+            previewModule.stat1_value = data.stat1_value || '';
+            previewModule.stat1_suffix = data.stat1_suffix || '';
+            previewModule.stat2_label = data.stat2_label || '';
+            previewModule.stat2_value = data.stat2_value || '';
+            previewModule.stat2_suffix = data.stat2_suffix || '';
+            previewModule.stat3_label = data.stat3_label || '';
+            previewModule.stat3_value = data.stat3_value || '';
+            previewModule.stat3_suffix = data.stat3_suffix || '';
+            previewModule.stat4_label = data.stat4_label || '';
+            previewModule.stat4_value = data.stat4_value || '';
+            previewModule.stat4_suffix = data.stat4_suffix || '';
+            break;
+            
+        case 'gallery':
+            // 갤러리 이미지 데이터 수집
+            const images = [];
+            const imageItems = form.querySelectorAll('.gallery-image-item');
+            imageItems.forEach((item, index) => {
+                const imgData = {
+                    url: item.querySelector(`[name="gallery_url_${index}"]`)?.value || '',
+                    alt: item.querySelector(`[name="gallery_alt_${index}"]`)?.value || ''
+                };
+                if (imgData.url) {
+                    images.push(imgData);
+                }
+            });
+            previewModule.section_title = data.section_title || '학교 갤러리';
+            previewModule.images = images;
+            break;
+            
+        case 'contact':
+        case 'map':
+            previewModule.section_title = data.section_title || '오시는 길';
+            previewModule.phone = data.phone || '';
+            previewModule.email = data.email || '';
+            previewModule.address = data.address || '';
+            previewModule.map_embed = data.map_embed || '';
             break;
     }
     
