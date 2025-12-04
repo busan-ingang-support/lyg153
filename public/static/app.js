@@ -145,7 +145,12 @@ async function handleLogin(e) {
             password
         });
         
-        currentUser = response.data.user;
+        // user 정보에 teacher/student 추가 정보 병합
+        currentUser = {
+            ...response.data.user,
+            teacher: response.data.teacher || null,
+            student: response.data.student || null
+        };
         authToken = response.data.token;
         
         localStorage.setItem('authToken', authToken);

@@ -224,13 +224,27 @@ async function showAssignmentManagement(container) {
 // 과목 목록 로드
 async function loadCoursesForAssignment() {
     try {
-        const response = await axios.get('/api/courses', {
+        let url = '/api/courses';
+        
+        // 교사인 경우에만 본인이 담당하는 수업만 가져오기 (관리자는 전체)
+        const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.role === 'super_admin');
+        const isTeacher = currentUser && currentUser.role === 'teacher';
+        
+        if (isTeacher && !isAdmin && currentUser.teacher) {
+            url += `?teacher_id=${currentUser.teacher.id}`;
+        }
+        
+        const response = await axios.get(url, {
             headers: { Authorization: `Bearer ${authToken}` }
         });
         
         const courses = response.data.courses || [];
         const filterSelect = document.getElementById('filter-course');
         const assignmentSelect = document.getElementById('assignment-course');
+        
+        if (courses.length === 0) {
+            console.warn('수업이 없습니다. 먼저 과목 관리에서 수업을 개설하세요.');
+        }
         
         const options = courses.map(c => `<option value="${c.id}">${c.course_name} (${c.subject_name || ''})</option>`).join('');
         

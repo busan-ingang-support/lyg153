@@ -4,6 +4,87 @@ import { requireRole } from '../middleware/auth';
 
 const assignments = new Hono<{ Bindings: CloudflareBindings }>();
 
+// ============================================
+// Bug 2 Fix: 더 구체적인 라우트를 먼저 정의
+// /student/:student_id 라우트를 /:id 라우트보다 먼저 정의
+// ============================================
+
+// 학생별 과제 목록 (학부모용 + 학생 본인 + 교사/관리자)
+// Bug 3 Fix: 적절한 권한 검증 추가
+assignments.get('/student/:student_id', async (c) => {
+  const db = c.env.DB;
+  const studentId = c.req.param('student_id');
+  const userId = c.get('userId');
+  const userRole = c.get('userRole');
+
+  // Bug 3 Fix: 역할별 권한 검증
+  if (userRole === 'student') {
+    // 학생 본인인지 확인
+    const student = await db.prepare(`
+      SELECT id FROM students WHERE user_id = ? AND id = ?
+    `).bind(userId, studentId).first();
+
+    if (!student) {
+      return c.json({ error: 'Forbidden: You can only view your own assignments' }, 403);
+    }
+  } else if (userRole === 'parent') {
+    // 학부모인 경우 자녀 확인
+    const relation = await db.prepare(`
+      SELECT id FROM parent_student WHERE parent_user_id = ? AND student_id = ? AND COALESCE(status, 1) = 1
+    `).bind(userId, studentId).first();
+
+    if (!relation) {
+      return c.json({ error: 'Forbidden: Not your child' }, 403);
+    }
+  } else if (userRole === 'teacher') {
+    // 교사인 경우: 해당 학생이 본인이 담당하는 반/과목에 속해있는지 확인
+    const teacher = await db.prepare(`
+      SELECT id FROM teachers WHERE user_id = ?
+    `).bind(userId).first() as any;
+
+    if (!teacher) {
+      return c.json({ error: 'Teacher not found' }, 404);
+    }
+
+    // 해당 학생이 교사의 담당 반 또는 담당 과목에 속해 있는지 확인
+    const hasAccess = await db.prepare(`
+      SELECT 1 FROM enrollments e
+      JOIN courses c ON e.course_id = c.id
+      LEFT JOIN classes cl ON c.class_id = cl.id
+      WHERE e.student_id = ? AND e.status = 'active'
+        AND (c.teacher_id = ? OR cl.homeroom_teacher_id = ?)
+      LIMIT 1
+    `).bind(studentId, teacher.id, teacher.id).first();
+
+    if (!hasAccess) {
+      return c.json({ error: 'Forbidden: You can only view assignments of students in your classes' }, 403);
+    }
+  } else if (userRole !== 'admin' && userRole !== 'super_admin') {
+    // 관리자/최고관리자가 아닌 경우 거부
+    return c.json({ error: 'Forbidden: Insufficient permissions' }, 403);
+  }
+
+  const { results } = await db.prepare(`
+    SELECT 
+      a.*,
+      c.course_name,
+      sub.name as subject_name,
+      asub.id as submission_id,
+      asub.submitted_at,
+      asub.score,
+      asub.status as submission_status
+    FROM assignments a
+    JOIN courses c ON a.course_id = c.id
+    LEFT JOIN subjects sub ON c.subject_id = sub.id
+    JOIN enrollments e ON e.course_id = c.id AND e.student_id = ?
+    LEFT JOIN assignment_submissions asub ON asub.assignment_id = a.id AND asub.student_id = ?
+    WHERE a.status = 1 AND a.is_published = 1 AND e.status = 'active'
+    ORDER BY a.due_date ASC
+  `).bind(studentId, studentId).all();
+
+  return c.json({ assignments: results });
+});
+
 // 과제 목록 조회
 assignments.get('/', async (c) => {
   const db = c.env.DB;
@@ -62,7 +143,7 @@ assignments.get('/', async (c) => {
       SELECT e.course_id 
       FROM enrollments e
       JOIN parent_student ps ON e.student_id = ps.student_id
-      WHERE ps.parent_user_id = ? AND e.status = 'active'
+      WHERE ps.parent_user_id = ? AND e.status = 'active' AND COALESCE(ps.status, 1) = 1
     ) AND a.is_published = 1`;
     params.push(userId);
   }
@@ -85,7 +166,7 @@ assignments.get('/', async (c) => {
   return c.json({ assignments: results });
 });
 
-// 과제 상세 조회
+// 과제 상세 조회 (/:id 라우트는 /student/:student_id 보다 뒤에 정의)
 assignments.get('/:id', async (c) => {
   const db = c.env.DB;
   const assignmentId = c.req.param('id');
@@ -433,45 +514,6 @@ assignments.put('/:id/submissions/:submission_id/grade', requireRole('teacher', 
     console.error('채점 실패:', error);
     return c.json({ error: error.message }, 500);
   }
-});
-
-// 학생별 과제 목록 (학부모용)
-assignments.get('/student/:student_id', async (c) => {
-  const db = c.env.DB;
-  const studentId = c.req.param('student_id');
-  const userId = c.get('userId');
-  const userRole = c.get('userRole');
-
-  // 학부모인 경우 자녀 확인
-  if (userRole === 'parent') {
-    const relation = await db.prepare(`
-      SELECT id FROM parent_student WHERE parent_user_id = ? AND student_id = ?
-    `).bind(userId, studentId).first();
-
-    if (!relation) {
-      return c.json({ error: 'Forbidden: Not your child' }, 403);
-    }
-  }
-
-  const { results } = await db.prepare(`
-    SELECT 
-      a.*,
-      c.course_name,
-      sub.name as subject_name,
-      asub.id as submission_id,
-      asub.submitted_at,
-      asub.score,
-      asub.status as submission_status
-    FROM assignments a
-    JOIN courses c ON a.course_id = c.id
-    LEFT JOIN subjects sub ON c.subject_id = sub.id
-    JOIN enrollments e ON e.course_id = c.id AND e.student_id = ?
-    LEFT JOIN assignment_submissions asub ON asub.assignment_id = a.id AND asub.student_id = ?
-    WHERE a.status = 1 AND a.is_published = 1 AND e.status = 'active'
-    ORDER BY a.due_date ASC
-  `).bind(studentId, studentId).all();
-
-  return c.json({ assignments: results });
 });
 
 // 알림 발송 헬퍼 함수

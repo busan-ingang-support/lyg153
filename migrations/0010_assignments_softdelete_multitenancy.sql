@@ -117,9 +117,11 @@ ALTER TABLE courses ADD COLUMN status INTEGER DEFAULT 1;
 ALTER TABLE enrollments ADD COLUMN site_id INTEGER DEFAULT 1;
 -- enrollments already has status column (but different values)
 
--- attendance
+-- attendance - 주의: 이미 TEXT status 컬럼이 있음 (present/absent/late/excused)
+-- Bug 1 Fix: INTEGER status 컬럼을 추가하지 않음
 ALTER TABLE attendance ADD COLUMN site_id INTEGER DEFAULT 1;
-ALTER TABLE attendance ADD COLUMN status INTEGER DEFAULT 1;
+-- attendance.status는 TEXT 타입으로 출석 상태를 나타내므로 별도의 soft delete 컬럼 사용
+ALTER TABLE attendance ADD COLUMN is_deleted INTEGER DEFAULT 0;
 
 -- grades
 ALTER TABLE grades ADD COLUMN site_id INTEGER DEFAULT 1;
@@ -173,15 +175,6 @@ ALTER TABLE homepage_module_settings ADD COLUMN site_id INTEGER DEFAULT 1;
 -- homepage_slides
 ALTER TABLE homepage_slides ADD COLUMN site_id INTEGER DEFAULT 1;
 
--- boards (if exists)
--- ALTER TABLE boards ADD COLUMN site_id INTEGER DEFAULT 1;
-
--- board_posts (if exists)
--- ALTER TABLE board_posts ADD COLUMN site_id INTEGER DEFAULT 1;
-
--- schedules (if exists)
--- ALTER TABLE schedules ADD COLUMN site_id INTEGER DEFAULT 1;
-
 -- ========================================
 -- 5. 인덱스 생성
 -- ========================================
@@ -223,7 +216,7 @@ JOIN users u ON s.user_id = u.id
 JOIN enrollments e ON e.student_id = s.id
 JOIN courses c ON e.course_id = c.id
 JOIN semesters sem ON c.semester_id = sem.id
-LEFT JOIN attendance a ON a.enrollment_id = e.id
+LEFT JOIN attendance a ON a.enrollment_id = e.id AND COALESCE(a.is_deleted, 0) = 0
 WHERE COALESCE(s.status, 'enrolled') NOT IN ('dropped', 'transferred')
 GROUP BY s.id, sem.id;
 
