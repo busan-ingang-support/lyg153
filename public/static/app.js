@@ -616,6 +616,14 @@ async function loadSidebarMenu() {
             `;
         }
         
+        // 과제 관리 (교사, 관리자 모두 표시)
+        menuHTML += `
+            <a href="#" data-page="assignments" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
+                <i class="fas fa-tasks w-5 mr-3"></i>
+                <span>과제 관리</span>
+            </a>
+        `;
+        
         // 성적표 출력, 생활기록부는 항상 표시
         menuHTML += `
             <a href="#" data-page="reports" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
@@ -686,6 +694,10 @@ function showDefaultTeacherMenu(sidebarNav) {
             <i class="fas fa-book w-5 mr-3"></i>
             <span>과목 관리</span>
         </a>
+        <a href="#" data-page="assignments" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
+            <i class="fas fa-tasks w-5 mr-3"></i>
+            <span>과제 관리</span>
+        </a>
         <div class="border-t border-gray-200 my-4"></div>
         <a href="#" data-page="reports" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
             <i class="fas fa-print w-5 mr-3"></i>
@@ -726,6 +738,10 @@ function showDefaultAdminMenu(sidebarNav) {
         <a href="#" data-page="grades" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
             <i class="fas fa-chart-line w-5 mr-3"></i>
             <span>성적 관리</span>
+        </a>
+        <a href="#" data-page="assignments" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
+            <i class="fas fa-tasks w-5 mr-3"></i>
+            <span>과제 관리</span>
         </a>
         <div class="border-t border-gray-200 my-4"></div>
         <a href="#" data-page="homeroom" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
