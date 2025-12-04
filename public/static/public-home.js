@@ -645,28 +645,36 @@ function renderHomepageModule(module) {
             break;
             
         case 'values':
-            // 교훈/핵심가치 (학교 스타일)
+            // 포스텍 스타일 교훈/핵심가치
+            const valueGradients = [
+                'from-blue-600 to-indigo-700',
+                'from-emerald-500 to-teal-600',
+                'from-amber-500 to-orange-600'
+            ];
             moduleHTML = `
-                <section class="py-12 bg-white"${sectionStyle}>
-                    <div class="${containerClass}">
-                        <div class="text-center mb-10">
-                            <h2 class="text-3xl font-bold text-gray-800 mb-2">${escapeHtml(module.section_title || '교훈')}</h2>
-                            <div class="w-20 h-1 bg-blue-600 mx-auto"></div>
+                <section class="py-20 md:py-28 bg-gradient-to-b from-slate-50 to-white relative overflow-hidden"${sectionStyle}>
+                    <div class="absolute top-0 left-1/4 w-96 h-96 bg-blue-100/50 rounded-full blur-3xl"></div>
+                    <div class="absolute bottom-0 right-1/4 w-72 h-72 bg-amber-100/50 rounded-full blur-3xl"></div>
+                    <div class="${containerClass} relative z-10">
+                        <div class="text-center mb-16">
+                            <h2 class="text-4xl md:text-5xl font-black text-gray-900 mb-4">${escapeHtml(module.section_title || '교훈')}</h2>
+                            <div class="w-24 h-1.5 bg-gradient-to-r from-amber-400 to-amber-600 mx-auto rounded-full"></div>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
                             ${[1, 2, 3].map((i) => {
                                 const icon = module[`value${i}_icon`];
                                 const title = module[`value${i}_title`] || '';
                                 const desc = module[`value${i}_desc`] || '';
-                                const colors = ['blue', 'green', 'orange'][i-1];
+                                const gradient = valueGradients[i-1];
                                 const iconClass = icon && icon.startsWith('fa-') ? `fas ${icon}` : (icon || 'fas fa-star');
                                 return title ? `
-                                    <div class="bg-gray-50 rounded-xl p-8 text-center border border-gray-200 hover:shadow-lg transition-shadow">
-                                        <div class="w-20 h-20 bg-${colors}-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                            <i class="${iconClass} text-3xl text-${colors}-600"></i>
+                                    <div class="group relative bg-white rounded-3xl p-10 shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100">
+                                        <div class="absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-5 rounded-3xl transition-opacity"></div>
+                                        <div class="w-20 h-20 bg-gradient-to-br ${gradient} rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg group-hover:scale-110 transition-transform">
+                                            <i class="${iconClass} text-3xl text-white"></i>
                                         </div>
-                                        <h3 class="text-xl font-bold text-gray-800 mb-2">${escapeHtml(title)}</h3>
-                                        <p class="text-gray-600">${escapeHtml(desc)}</p>
+                                        <h3 class="text-2xl font-bold text-gray-900 mb-3 text-center">${escapeHtml(title)}</h3>
+                                        <p class="text-gray-500 text-center leading-relaxed">${escapeHtml(desc)}</p>
                                     </div>
                                 ` : '';
                             }).join('')}
@@ -1019,16 +1027,11 @@ async function loadPublicNoticePreview() {
         const container = document.getElementById('public-notice-preview');
         if (!container) return;
         
-        const notices = response.data.posts || [];
+        let notices = response.data.posts || [];
         
+        // 공지사항이 없으면 샘플 데이터 표시
         if (notices.length === 0) {
-            container.innerHTML = `
-                <div class="col-span-full text-center py-16 bg-gray-50 rounded-2xl">
-                    <i class="fas fa-newspaper text-5xl text-gray-300 mb-4"></i>
-                    <p class="text-gray-500">등록된 공지사항이 없습니다.</p>
-                </div>
-            `;
-            return;
+            notices = getSampleSchoolNews();
         }
         
         // 포스텍 스타일 뉴스 카드
@@ -1086,6 +1089,61 @@ function formatDateKorean(dateString) {
     const month = date.getMonth() + 1;
     const day = date.getDate();
     return `${year}년 ${month}월 ${day}일`;
+}
+
+// 샘플 학교 뉴스 데이터
+function getSampleSchoolNews() {
+    const today = new Date();
+    const formatDate = (daysAgo) => {
+        const d = new Date(today);
+        d.setDate(d.getDate() - daysAgo);
+        return d.toISOString();
+    };
+    
+    return [
+        {
+            title: '2024학년도 2학기 신입생 모집 안내',
+            content: '우리 학교에서 2024학년도 2학기 신입생을 모집합니다. 관심 있는 학부모님과 학생 여러분의 많은 지원 바랍니다.',
+            category: '입학',
+            created_at: formatDate(1),
+            image: null
+        },
+        {
+            title: '제15회 학교 축제 "꿈을 펼쳐라" 성황리 마감',
+            content: '지난 주말 열린 학교 축제에 1,000여 명의 학부모와 지역 주민이 참여하여 큰 호응을 얻었습니다.',
+            category: '행사',
+            created_at: formatDate(3),
+            image: null
+        },
+        {
+            title: '전국 학생 과학탐구대회 대상 수상',
+            content: '우리 학교 과학탐구반 학생들이 전국 학생 과학탐구대회에서 대상을 수상하는 쾌거를 이루었습니다.',
+            category: '수상',
+            created_at: formatDate(5),
+            image: null
+        },
+        {
+            title: '겨울방학 특별 프로그램 신청 안내',
+            content: '겨울방학 기간 중 진행되는 다양한 특별 프로그램에 대한 신청을 받고 있습니다. 마감일 전 신청 바랍니다.',
+            category: '안내',
+            created_at: formatDate(7),
+            image: null
+        },
+        {
+            title: '학부모 상담주간 운영 안내',
+            content: '12월 첫째 주 학부모 상담주간을 운영합니다. 담임 선생님과의 상담을 원하시는 분은 사전 예약해 주세요.',
+            category: '안내',
+            created_at: formatDate(10),
+            image: null
+        },
+        {
+            title: '교육부 우수학교 인증 획득',
+            content: '우리 학교가 교육부 주관 "창의적 교육과정 운영 우수학교"로 선정되어 인증을 받았습니다.',
+            category: '공지',
+            created_at: formatDate(14),
+            image: null
+        }
+    ];
 }
 
 // 짧은 날짜 포맷
