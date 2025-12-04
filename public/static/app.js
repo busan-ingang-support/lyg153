@@ -599,6 +599,14 @@ async function loadSidebarMenu() {
             }
         });
         
+        // 과제 관리 (교사, 관리자 모두 표시) - 교육 기능이므로 위쪽에 배치
+        menuHTML += `
+            <a href="#" data-page="assignments" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
+                <i class="fas fa-tasks w-5 mr-3"></i>
+                <span>과제 관리</span>
+            </a>
+        `;
+        
         // 구분선 및 관리 메뉴
         menuHTML += `<div class="border-t border-gray-700 my-4"></div>`;
         
@@ -615,14 +623,6 @@ async function loadSidebarMenu() {
                 </a>
             `;
         }
-        
-        // 과제 관리 (교사, 관리자 모두 표시)
-        menuHTML += `
-            <a href="#" data-page="assignments" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
-                <i class="fas fa-tasks w-5 mr-3"></i>
-                <span>과제 관리</span>
-            </a>
-        `;
         
         // 성적표 출력, 생활기록부는 항상 표시
         menuHTML += `
@@ -743,11 +743,6 @@ function showDefaultAdminMenu(sidebarNav) {
             <i class="fas fa-tasks w-5 mr-3"></i>
             <span>과제 관리</span>
         </a>
-        <div class="border-t border-gray-200 my-4"></div>
-        <a href="#" data-page="homeroom" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
-            <i class="fas fa-user-tie w-5 mr-3"></i>
-            <span>담임 배정</span>
-        </a>
         <a href="#" data-page="reports" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
             <i class="fas fa-print w-5 mr-3"></i>
             <span>성적표 출력</span>
@@ -755,6 +750,11 @@ function showDefaultAdminMenu(sidebarNav) {
         <a href="#" data-page="records" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
             <i class="fas fa-file-alt w-5 mr-3"></i>
             <span>생활기록부</span>
+        </a>
+        <div class="border-t border-gray-200 my-4"></div>
+        <a href="#" data-page="homeroom" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
+            <i class="fas fa-user-tie w-5 mr-3"></i>
+            <span>담임 배정</span>
         </a>
         <a href="#" data-page="settings" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
             <i class="fas fa-cog w-5 mr-3"></i>
@@ -1199,6 +1199,15 @@ function navigateToPage(page, updateURL = true) {
                 showSubjectAddPage(contentArea);
             } else {
                 alert('과목 추가 기능을 불러올 수 없습니다.');
+                navigateToPage('subjects');
+            }
+            break;
+        case 'subjects-edit':
+            // 과목 수정 페이지 표시
+            if (typeof showSubjectEditPage === 'function') {
+                showSubjectEditPage(contentArea);
+            } else {
+                alert('과목 수정 기능을 불러올 수 없습니다.');
                 navigateToPage('subjects');
             }
             break;
