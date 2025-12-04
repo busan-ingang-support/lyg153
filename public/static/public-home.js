@@ -297,7 +297,11 @@ function setupPublicNavigation() {
     document.querySelectorAll('.public-nav-item').forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
-            const page = e.target.getAttribute('data-page');
+            // closest를 사용하여 data-page를 가진 요소 찾기
+            const target = e.target.closest('.public-nav-item');
+            const page = target ? target.getAttribute('data-page') : null;
+            
+            if (!page) return;
             
             // 활성 상태 업데이트
             document.querySelectorAll('.public-nav-item').forEach(link => {
@@ -504,37 +508,56 @@ function renderHomepageModule(module) {
             const heroBgImage = module.background_image || module.hero_background_image || null;
             
             moduleHTML = `
-                <section class="hero-visual relative min-h-[80vh] md:min-h-screen overflow-hidden"${sectionStyle}>
+                <section class="hero-visual relative min-h-[70vh] md:min-h-[85vh] overflow-hidden"${sectionStyle}>
+                    <!-- 배경 -->
                     ${heroVideo ? `
                         <video autoplay muted loop playsinline class="absolute inset-0 w-full h-full object-cover">
                             <source src="${escapeHtml(heroVideo)}" type="video/mp4">
                         </video>
                     ` : heroBgImage ? `
-                        <div class="hero-bg-image absolute inset-0 w-full h-full">
+                        <div class="absolute inset-0 w-full h-full">
                             <img src="${escapeHtml(heroBgImage)}" alt="" class="w-full h-full object-cover">
                         </div>
-                    ` : ''}
-                    <div class="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/60"></div>
-                    <div class="hero-content relative z-10 flex flex-col justify-center items-center text-center min-h-[80vh] md:min-h-screen px-4">
-                        <h2 class="hero-title text-4xl md:text-6xl lg:text-7xl font-black text-white mb-6 leading-tight" style="text-shadow: 2px 4px 16px rgba(0,0,0,0.5);">
-                            ${escapeHtml(heroTitle)}
-                        </h2>
-                        <p class="hero-subtitle text-lg md:text-2xl text-white/90 mb-10 max-w-3xl leading-relaxed font-light">
-                            ${escapeHtml(heroSubtitle)}
-                        </p>
-                        <div class="flex flex-col sm:flex-row gap-4">
-                            <a href="#" onclick="navigatePublicPage('about'); return false;" class="hero-cta inline-flex items-center gap-2 px-10 py-4 bg-amber-500 text-gray-900 font-bold rounded-full hover:bg-white transition-all duration-300 shadow-2xl hover:shadow-xl hover:-translate-y-1">
-                                <i class="fas fa-school"></i>
-                                <span>학교소개</span>
-                            </a>
-                            <a href="#" onclick="navigatePublicPage('notice'); return false;" class="inline-flex items-center gap-2 px-10 py-4 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-full border-2 border-white/30 hover:bg-white hover:text-gray-900 transition-all duration-300">
-                                <i class="fas fa-bullhorn"></i>
-                                <span>공지사항</span>
-                            </a>
+                    ` : `
+                        <!-- 기본 그라데이션 배경 -->
+                        <div class="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900"></div>
+                        <div class="absolute inset-0 opacity-30">
+                            <div class="absolute top-20 left-20 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl animate-pulse"></div>
+                            <div class="absolute top-40 right-20 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl animate-pulse" style="animation-delay: 1s;"></div>
+                            <div class="absolute bottom-20 left-1/2 w-80 h-80 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl animate-pulse" style="animation-delay: 2s;"></div>
+                        </div>
+                    `}
+                    <div class="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/40"></div>
+                    
+                    <!-- 콘텐츠 -->
+                    <div class="relative z-10 flex flex-col justify-center items-center text-center min-h-[70vh] md:min-h-[85vh] px-4">
+                        <div class="max-w-4xl mx-auto">
+                            <h2 class="text-5xl md:text-7xl lg:text-8xl font-black text-white mb-8 leading-tight tracking-tight" style="text-shadow: 0 4px 30px rgba(0,0,0,0.5);">
+                                ${escapeHtml(heroTitle)}
+                            </h2>
+                            <p class="text-xl md:text-2xl text-white/80 mb-12 max-w-2xl mx-auto leading-relaxed font-light">
+                                ${escapeHtml(heroSubtitle)}
+                            </p>
+                            <div class="flex flex-col sm:flex-row justify-center gap-4">
+                                <a href="#" onclick="navigatePublicPage('about'); return false;" class="group inline-flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-amber-400 to-amber-500 text-gray-900 font-bold text-lg rounded-full hover:from-amber-300 hover:to-amber-400 transition-all duration-300 shadow-2xl hover:shadow-amber-500/25 hover:-translate-y-1">
+                                    <i class="fas fa-school"></i>
+                                    <span>학교소개</span>
+                                    <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                                </a>
+                                <a href="#" onclick="navigatePublicPage('notice'); return false;" class="group inline-flex items-center gap-3 px-10 py-5 bg-white/10 backdrop-blur-md text-white font-semibold text-lg rounded-full border-2 border-white/20 hover:bg-white hover:text-gray-900 transition-all duration-300 hover:-translate-y-1">
+                                    <i class="fas fa-bullhorn"></i>
+                                    <span>공지사항</span>
+                                    <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                                </a>
+                            </div>
                         </div>
                     </div>
-                    <div class="scroll-indicator">
-                        <span></span>
+                    
+                    <!-- 스크롤 인디케이터 -->
+                    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 z-10">
+                        <div class="w-8 h-14 border-2 border-white/30 rounded-full flex justify-center pt-2">
+                            <div class="w-1.5 h-3 bg-white/60 rounded-full animate-bounce"></div>
+                        </div>
                     </div>
                 </section>
             `;
