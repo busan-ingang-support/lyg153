@@ -52,7 +52,7 @@ async function showHomeroomAssignmentManagement() {
 async function loadSemestersForHomeroom() {
     try {
         const response = await axios.get('/api/semesters', {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         const semesters = response.data.semesters;
@@ -99,13 +99,13 @@ async function loadHomeroomAssignments() {
         // 반 목록과 담임 배정 정보 가져오기
         const [classesResponse, teachersResponse, homeroomResponse] = await Promise.all([
             axios.get(`/api/classes?semester_id=${semesterId}`, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                headers: { 'Authorization': `Bearer ${authToken}` }
             }),
             axios.get('/api/users?role=teacher', {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                headers: { 'Authorization': `Bearer ${authToken}` }
             }),
             axios.get(`/api/teacher-homeroom?semester_id=${semesterId}`, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                headers: { 'Authorization': `Bearer ${authToken}` }
             })
         ]);
         
@@ -209,7 +209,7 @@ async function assignHomeroomTeacher(classId, className) {
     try {
         // 교사 목록 가져오기
         const teachersResponse = await axios.get('/api/users?role=teacher', {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         const teachers = teachersResponse.data.users.filter(t => t.teacher_id != null);
@@ -265,7 +265,7 @@ async function assignHomeroomTeacher(classId, className) {
                     class_id: classId,
                     semester_id: semesterId
                 }, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                    headers: { 'Authorization': `Bearer ${authToken}` }
                 });
                 
                 alert('담임 교사가 배정되었습니다.');
@@ -288,7 +288,7 @@ async function changeHomeroomTeacher(classId, homeroomId, className) {
     
     try {
         const teachersResponse = await axios.get('/api/users?role=teacher', {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         const teachers = teachersResponse.data.users.filter(t => t.teacher_id != null);
@@ -342,7 +342,7 @@ async function changeHomeroomTeacher(classId, homeroomId, className) {
                 await axios.put(`/api/teacher-homeroom/${homeroomId}`, {
                     teacher_id: newTeacherId
                 }, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                    headers: { 'Authorization': `Bearer ${authToken}` }
                 });
                 
                 alert('담임 교사가 변경되었습니다.');
@@ -367,7 +367,7 @@ async function removeHomeroomTeacher(homeroomId, className) {
     
     try {
         await axios.delete(`/api/teacher-homeroom/${homeroomId}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         alert('담임 교사 배정이 해제되었습니다.');

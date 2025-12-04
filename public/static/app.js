@@ -1726,11 +1726,34 @@ function showSettingsPage(container) {
 // 학생 관리 화면
 async function showStudentManagement(container) {
     try {
+        if (!authToken) {
+            alert('로그인이 필요합니다.');
+            return;
+        }
+        
         const response = await axios.get('/api/students?limit=100', {
             headers: { 'Authorization': 'Bearer ' + authToken }
         });
         
-        const students = response.data.students;
+        const students = response.data.students || [];
+        
+        if (students.length === 0) {
+            container.innerHTML = `
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800 mb-8">학생 관리</h1>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="text-center py-12">
+                            <i class="fas fa-users text-6xl text-gray-300 mb-4"></i>
+                            <p class="text-gray-600 text-lg mb-4">등록된 학생이 없습니다.</p>
+                            <button onclick="showAddStudentPage()" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700">
+                                <i class="fas fa-plus mr-2"></i>학생 추가
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            return;
+        }
         
         container.innerHTML = `
             <div>
@@ -1812,7 +1835,22 @@ async function showStudentManagement(container) {
         `;
     } catch (error) {
         console.error('Failed to load students:', error);
-        alert('학생 목록을 불러오는데 실패했습니다.');
+        const errorMessage = error.response?.data?.error || error.message || '알 수 없는 오류가 발생했습니다.';
+        container.innerHTML = `
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800 mb-8">학생 관리</h1>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="text-center py-12">
+                        <i class="fas fa-exclamation-triangle text-6xl text-red-300 mb-4"></i>
+                        <p class="text-red-600 text-lg mb-2">학생 목록을 불러오는데 실패했습니다.</p>
+                        <p class="text-gray-500 text-sm mb-4">${errorMessage}</p>
+                        <button onclick="showStudentManagement(document.getElementById('main-content'))" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700">
+                            <i class="fas fa-redo mr-2"></i>다시 시도
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
     }
 }
 

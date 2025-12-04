@@ -86,7 +86,7 @@ async function loadCounselingRecords() {
         if (filters.end_date) queryParams.append('end_date', filters.end_date);
         
         const response = await axios.get(`/api/counseling?${queryParams.toString()}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         const records = response.data.counseling_records;
@@ -199,7 +199,7 @@ function clearCounselingFilters() {
 async function showAddCounselingForm() {
     // 학생 목록 로드
     const studentsResponse = await axios.get('/api/students', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${authToken}` }
     });
     const students = studentsResponse.data.students;
     
@@ -308,7 +308,7 @@ async function showAddCounselingForm() {
         
         try {
             await axios.post('/api/counseling', data, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                headers: { 'Authorization': `Bearer ${authToken}` }
             });
             
             alert('상담 기록이 추가되었습니다.');
@@ -325,7 +325,7 @@ async function showAddCounselingForm() {
 async function viewCounselingDetail(id) {
     try {
         const response = await axios.get(`/api/counseling/${id}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         const record = response.data.counseling_record;
@@ -417,14 +417,14 @@ async function viewCounselingDetail(id) {
 async function editCounseling(id) {
     try {
         const response = await axios.get(`/api/counseling/${id}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         const record = response.data.counseling_record;
         
         // 학생 목록 로드
         const studentsResponse = await axios.get('/api/students', {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         const students = studentsResponse.data.students;
         
@@ -527,7 +527,7 @@ async function editCounseling(id) {
             
             try {
                 await axios.put(`/api/counseling/${id}`, data, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                    headers: { 'Authorization': `Bearer ${authToken}` }
                 });
                 
                 alert('상담 기록이 수정되었습니다.');
@@ -552,7 +552,7 @@ async function deleteCounseling(id) {
     
     try {
         await axios.delete(`/api/counseling/${id}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         alert('상담 기록이 삭제되었습니다.');

@@ -173,18 +173,18 @@ app.get('/', (c) => {
         <script src="/static/student-home.js?v=202511141500"></script>
         <script src="/static/parent-home.js?v=202511212350"></script>
         <script src="/static/homepage-module-management.js?v=202511211100"></script>
-        <script src="/static/app.js?v=202511212350"></script>
+        <script src="/static/app.js?v=202511212400"></script>
         <script src="/static/add-pages-functions.js?v=202511111600" defer></script>
         <script src="/static/schedule-management.js?v=202511111700" defer></script>
         <script src="/static/subject-management.js?v=202511111700" defer></script>
         <script src="/static/admin.js?v=202511071013" defer></script>
-        <script src="/static/counseling.js?v=202511071013" defer></script>
-        <script src="/static/settings.js?v=202511071013" defer></script>
-        <script src="/static/class-detail.js?v=202511071013" defer></script>
+        <script src="/static/counseling.js?v=202511212400" defer></script>
+        <script src="/static/settings.js?v=202511212400" defer></script>
+        <script src="/static/class-detail.js?v=202511212400" defer></script>
         <script src="/static/student-detail.js?v=202511071013" defer></script>
-        <script src="/static/reports.js?v=202511192325" defer></script>
+        <script src="/static/reports.js?v=202511212400" defer></script>
         <script src="/static/attendance-improved.js?v=202511071013" defer></script>
-        <script src="/static/teacher-management.js?v=202511071013" defer></script>
+        <script src="/static/teacher-management.js?v=202511212400" defer></script>
         <script src="/static/user-management.js?v=202511121000" defer></script>
         <!-- homepage-management.js는 레거시 파일이므로 더 이상 사용하지 않습니다 -->
         <!-- <script src="/static/homepage-management.js?v=202511200000" defer></script> -->

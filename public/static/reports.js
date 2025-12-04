@@ -44,7 +44,7 @@ async function showLifeRecordPage(studentId) {
 async function loadLifeRecord(studentId) {
     try {
         const response = await axios.get(`/api/student-report/life-record/${studentId}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         const data = response.data;
@@ -342,7 +342,7 @@ async function showGradeReportPage(studentId, semesterId) {
 async function loadSemestersForSelector(selectedId, studentId) {
     try {
         const response = await axios.get('/api/semesters', {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         const semesters = response.data.semesters;
@@ -380,7 +380,7 @@ async function loadSemestersForSelector(selectedId, studentId) {
 async function loadGradeReport(studentId, semesterId) {
     try {
         const response = await axios.get(`/api/student-report/grade-report/${studentId}?semester_id=${semesterId}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         const data = response.data;
@@ -721,10 +721,10 @@ async function loadReportStudentList() {
     try {
         const [studentsRes, classesRes] = await Promise.all([
             axios.get('/api/students', {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                headers: { 'Authorization': `Bearer ${authToken}` }
             }),
             axios.get('/api/classes', {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                headers: { 'Authorization': `Bearer ${authToken}` }
             })
         ]);
         
@@ -755,10 +755,10 @@ async function loadRecordStudentList() {
     try {
         const [studentsRes, classesRes] = await Promise.all([
             axios.get('/api/students', {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                headers: { 'Authorization': `Bearer ${authToken}` }
             }),
             axios.get('/api/classes', {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                headers: { 'Authorization': `Bearer ${authToken}` }
             })
         ]);
         

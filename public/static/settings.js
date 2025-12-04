@@ -266,7 +266,7 @@ async function showSystemSettings() {
 async function loadSystemSettings() {
     try {
         const response = await axios.get('/api/settings', {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         const settings = response.data.settings;
@@ -363,7 +363,7 @@ async function saveSettings(settingsArray) {
             settings: settings,
             updated_by: userData.id
         }, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         alert('설정이 저장되었습니다.');

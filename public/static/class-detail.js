@@ -116,7 +116,7 @@ async function showClassDetail(classId) {
 async function loadClassInfo() {
     try {
         const response = await axios.get(`/api/classes/${currentClassId}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         currentClassInfo = response.data.class;
@@ -219,7 +219,7 @@ async function loadClassStudents() {
     
     try {
         const response = await axios.get(`/api/classes/${currentClassId}/students`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         const students = response.data.students;
@@ -330,7 +330,7 @@ async function loadClassAttendanceByDate() {
     
     try {
         const response = await axios.get(`/api/classes/${currentClassId}/attendance?date=${date}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         const attendance = response.data.attendance;
@@ -437,7 +437,7 @@ async function takeClassAttendance() {
     try {
         // 반의 학생 목록 가져오기
         const studentsResponse = await axios.get(`/api/classes/${currentClassId}/students`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         const students = studentsResponse.data.students;
@@ -454,7 +454,7 @@ async function takeClassAttendance() {
         
         // 해당 날짜의 출석 기록 가져오기
         const attendanceResponse = await axios.get(`/api/attendance/by-date?date=${date}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         const attendanceRecords = attendanceResponse.data.attendance || [];
@@ -787,7 +787,7 @@ async function saveClassDetailAttendance() {
             attendance_date: window.currentClassDetailAttendanceDate,
             records: recordsToSave
         }, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         if (response.data.success) {
@@ -821,7 +821,7 @@ async function loadClassGrades() {
     
     try {
         const response = await axios.get(`/api/classes/${currentClassId}/grades`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         const grades = response.data.grades;
@@ -939,10 +939,10 @@ async function loadClassAwards() {
     try {
         const [studentsRes, awardsRes] = await Promise.all([
             axios.get(`/api/classes/${currentClassId}/students`, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                headers: { 'Authorization': `Bearer ${authToken}` }
             }),
             axios.get('/api/awards?limit=1000', {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                headers: { 'Authorization': `Bearer ${authToken}` }
             })
         ]);
         
@@ -1031,10 +1031,10 @@ async function loadClassReading() {
     try {
         const [studentsRes, readingRes] = await Promise.all([
             axios.get(`/api/classes/${currentClassId}/students`, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                headers: { 'Authorization': `Bearer ${authToken}` }
             }),
             axios.get('/api/reading?limit=1000', {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                headers: { 'Authorization': `Bearer ${authToken}` }
             })
         ]);
         
@@ -1121,10 +1121,10 @@ async function loadClassVolunteer() {
     try {
         const [studentsRes, volunteerRes] = await Promise.all([
             axios.get(`/api/classes/${currentClassId}/students`, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                headers: { 'Authorization': `Bearer ${authToken}` }
             }),
             axios.get('/api/volunteer?limit=1000', {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                headers: { 'Authorization': `Bearer ${authToken}` }
             })
         ]);
         
@@ -1211,10 +1211,10 @@ async function loadClassCounseling() {
     try {
         const [studentsRes, counselingRes] = await Promise.all([
             axios.get(`/api/classes/${currentClassId}/students`, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                headers: { 'Authorization': `Bearer ${authToken}` }
             }),
             axios.get('/api/counseling?limit=1000', {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                headers: { 'Authorization': `Bearer ${authToken}` }
             })
         ]);
         
@@ -1300,7 +1300,7 @@ async function loadClassSchedule() {
     
     try {
         const response = await axios.get(`/api/schedules/weekly/${currentClassId}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         const schedule = response.data.schedule;
@@ -1379,14 +1379,14 @@ async function removeStudentFromClass(studentId) {
     try {
         // student_class_history에서 비활성화
         const response = await axios.get(`/api/student-class-history/student/${studentId}/current`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         const currentAssignment = response.data.current_class;
         
         if (currentAssignment && currentAssignment.class_id == currentClassId) {
             await axios.delete(`/api/student-class-history/${currentAssignment.id}`, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                headers: { 'Authorization': `Bearer ${authToken}` }
             });
             
             alert('학생이 반에서 제외되었습니다.');
@@ -1406,13 +1406,13 @@ async function showAddStudentToClassForm() {
         // 모든 학생과 반 정보 가져오기
         const [allStudentsRes, classesRes, semestersRes] = await Promise.all([
             axios.get('/api/students', {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                headers: { 'Authorization': `Bearer ${authToken}` }
             }),
             axios.get('/api/classes', {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                headers: { 'Authorization': `Bearer ${authToken}` }
             }),
             axios.get('/api/semesters', {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                headers: { 'Authorization': `Bearer ${authToken}` }
             })
         ]);
         
@@ -1744,7 +1744,7 @@ async function submitBulkStudentAdd() {
             
             try {
                 const result = await axios.post('/api/student-class-history', newAssignment, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                    headers: { 'Authorization': `Bearer ${authToken}` }
                 });
                 console.log(`학생 ${studentId}: 새 배정 생성 완료`, result.data);
                 return result;
@@ -1805,7 +1805,7 @@ async function showAddClassAwardForm() {
     
     try {
         const semestersRes = await axios.get('/api/semesters', {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         const container = document.getElementById('awards-list');
@@ -1902,7 +1902,7 @@ async function showAddClassAwardForm() {
             
             try {
                 await axios.post('/api/awards', data, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                    headers: { 'Authorization': `Bearer ${authToken}` }
                 });
                 alert('수상이 등록되었습니다.');
                 loadClassAwards();
@@ -1923,9 +1923,9 @@ async function showAddClassAwardForm() {
 async function editClassAward(awardId) {
     try {
         const [awardRes, studentsRes, semestersRes] = await Promise.all([
-            axios.get(`/api/awards/${awardId}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }),
-            axios.get('/api/students', { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }),
-            axios.get('/api/semesters', { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } })
+            axios.get(`/api/awards/${awardId}`, { headers: { 'Authorization': `Bearer ${authToken}` } }),
+            axios.get('/api/students', { headers: { 'Authorization': `Bearer ${authToken}` } }),
+            axios.get('/api/semesters', { headers: { 'Authorization': `Bearer ${authToken}` } })
         ]);
         
         const award = awardRes.data.award;
@@ -2023,7 +2023,7 @@ async function editClassAward(awardId) {
             
             try {
                 await axios.put(`/api/awards/${awardId}`, data, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                    headers: { 'Authorization': `Bearer ${authToken}` }
                 });
                 alert('수상이 수정되었습니다.');
                 loadClassAwards();
@@ -2044,7 +2044,7 @@ async function deleteClassAward(awardId) {
     
     try {
         await axios.delete(`/api/awards/${awardId}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         alert('수상이 삭제되었습니다.');
         loadClassAwards();
@@ -2064,7 +2064,7 @@ async function showAddClassReadingForm() {
     
     try {
         const semestersRes = await axios.get('/api/semesters', {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         const container = document.getElementById('reading-list');
@@ -2172,7 +2172,7 @@ async function showAddClassReadingForm() {
             
             try {
                 await axios.post('/api/reading', data, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                    headers: { 'Authorization': `Bearer ${authToken}` }
                 });
                 alert('독서활동이 등록되었습니다.');
                 loadClassReading();
@@ -2190,9 +2190,9 @@ async function showAddClassReadingForm() {
 async function editClassReading(readingId) {
     try {
         const [readingRes, studentsRes, semestersRes] = await Promise.all([
-            axios.get(`/api/reading/${readingId}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }),
-            axios.get('/api/students', { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }),
-            axios.get('/api/semesters', { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } })
+            axios.get(`/api/reading/${readingId}`, { headers: { 'Authorization': `Bearer ${authToken}` } }),
+            axios.get('/api/students', { headers: { 'Authorization': `Bearer ${authToken}` } }),
+            axios.get('/api/semesters', { headers: { 'Authorization': `Bearer ${authToken}` } })
         ]);
         
         const reading = readingRes.data.reading;
@@ -2301,7 +2301,7 @@ async function editClassReading(readingId) {
             
             try {
                 await axios.put(`/api/reading/${readingId}`, data, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                    headers: { 'Authorization': `Bearer ${authToken}` }
                 });
                 alert('독서활동이 수정되었습니다.');
                 loadClassReading();
@@ -2321,7 +2321,7 @@ async function deleteClassReading(readingId) {
     
     try {
         await axios.delete(`/api/reading/${readingId}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         alert('독서 활동이 삭제되었습니다.');
         loadClassReading();
@@ -2341,7 +2341,7 @@ async function showAddClassVolunteerForm() {
     
     try {
         const semestersRes = await axios.get('/api/semesters', {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         const container = document.getElementById('volunteer-list');
@@ -2442,7 +2442,7 @@ async function showAddClassVolunteerForm() {
             
             try {
                 await axios.post('/api/volunteer', data, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                    headers: { 'Authorization': `Bearer ${authToken}` }
                 });
                 alert('봉사활동이 등록되었습니다.');
                 loadClassVolunteer();
@@ -2460,9 +2460,9 @@ async function showAddClassVolunteerForm() {
 async function editClassVolunteer(volunteerId) {
     try {
         const [volunteerRes, studentsRes, semestersRes] = await Promise.all([
-            axios.get(`/api/volunteer/${volunteerId}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }),
-            axios.get('/api/students', { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }),
-            axios.get('/api/semesters', { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } })
+            axios.get(`/api/volunteer/${volunteerId}`, { headers: { 'Authorization': `Bearer ${authToken}` } }),
+            axios.get('/api/students', { headers: { 'Authorization': `Bearer ${authToken}` } }),
+            axios.get('/api/semesters', { headers: { 'Authorization': `Bearer ${authToken}` } })
         ]);
         
         const volunteer = volunteerRes.data.volunteer;
@@ -2564,7 +2564,7 @@ async function editClassVolunteer(volunteerId) {
             
             try {
                 await axios.put(`/api/volunteer/${volunteerId}`, data, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                    headers: { 'Authorization': `Bearer ${authToken}` }
                 });
                 alert('봉사활동이 수정되었습니다.');
                 loadClassVolunteer();
@@ -2584,7 +2584,7 @@ async function deleteClassVolunteer(volunteerId) {
     
     try {
         await axios.delete(`/api/volunteer/${volunteerId}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         alert('봉사 활동이 삭제되었습니다.');
         loadClassVolunteer();
@@ -2604,7 +2604,7 @@ async function showAddClassCounselingForm() {
     
     try {
         const semestersRes = await axios.get('/api/semesters', {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         const container = document.getElementById('counseling-list');
@@ -2703,7 +2703,7 @@ async function showAddClassCounselingForm() {
             
             try {
                 await axios.post('/api/counseling', data, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                    headers: { 'Authorization': `Bearer ${authToken}` }
                 });
                 alert('상담기록이 등록되었습니다.');
                 loadClassCounseling();
@@ -2721,9 +2721,9 @@ async function showAddClassCounselingForm() {
 async function editClassCounseling(counselingId) {
     try {
         const [counselingRes, studentsRes, semestersRes] = await Promise.all([
-            axios.get(`/api/counseling/${counselingId}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }),
-            axios.get('/api/students', { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }),
-            axios.get('/api/semesters', { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } })
+            axios.get(`/api/counseling/${counselingId}`, { headers: { 'Authorization': `Bearer ${authToken}` } }),
+            axios.get('/api/students', { headers: { 'Authorization': `Bearer ${authToken}` } }),
+            axios.get('/api/semesters', { headers: { 'Authorization': `Bearer ${authToken}` } })
         ]);
         
         const counseling = counselingRes.data.counseling;
@@ -2823,7 +2823,7 @@ async function editClassCounseling(counselingId) {
             
             try {
                 await axios.put(`/api/counseling/${counselingId}`, data, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                    headers: { 'Authorization': `Bearer ${authToken}` }
                 });
                 alert('상담기록이 수정되었습니다.');
                 loadClassCounseling();
@@ -2843,7 +2843,7 @@ async function deleteClassCounseling(counselingId) {
     
     try {
         await axios.delete(`/api/counseling/${counselingId}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         alert('상담 내역이 삭제되었습니다.');
         loadClassCounseling();
@@ -2863,8 +2863,8 @@ async function showAddClassGradeForm() {
     
     try {
         const [semestersRes, subjectsRes] = await Promise.all([
-            axios.get('/api/semesters', { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }),
-            axios.get('/api/subjects', { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } })
+            axios.get('/api/semesters', { headers: { 'Authorization': `Bearer ${authToken}` } }),
+            axios.get('/api/subjects', { headers: { 'Authorization': `Bearer ${authToken}` } })
         ]);
         
         const container = document.getElementById('grades-list');
@@ -2962,7 +2962,7 @@ async function showAddClassGradeForm() {
             
             try {
                 await axios.post('/api/grades', data, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                    headers: { 'Authorization': `Bearer ${authToken}` }
                 });
                 alert('성적이 등록되었습니다.');
                 loadClassGrades();
@@ -2980,10 +2980,10 @@ async function showAddClassGradeForm() {
 async function editClassGrade(gradeId) {
     try {
         const [gradeRes, studentsRes, semestersRes, subjectsRes] = await Promise.all([
-            axios.get(`/api/grades/${gradeId}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }),
-            axios.get('/api/students', { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }),
-            axios.get('/api/semesters', { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }),
-            axios.get('/api/subjects', { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } })
+            axios.get(`/api/grades/${gradeId}`, { headers: { 'Authorization': `Bearer ${authToken}` } }),
+            axios.get('/api/students', { headers: { 'Authorization': `Bearer ${authToken}` } }),
+            axios.get('/api/semesters', { headers: { 'Authorization': `Bearer ${authToken}` } }),
+            axios.get('/api/subjects', { headers: { 'Authorization': `Bearer ${authToken}` } })
         ]);
         
         const grade = gradeRes.data.grade;
@@ -3080,7 +3080,7 @@ async function editClassGrade(gradeId) {
             
             try {
                 await axios.put(`/api/grades/${gradeId}`, data, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                    headers: { 'Authorization': `Bearer ${authToken}` }
                 });
                 alert('성적이 수정되었습니다.');
                 loadClassGrades();
@@ -3100,7 +3100,7 @@ async function deleteClassGrade(gradeId) {
     
     try {
         await axios.delete(`/api/grades/${gradeId}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         alert('성적이 삭제되었습니다.');
         loadClassGrades();
