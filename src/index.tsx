@@ -82,7 +82,9 @@ app.get('/', (c) => {
         <title>학적 관리 시스템</title>
         <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%234169E1'/><text x='50' y='70' font-size='60' text-anchor='middle' fill='white' font-family='Arial'>학</text></svg>">
         <link rel="stylesheet" href="/static/styles.css">
+        <link rel="stylesheet" href="/static/postech-style.css">
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
     </head>
     <body class="bg-gray-50">
         <div id="app">

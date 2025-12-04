@@ -133,46 +133,74 @@ async function showPublicHome() {
                 <!-- 여기에 동적으로 컨텐츠 로드 -->
             </main>
 
-            <!-- 푸터 -->
-            <footer class="bg-slate-800 text-white mt-12">
-                <div class="container mx-auto px-4 py-10">
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-                        <div class="md:col-span-2">
-                            <div class="flex items-center space-x-3 mb-4">
-                                <div class="w-12 h-12 rounded-full bg-blue-700 flex items-center justify-center">
-                                    <i class="fas fa-graduation-cap text-white text-xl"></i>
+            <!-- 마퀴 섹션 -->
+            <section class="marquee-section py-8 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 overflow-hidden">
+                <div class="marquee-container flex whitespace-nowrap">
+                    <div class="marquee-text flex animate-marquee">
+                        ${Array(6).fill(`<span class="text-4xl md:text-5xl font-black px-8" style="-webkit-text-stroke: 1px rgba(255,255,255,0.2); color: transparent;">• DREAM BIG • LEARN MORE • GROW TOGETHER</span>`).join('')}
+                    </div>
+                </div>
+            </section>
+
+            <!-- 포스텍 스타일 푸터 -->
+            <footer class="main-footer bg-slate-900 text-white">
+                <div class="container mx-auto px-4 py-16">
+                    <div class="footer-top grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 pb-12 border-b border-white/10">
+                        <div class="lg:col-span-2">
+                            <div class="flex items-center space-x-4 mb-6">
+                                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
+                                    <i class="fas fa-graduation-cap text-white text-2xl"></i>
                                 </div>
                                 <div>
-                                    <h3 class="text-xl font-bold">${escapeHtml(homepageSettings.school_name)}</h3>
-                                    <p class="text-sm text-gray-400">${escapeHtml(homepageSettings.school_slogan)}</p>
+                                    <h3 class="text-2xl font-black">${escapeHtml(homepageSettings.school_name)}</h3>
+                                    <p class="text-amber-400 font-medium">${escapeHtml(homepageSettings.school_slogan)}</p>
                                 </div>
                             </div>
-                            <div class="text-sm text-gray-400 space-y-2">
-                                <p><i class="fas fa-map-marker-alt mr-2 w-5"></i>${escapeHtml(homepageSettings.contact_address)}</p>
-                                <p><i class="fas fa-phone mr-2 w-5"></i>${escapeHtml(homepageSettings.contact_phone)}</p>
-                                <p><i class="fas fa-envelope mr-2 w-5"></i>${escapeHtml(homepageSettings.contact_email)}</p>
+                            <p class="text-gray-400 leading-relaxed mb-6 max-w-md">
+                                학생 한 명 한 명의 꿈과 잠재력을 발견하고, 미래를 열어가는 교육을 실현합니다.
+                            </p>
+                            <div class="space-y-3 text-gray-400">
+                                <p class="flex items-center gap-3">
+                                    <i class="fas fa-map-marker-alt w-5 text-amber-400"></i>
+                                    <span>${escapeHtml(homepageSettings.contact_address)}</span>
+                                </p>
+                                <p class="flex items-center gap-3">
+                                    <i class="fas fa-phone w-5 text-amber-400"></i>
+                                    <span>${escapeHtml(homepageSettings.contact_phone)}</span>
+                                </p>
+                                <p class="flex items-center gap-3">
+                                    <i class="fas fa-envelope w-5 text-amber-400"></i>
+                                    <span>${escapeHtml(homepageSettings.contact_email)}</span>
+                                </p>
                             </div>
                         </div>
-                        <div>
-                            <h4 class="font-bold mb-4 text-gray-200">바로가기</h4>
-                            <ul class="space-y-2 text-sm text-gray-400">
-                                <li><a href="#" onclick="navigatePublicPage('about')" class="hover:text-white transition-colors">학교소개</a></li>
-                                <li><a href="#" onclick="navigatePublicPage('education')" class="hover:text-white transition-colors">교육과정</a></li>
-                                <li><a href="#" onclick="navigatePublicPage('notice')" class="hover:text-white transition-colors">공지사항</a></li>
-                                <li><a href="#" onclick="navigatePublicPage('location')" class="hover:text-white transition-colors">오시는 길</a></li>
+                        <div class="footer-links">
+                            <h4 class="text-lg font-bold mb-6 text-white">바로가기</h4>
+                            <ul class="space-y-3">
+                                <li><a href="#" onclick="navigatePublicPage('about'); return false;" class="text-gray-400 hover:text-amber-400 transition-colors flex items-center gap-2"><i class="fas fa-chevron-right text-xs"></i>학교소개</a></li>
+                                <li><a href="#" onclick="navigatePublicPage('education'); return false;" class="text-gray-400 hover:text-amber-400 transition-colors flex items-center gap-2"><i class="fas fa-chevron-right text-xs"></i>교육과정</a></li>
+                                <li><a href="#" onclick="navigatePublicPage('notice'); return false;" class="text-gray-400 hover:text-amber-400 transition-colors flex items-center gap-2"><i class="fas fa-chevron-right text-xs"></i>공지사항</a></li>
+                                <li><a href="#" onclick="navigatePublicPage('location'); return false;" class="text-gray-400 hover:text-amber-400 transition-colors flex items-center gap-2"><i class="fas fa-chevron-right text-xs"></i>오시는 길</a></li>
                             </ul>
                         </div>
-                        <div>
-                            <h4 class="font-bold mb-4 text-gray-200">이용안내</h4>
-                            <ul class="space-y-2 text-sm text-gray-400">
-                                <li><a href="#" onclick="showLoginModal()" class="hover:text-white transition-colors">로그인</a></li>
-                                <li><a href="#" class="hover:text-white transition-colors">개인정보처리방침</a></li>
-                                <li><a href="#" class="hover:text-white transition-colors">이용약관</a></li>
+                        <div class="footer-links">
+                            <h4 class="text-lg font-bold mb-6 text-white">이용안내</h4>
+                            <ul class="space-y-3">
+                                <li><a href="#" onclick="showLoginModal(); return false;" class="text-gray-400 hover:text-amber-400 transition-colors flex items-center gap-2"><i class="fas fa-chevron-right text-xs"></i>로그인</a></li>
+                                <li><a href="#" class="text-gray-400 hover:text-amber-400 transition-colors flex items-center gap-2"><i class="fas fa-chevron-right text-xs"></i>개인정보처리방침</a></li>
+                                <li><a href="#" class="text-gray-400 hover:text-amber-400 transition-colors flex items-center gap-2"><i class="fas fa-chevron-right text-xs"></i>이용약관</a></li>
                             </ul>
                         </div>
                     </div>
-                    <div class="border-t border-slate-700 mt-8 pt-6 text-center text-sm text-gray-500">
-                        <p>&copy; ${new Date().getFullYear()} ${escapeHtml(homepageSettings.school_name)}. All rights reserved.</p>
+                    <div class="footer-bottom flex flex-col md:flex-row justify-between items-center pt-8 gap-4">
+                        <p class="text-gray-500 text-sm">
+                            &copy; ${new Date().getFullYear()} ${escapeHtml(homepageSettings.school_name)}. All rights reserved.
+                        </p>
+                        <div class="footer-social flex gap-3">
+                            <a href="#" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-amber-500 transition-all hover:-translate-y-1"><i class="fab fa-instagram"></i></a>
+                            <a href="#" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-amber-500 transition-all hover:-translate-y-1"><i class="fab fa-youtube"></i></a>
+                            <a href="#" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-amber-500 transition-all hover:-translate-y-1"><i class="fab fa-facebook-f"></i></a>
+                        </div>
                     </div>
                 </div>
             </footer>
@@ -469,29 +497,44 @@ function renderHomepageModule(module) {
     switch (module.module_type) {
         case 'hero':
         case 'banner':
-            // 메인 배너 슬라이드
-            const hasBgImage = module.background_image || module.hero_background_image;
+            // 포스텍 스타일 메인 히어로 섹션
+            const heroTitle = module.title || homepageSettings.school_name;
+            const heroSubtitle = module.subtitle || homepageSettings.school_slogan;
+            const heroVideo = module.video_url || null;
+            const heroBgImage = module.background_image || module.hero_background_image || null;
+            
             moduleHTML = `
-                <section class="relative bg-blue-800 text-white overflow-hidden"${sectionStyle}>
-                    ${hasBgImage ? '' : '<div class="absolute inset-0 bg-gradient-to-r from-blue-900 to-blue-700"></div>'}
-                    <div class="absolute inset-0 bg-black/30"></div>
-                    <div class="${containerClass} relative z-10 py-20 md:py-32">
-                        <div class="max-w-3xl">
-                            <h2 class="text-4xl md:text-5xl font-bold mb-4 leading-tight">
-                                ${escapeHtml(module.title || homepageSettings.school_name)}
-                            </h2>
-                            <p class="text-xl md:text-2xl mb-8 text-blue-100 leading-relaxed">
-                                ${escapeHtml(module.subtitle || homepageSettings.school_slogan)}
-                            </p>
-                            <div class="flex flex-wrap gap-4">
-                                <button onclick="navigatePublicPage('about')" class="bg-white text-blue-800 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors shadow-lg">
-                                    <i class="fas fa-info-circle mr-2"></i>학교소개
-                                </button>
-                                <button onclick="navigatePublicPage('notice')" class="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-500 transition-colors border border-blue-400">
-                                    <i class="fas fa-bullhorn mr-2"></i>공지사항
-                                </button>
-                            </div>
+                <section class="hero-visual relative min-h-[80vh] md:min-h-screen overflow-hidden"${sectionStyle}>
+                    ${heroVideo ? `
+                        <video autoplay muted loop playsinline class="absolute inset-0 w-full h-full object-cover">
+                            <source src="${escapeHtml(heroVideo)}" type="video/mp4">
+                        </video>
+                    ` : heroBgImage ? `
+                        <div class="hero-bg-image absolute inset-0 w-full h-full">
+                            <img src="${escapeHtml(heroBgImage)}" alt="" class="w-full h-full object-cover">
                         </div>
+                    ` : ''}
+                    <div class="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/60"></div>
+                    <div class="hero-content relative z-10 flex flex-col justify-center items-center text-center min-h-[80vh] md:min-h-screen px-4">
+                        <h2 class="hero-title text-4xl md:text-6xl lg:text-7xl font-black text-white mb-6 leading-tight" style="text-shadow: 2px 4px 16px rgba(0,0,0,0.5);">
+                            ${escapeHtml(heroTitle)}
+                        </h2>
+                        <p class="hero-subtitle text-lg md:text-2xl text-white/90 mb-10 max-w-3xl leading-relaxed font-light">
+                            ${escapeHtml(heroSubtitle)}
+                        </p>
+                        <div class="flex flex-col sm:flex-row gap-4">
+                            <a href="#" onclick="navigatePublicPage('about'); return false;" class="hero-cta inline-flex items-center gap-2 px-10 py-4 bg-amber-500 text-gray-900 font-bold rounded-full hover:bg-white transition-all duration-300 shadow-2xl hover:shadow-xl hover:-translate-y-1">
+                                <i class="fas fa-school"></i>
+                                <span>학교소개</span>
+                            </a>
+                            <a href="#" onclick="navigatePublicPage('notice'); return false;" class="inline-flex items-center gap-2 px-10 py-4 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-full border-2 border-white/30 hover:bg-white hover:text-gray-900 transition-all duration-300">
+                                <i class="fas fa-bullhorn"></i>
+                                <span>공지사항</span>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="scroll-indicator">
+                        <span></span>
                     </div>
                 </section>
             `;
@@ -574,19 +617,26 @@ function renderHomepageModule(module) {
             
         case 'notice':
         case 'notice_board':
-            // 공지사항 게시판
+            // 포스텍 스타일 뉴스 섹션
             moduleHTML = `
-                <section class="py-10"${sectionStyle}>
+                <section class="news-section py-16 md:py-24 bg-white"${sectionStyle}>
                     <div class="${containerClass}">
-                        <div class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
-                            <div class="bg-blue-800 text-white px-6 py-4 flex justify-between items-center">
-                                <h3 class="text-lg font-bold"><i class="fas fa-bullhorn mr-2"></i>공지사항</h3>
-                                <a href="#" onclick="navigatePublicPage('notice')" class="text-sm text-blue-200 hover:text-white">
-                                    더보기 <i class="fas fa-chevron-right ml-1"></i>
-                                </a>
+                        <div class="flex flex-col md:flex-row md:items-end md:justify-between mb-12">
+                            <div>
+                                <h2 class="section-title text-3xl md:text-4xl font-bold text-gray-900 mb-2 relative inline-block">
+                                    ${escapeHtml(module.section_title || '주요 소식')}
+                                    <span class="absolute -bottom-2 left-0 w-16 h-1 bg-amber-500 rounded"></span>
+                                </h2>
+                                <p class="text-gray-500 mt-4">${escapeHtml(module.section_subtitle || '학교의 새로운 소식을 확인하세요')}</p>
                             </div>
-                            <div id="public-notice-preview" class="divide-y divide-gray-100">
-                                <p class="text-gray-500 text-center py-8">로딩 중...</p>
+                            <a href="#" onclick="navigatePublicPage('notice'); return false;" class="mt-4 md:mt-0 inline-flex items-center gap-2 text-blue-600 font-semibold hover:text-blue-800 transition-colors group">
+                                뉴스센터 바로가기
+                                <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                            </a>
+                        </div>
+                        <div id="public-notice-preview" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div class="col-span-full text-center py-12">
+                                <i class="fas fa-spinner fa-spin text-3xl text-gray-300"></i>
                             </div>
                         </div>
                     </div>
@@ -627,27 +677,35 @@ function renderHomepageModule(module) {
             break;
             
         case 'features':
-            // 학교 특징 (학교 스타일)
+            // 포스텍 스타일 프로그램 섹션
+            const gradientColors = [
+                'from-blue-500 to-cyan-500',
+                'from-purple-500 to-pink-500',
+                'from-amber-500 to-orange-500',
+                'from-emerald-500 to-teal-500'
+            ];
             moduleHTML = `
-                <section class="py-12 bg-gray-50"${sectionStyle}>
+                <section class="programs-section py-16 md:py-24 bg-gradient-to-b from-gray-50 to-white"${sectionStyle}>
                     <div class="${containerClass}">
-                        <div class="text-center mb-10">
-                            <h2 class="text-3xl font-bold text-gray-800 mb-2">${escapeHtml(module.section_title || '학교 특징')}</h2>
-                            <div class="w-20 h-1 bg-blue-600 mx-auto"></div>
+                        <div class="text-center mb-14">
+                            <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">${escapeHtml(module.section_title || '교육 프로그램')}</h2>
+                            <p class="text-gray-500 text-lg max-w-2xl mx-auto">${escapeHtml(module.section_subtitle || '우리 학교만의 특별한 교육을 만나보세요')}</p>
                         </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                             ${[1, 2, 3, 4].map((i) => {
                                 const icon = module[`feature${i}_icon`];
                                 const title = module[`feature${i}_title`] || '';
                                 const desc = module[`feature${i}_desc`] || '';
-                                const iconClass = icon && icon.startsWith('fa-') ? `fas ${icon}` : (icon || 'fas fa-check');
+                                const iconClass = icon && icon.startsWith('fa-') ? `fas ${icon}` : (icon || 'fas fa-lightbulb');
+                                const gradient = gradientColors[i-1];
                                 return title ? `
-                                    <div class="bg-white rounded-xl p-6 text-center border border-gray-200 hover:shadow-lg transition-all hover:-translate-y-1">
-                                        <div class="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                                            <i class="${iconClass} text-2xl text-blue-600"></i>
+                                    <div class="program-card group bg-white rounded-2xl p-8 shadow-sm hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100 relative overflow-hidden">
+                                        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${gradient} opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                        <div class="program-icon w-16 h-16 bg-gradient-to-br ${gradient} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                                            <i class="${iconClass} text-2xl text-white"></i>
                                         </div>
-                                        <h4 class="font-bold text-gray-800 mb-2">${escapeHtml(title)}</h4>
-                                        <p class="text-sm text-gray-600">${escapeHtml(desc)}</p>
+                                        <h4 class="program-title text-xl font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors">${escapeHtml(title)}</h4>
+                                        <p class="program-desc text-gray-500 leading-relaxed">${escapeHtml(desc)}</p>
                                     </div>
                                 ` : '';
                             }).join('')}
@@ -658,26 +716,40 @@ function renderHomepageModule(module) {
             break;
             
         case 'stats':
-            // 학교 현황 통계
+            // 포스텍 스타일 학교 현황 통계
             moduleHTML = `
-                <section class="py-10 bg-blue-800 text-white"${sectionStyle}>
-                    <div class="${containerClass}">
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-                            <div>
-                                <div class="text-4xl font-bold mb-2">${escapeHtml(module.stat1_value || '100')}${escapeHtml(module.stat1_suffix || '명')}</div>
-                                <div class="text-blue-200">${escapeHtml(module.stat1_label || '재학생')}</div>
+                <section class="stats-section relative py-20 overflow-hidden"${sectionStyle || ' style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);"'}>
+                    <div class="absolute top-0 right-0 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+                    <div class="absolute bottom-0 left-0 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
+                    <div class="${containerClass} relative z-10">
+                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-8">
+                            <div class="stat-item text-center p-6">
+                                <div class="stat-number text-5xl md:text-6xl font-black mb-2" style="color: #c9a227;">
+                                    ${escapeHtml(module.stat1_value || '100')}
+                                    <span class="text-3xl">${escapeHtml(module.stat1_suffix || '명')}</span>
+                                </div>
+                                <div class="stat-label text-lg text-white/80 font-medium">${escapeHtml(module.stat1_label || '재학생')}</div>
                             </div>
-                            <div>
-                                <div class="text-4xl font-bold mb-2">${escapeHtml(module.stat2_value || '15')}${escapeHtml(module.stat2_suffix || '명')}</div>
-                                <div class="text-blue-200">${escapeHtml(module.stat2_label || '교원')}</div>
+                            <div class="stat-item text-center p-6">
+                                <div class="stat-number text-5xl md:text-6xl font-black mb-2" style="color: #c9a227;">
+                                    ${escapeHtml(module.stat2_value || '15')}
+                                    <span class="text-3xl">${escapeHtml(module.stat2_suffix || '명')}</span>
+                                </div>
+                                <div class="stat-label text-lg text-white/80 font-medium">${escapeHtml(module.stat2_label || '교원')}</div>
                             </div>
-                            <div>
-                                <div class="text-4xl font-bold mb-2">${escapeHtml(module.stat3_value || '6')}${escapeHtml(module.stat3_suffix || '개')}</div>
-                                <div class="text-blue-200">${escapeHtml(module.stat3_label || '학급')}</div>
+                            <div class="stat-item text-center p-6">
+                                <div class="stat-number text-5xl md:text-6xl font-black mb-2" style="color: #c9a227;">
+                                    ${escapeHtml(module.stat3_value || '6')}
+                                    <span class="text-3xl">${escapeHtml(module.stat3_suffix || '개')}</span>
+                                </div>
+                                <div class="stat-label text-lg text-white/80 font-medium">${escapeHtml(module.stat3_label || '학급')}</div>
                             </div>
-                            <div>
-                                <div class="text-4xl font-bold mb-2">${escapeHtml(module.stat4_value || '2020')}${escapeHtml(module.stat4_suffix || '년')}</div>
-                                <div class="text-blue-200">${escapeHtml(module.stat4_label || '설립')}</div>
+                            <div class="stat-item text-center p-6">
+                                <div class="stat-number text-5xl md:text-6xl font-black mb-2" style="color: #c9a227;">
+                                    ${escapeHtml(module.stat4_value || '2020')}
+                                    <span class="text-3xl">${escapeHtml(module.stat4_suffix || '년')}</span>
+                                </div>
+                                <div class="stat-label text-lg text-white/80 font-medium">${escapeHtml(module.stat4_label || '설립')}</div>
                             </div>
                         </div>
                     </div>
@@ -942,7 +1014,7 @@ function startAutoSlide(moduleId, slideCount) {
 async function loadPublicNoticePreview() {
     try {
         // 게시판 API 호출 (인증 없이)
-        const response = await axios.get('/api/boards/posts?board_type=student&is_notice=1&limit=5');
+        const response = await axios.get('/api/boards/posts?board_type=student&is_notice=1&limit=6');
         
         const container = document.getElementById('public-notice-preview');
         if (!container) return;
@@ -950,26 +1022,70 @@ async function loadPublicNoticePreview() {
         const notices = response.data.posts || [];
         
         if (notices.length === 0) {
-            container.innerHTML = '<p class="text-gray-500 text-center py-8">등록된 공지사항이 없습니다.</p>';
+            container.innerHTML = `
+                <div class="col-span-full text-center py-16 bg-gray-50 rounded-2xl">
+                    <i class="fas fa-newspaper text-5xl text-gray-300 mb-4"></i>
+                    <p class="text-gray-500">등록된 공지사항이 없습니다.</p>
+                </div>
+            `;
             return;
         }
         
-        container.innerHTML = notices.map((notice, idx) => `
-            <div class="flex items-center justify-between px-6 py-4 hover:bg-blue-50 transition-colors cursor-pointer ${idx < notices.length - 1 ? 'border-b border-gray-100' : ''}">
-                <div class="flex items-center space-x-3 flex-1 min-w-0">
-                    <span class="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-600 rounded text-xs flex items-center justify-center font-bold">${idx + 1}</span>
-                    <span class="font-medium text-gray-800 truncate">${escapeHtml(notice.title)}</span>
-                </div>
-                <span class="flex-shrink-0 text-sm text-gray-500 ml-4">${formatDateShort(notice.created_at)}</span>
-            </div>
-        `).join('');
+        // 포스텍 스타일 뉴스 카드
+        const categoryColors = {
+            '공지': 'bg-blue-600',
+            '안내': 'bg-green-600',
+            '행사': 'bg-purple-600',
+            '기타': 'bg-gray-600'
+        };
+        
+        container.innerHTML = notices.map((notice, idx) => {
+            const category = notice.category || '공지';
+            const categoryColor = categoryColors[category] || 'bg-blue-600';
+            const dateStr = formatDateKorean(notice.created_at);
+            
+            return `
+                <article class="news-card group cursor-pointer" onclick="navigatePublicPage('notice')">
+                    <div class="card-image relative h-48 bg-gradient-to-br from-slate-700 to-slate-900 overflow-hidden">
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <i class="fas fa-newspaper text-5xl text-white/20"></i>
+                        </div>
+                        <span class="card-category absolute top-4 left-4 px-3 py-1 ${categoryColor} text-white text-xs font-bold rounded-full uppercase tracking-wide">
+                            ${escapeHtml(category)}
+                        </span>
+                    </div>
+                    <div class="card-body p-6">
+                        <h3 class="card-title text-lg font-bold text-gray-900 mb-3 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                            ${escapeHtml(notice.title)}
+                        </h3>
+                        <p class="text-gray-500 text-sm line-clamp-2 mb-4">${escapeHtml(notice.content || '').substring(0, 100)}...</p>
+                        <time class="card-date text-sm text-gray-400">${dateStr}</time>
+                    </div>
+                </article>
+            `;
+        }).join('');
     } catch (error) {
         console.error('공지사항 로드 실패:', error);
         const container = document.getElementById('public-notice-preview');
         if (container) {
-            container.innerHTML = '<p class="text-gray-500 text-center py-8">공지사항을 불러올 수 없습니다.</p>';
+            container.innerHTML = `
+                <div class="col-span-full text-center py-16 bg-red-50 rounded-2xl">
+                    <i class="fas fa-exclamation-circle text-5xl text-red-300 mb-4"></i>
+                    <p class="text-red-500">공지사항을 불러올 수 없습니다.</p>
+                </div>
+            `;
         }
     }
+}
+
+// 한국어 날짜 포맷
+function formatDateKorean(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    return `${year}년 ${month}월 ${day}일`;
 }
 
 // 짧은 날짜 포맷
