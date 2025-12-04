@@ -25,35 +25,50 @@ async function showPublicHome() {
         <!-- 공개 학교 홈페이지 -->
         <div id="public-home" class="min-h-screen bg-white">
             <!-- 헤더 -->
-            <header class="bg-white shadow-sm sticky top-0 z-50">
-                <div class="container mx-auto px-4 py-4">
+            <header class="bg-white/95 backdrop-blur-md shadow-lg sticky top-0 z-50 border-b border-gray-100">
+                <div class="container mx-auto px-4 py-5">
                     <div class="flex items-center justify-between">
-                        <div class="flex items-center space-x-4 cursor-pointer" onclick="navigatePublicPage('home')">
-                            <div class="w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center">
-                                <i class="fas fa-graduation-cap text-white text-xl"></i>
+                        <div class="flex items-center space-x-4 cursor-pointer group" onclick="navigatePublicPage('home')">
+                            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 flex items-center justify-center shadow-lg transform transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
+                                <i class="fas fa-graduation-cap text-white text-2xl"></i>
                             </div>
                             <div>
-                                <h1 class="text-2xl font-bold text-gray-800">대안학교</h1>
-                                <p class="text-sm text-gray-500">꿈을 키우는 학교</p>
+                                <h1 class="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">대안학교</h1>
+                                <p class="text-sm text-gray-500 font-medium">꿈을 키우는 학교</p>
                             </div>
                         </div>
                         <div class="flex items-center space-x-8">
-                            <nav class="hidden md:flex space-x-8">
-                                <a href="#" class="public-nav-item text-gray-600 hover:text-purple-600 font-medium transition-colors" data-page="home">홈</a>
-                                <a href="#" class="public-nav-item text-gray-600 hover:text-purple-600 font-medium transition-colors" data-page="about">학교소개</a>
-                                <a href="#" class="public-nav-item text-gray-600 hover:text-purple-600 font-medium transition-colors" data-page="education">교육과정</a>
-                                <a href="#" class="public-nav-item text-gray-600 hover:text-purple-600 font-medium transition-colors" data-page="notice">공지사항</a>
-                                <a href="#" class="public-nav-item text-gray-600 hover:text-purple-600 font-medium transition-colors" data-page="location">오시는 길</a>
+                            <nav class="hidden md:flex space-x-6">
+                                <a href="#" class="public-nav-item text-gray-700 hover:text-indigo-600 font-semibold transition-all duration-300 relative group" data-page="home">
+                                    홈
+                                    <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-indigo-600 transition-all duration-300 group-hover:w-full"></span>
+                                </a>
+                                <a href="#" class="public-nav-item text-gray-700 hover:text-indigo-600 font-semibold transition-all duration-300 relative group" data-page="about">
+                                    학교소개
+                                    <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-indigo-600 transition-all duration-300 group-hover:w-full"></span>
+                                </a>
+                                <a href="#" class="public-nav-item text-gray-700 hover:text-indigo-600 font-semibold transition-all duration-300 relative group" data-page="education">
+                                    교육과정
+                                    <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-indigo-600 transition-all duration-300 group-hover:w-full"></span>
+                                </a>
+                                <a href="#" class="public-nav-item text-gray-700 hover:text-indigo-600 font-semibold transition-all duration-300 relative group" data-page="notice">
+                                    공지사항
+                                    <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-indigo-600 transition-all duration-300 group-hover:w-full"></span>
+                                </a>
+                                <a href="#" class="public-nav-item text-gray-700 hover:text-indigo-600 font-semibold transition-all duration-300 relative group" data-page="location">
+                                    오시는 길
+                                    <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-indigo-600 transition-all duration-300 group-hover:w-full"></span>
+                                </a>
                             </nav>
                             ${typeof currentUser !== 'undefined' && currentUser ? `
                                 <div class="flex items-center space-x-4">
-                                    <span class="text-sm text-gray-600">${escapeHtml(currentUser.name)}님</span>
-                                    <button onclick="goToDashboard()" class="btn-pastel-primary px-6 py-2 rounded-lg font-medium">
+                                    <span class="text-sm text-gray-600 font-medium">${escapeHtml(currentUser.name)}님</span>
+                                    <button onclick="goToDashboard()" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-2.5 rounded-xl font-semibold shadow-lg hover:shadow-xl transform transition-all duration-300 hover:scale-105">
                                         <i class="fas fa-tachometer-alt mr-2"></i>대시보드
                                     </button>
                                 </div>
                             ` : `
-                                <button onclick="showLoginModal()" class="btn-pastel-primary px-6 py-2 rounded-lg font-medium">
+                                <button onclick="showLoginModal()" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-2.5 rounded-xl font-semibold shadow-lg hover:shadow-xl transform transition-all duration-300 hover:scale-105">
                                     <i class="fas fa-sign-in-alt mr-2"></i>로그인
                                 </button>
                             `}
@@ -68,36 +83,56 @@ async function showPublicHome() {
             </main>
 
             <!-- 푸터 -->
-            <footer class="bg-gray-800 text-white py-12 mt-20">
-                <div class="container mx-auto px-4">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <footer class="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white py-16 mt-24 relative overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-r from-indigo-600/10 via-purple-600/10 to-pink-600/10"></div>
+                <div class="container mx-auto px-4 relative z-10">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
                         <div>
-                            <h3 class="text-xl font-bold mb-4">대안학교</h3>
-                            <p class="text-gray-400 text-sm">
+                            <div class="flex items-center space-x-3 mb-6">
+                                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg">
+                                    <i class="fas fa-graduation-cap text-white text-xl"></i>
+                                </div>
+                                <h3 class="text-2xl font-bold">대안학교</h3>
+                            </div>
+                            <p class="text-gray-300 text-sm leading-relaxed">
                                 꿈을 키우고 가능성을 발견하는<br>
                                 행복한 배움의 공간
                             </p>
                         </div>
                         <div>
-                            <h4 class="font-semibold mb-4">바로가기</h4>
-                            <ul class="space-y-2 text-sm text-gray-400">
-                                <li><a href="#" onclick="navigatePublicPage('about')" class="hover:text-white transition-colors">학교소개</a></li>
-                                <li><a href="#" onclick="navigatePublicPage('education')" class="hover:text-white transition-colors">교육과정</a></li>
-                                <li><a href="#" onclick="navigatePublicPage('notice')" class="hover:text-white transition-colors">공지사항</a></li>
-                                <li><a href="#" onclick="navigatePublicPage('location')" class="hover:text-white transition-colors">오시는 길</a></li>
+                            <h4 class="font-bold text-lg mb-6 text-indigo-300">바로가기</h4>
+                            <ul class="space-y-3 text-sm">
+                                <li><a href="#" onclick="navigatePublicPage('about')" class="text-gray-300 hover:text-white transition-colors duration-300 flex items-center group">
+                                    <i class="fas fa-chevron-right text-xs mr-2 text-indigo-400 group-hover:translate-x-1 transition-transform"></i>학교소개
+                                </a></li>
+                                <li><a href="#" onclick="navigatePublicPage('education')" class="text-gray-300 hover:text-white transition-colors duration-300 flex items-center group">
+                                    <i class="fas fa-chevron-right text-xs mr-2 text-indigo-400 group-hover:translate-x-1 transition-transform"></i>교육과정
+                                </a></li>
+                                <li><a href="#" onclick="navigatePublicPage('notice')" class="text-gray-300 hover:text-white transition-colors duration-300 flex items-center group">
+                                    <i class="fas fa-chevron-right text-xs mr-2 text-indigo-400 group-hover:translate-x-1 transition-transform"></i>공지사항
+                                </a></li>
+                                <li><a href="#" onclick="navigatePublicPage('location')" class="text-gray-300 hover:text-white transition-colors duration-300 flex items-center group">
+                                    <i class="fas fa-chevron-right text-xs mr-2 text-indigo-400 group-hover:translate-x-1 transition-transform"></i>오시는 길
+                                </a></li>
                             </ul>
                         </div>
                         <div>
-                            <h4 class="font-semibold mb-4">문의</h4>
-                            <ul class="space-y-2 text-sm text-gray-400">
-                                <li><i class="fas fa-phone mr-2"></i>대표전화: ${escapeHtml(contactPhone)}</li>
-                                <li><i class="fas fa-envelope mr-2"></i>이메일: ${escapeHtml(contactEmail)}</li>
-                                <li><i class="fas fa-map-marker-alt mr-2"></i>주소: ${escapeHtml(contactAddress)}</li>
+                            <h4 class="font-bold text-lg mb-6 text-indigo-300">문의</h4>
+                            <ul class="space-y-3 text-sm text-gray-300">
+                                <li class="flex items-center">
+                                    <i class="fas fa-phone mr-3 text-indigo-400 w-5"></i>대표전화: ${escapeHtml(contactPhone)}
+                                </li>
+                                <li class="flex items-center">
+                                    <i class="fas fa-envelope mr-3 text-indigo-400 w-5"></i>이메일: ${escapeHtml(contactEmail)}
+                                </li>
+                                <li class="flex items-center">
+                                    <i class="fas fa-map-marker-alt mr-3 text-indigo-400 w-5"></i>주소: ${escapeHtml(contactAddress)}
+                                </li>
                             </ul>
                         </div>
                     </div>
-                    <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400 text-sm">
-                        <p>&copy; 2024 대안학교. All rights reserved.</p>
+                    <div class="border-t border-gray-700/50 mt-12 pt-8 text-center">
+                        <p class="text-gray-400 text-sm">&copy; 2024 대안학교. All rights reserved.</p>
                     </div>
                 </div>
             </footer>
@@ -193,11 +228,11 @@ function setupPublicNavigation() {
             
             // 활성 상태 업데이트
             document.querySelectorAll('.public-nav-item').forEach(link => {
-                link.classList.remove('text-purple-600', 'font-semibold');
-                link.classList.add('text-gray-600');
+                link.classList.remove('text-indigo-600', 'font-semibold');
+                link.classList.add('text-gray-700');
             });
-            e.target.classList.add('text-purple-600', 'font-semibold');
-            e.target.classList.remove('text-gray-600');
+            e.target.classList.add('text-indigo-600', 'font-semibold');
+            e.target.classList.remove('text-gray-700');
             
             navigatePublicPage(page);
         });
@@ -223,11 +258,11 @@ function updatePublicNavActive(page) {
     document.querySelectorAll('.public-nav-item').forEach(link => {
         const linkPage = link.getAttribute('data-page');
         if (linkPage === page) {
-            link.classList.add('text-purple-600', 'font-semibold');
-            link.classList.remove('text-gray-600');
+            link.classList.add('text-indigo-600', 'font-semibold');
+            link.classList.remove('text-gray-700');
         } else {
-            link.classList.remove('text-purple-600', 'font-semibold');
-            link.classList.add('text-gray-600');
+            link.classList.remove('text-indigo-600', 'font-semibold');
+            link.classList.add('text-gray-700');
         }
     });
 }
@@ -288,24 +323,49 @@ async function showPublicHomePage() {
         if (modules.length === 0) {
             // 모듈이 없으면 안내 메시지 표시
             content.innerHTML = `
-                <section class="relative bg-gradient-to-r from-purple-600 to-blue-600 text-white py-24">
-                    <div class="container mx-auto px-4 text-center">
-                        <h2 class="text-5xl font-bold mb-6">꿈을 키우는 학교</h2>
-                        <p class="text-2xl mb-8 text-purple-100">우리 모두가 주인공이 되는 배움의 공간</p>
-                        <div class="flex justify-center space-x-4">
-                            <button onclick="navigatePublicPage('about')" class="bg-white text-purple-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
-                                학교 소개 보기
-                            </button>
-                            <button onclick="showLoginModal()" class="bg-purple-800 text-white px-8 py-3 rounded-lg font-semibold hover:bg-purple-900 transition-colors">
-                                로그인
-                            </button>
+                <section class="relative bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 text-white py-32 overflow-hidden">
+                    <div class="absolute inset-0 bg-black/20"></div>
+                    <div class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/30"></div>
+                    <div class="container mx-auto px-4 text-center relative z-10">
+                        <div class="animate-fade-in-up">
+                            <h2 class="text-6xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-white to-purple-100 bg-clip-text text-transparent drop-shadow-2xl">
+                                꿈을 키우는 학교
+                            </h2>
+                            <p class="text-xl md:text-2xl mb-12 text-white/90 font-light max-w-3xl mx-auto leading-relaxed">
+                                우리 모두가 주인공이 되는 배움의 공간
+                            </p>
+                            <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
+                                <button onclick="navigatePublicPage('about')" class="bg-white text-indigo-600 px-10 py-4 rounded-xl font-bold text-lg shadow-2xl hover:shadow-3xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1">
+                                    <i class="fas fa-info-circle mr-2"></i>학교 소개 보기
+                                </button>
+                                ${typeof currentUser !== 'undefined' && currentUser ? `
+                                    <button onclick="goToDashboard()" class="bg-indigo-600/90 backdrop-blur-sm text-white px-10 py-4 rounded-xl font-bold text-lg border-2 border-white/30 shadow-2xl hover:shadow-3xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1">
+                                        <i class="fas fa-tachometer-alt mr-2"></i>대시보드
+                                    </button>
+                                ` : `
+                                    <button onclick="showLoginModal()" class="bg-indigo-600/90 backdrop-blur-sm text-white px-10 py-4 rounded-xl font-bold text-lg border-2 border-white/30 shadow-2xl hover:shadow-3xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1">
+                                        <i class="fas fa-sign-in-alt mr-2"></i>로그인
+                                    </button>
+                                `}
+                            </div>
                         </div>
                     </div>
+                    <div class="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white to-transparent"></div>
                 </section>
-                <section class="py-16 bg-gray-50">
+                <section class="py-20 bg-gradient-to-br from-gray-50 to-white">
                     <div class="container mx-auto px-4 text-center">
-                        <p class="text-gray-600 mb-4">홈페이지 모듈이 아직 설정되지 않았습니다.</p>
-                        <p class="text-sm text-gray-500">최고 관리자로 로그인하여 홈페이지 모듈을 추가해주세요.</p>
+                        <div class="max-w-2xl mx-auto bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
+                            <div class="w-20 h-20 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                                <i class="fas fa-info-circle text-4xl text-indigo-600"></i>
+                            </div>
+                            <h3 class="text-2xl font-bold text-gray-800 mb-4">홈페이지 모듈이 아직 설정되지 않았습니다</h3>
+                            <p class="text-gray-600 mb-6">최고 관리자로 로그인하여 홈페이지 모듈을 추가해주세요.</p>
+                            ${typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'super_admin' ? `
+                                <button onclick="goToDashboard(); setTimeout(() => navigateToPage('homepage-management'), 500)" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform transition-all duration-300 hover:scale-105">
+                                    <i class="fas fa-cog mr-2"></i>홈페이지 관리하기
+                                </button>
+                            ` : ''}
+                        </div>
                     </div>
                 </section>
             `;
@@ -371,20 +431,31 @@ function renderHomepageModule(module) {
     
     switch (module.module_type) {
         case 'hero':
+            const heroBgStyle = module.background_image ? '' : 'bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600';
             moduleHTML = `
-                <section class="relative text-white py-24"${sectionStyle}>
-                    <div class="${containerClass} text-center">
-                        <h2 class="text-5xl font-bold mb-6">${escapeHtml(module.title || '꿈을 키우는 학교')}</h2>
-                        <p class="text-2xl mb-8 ${module.background_color ? '' : 'text-purple-100'}">${escapeHtml(module.subtitle || '우리 모두가 주인공이 되는 배움의 공간')}</p>
-                        <div class="flex justify-center space-x-4">
-                            <button onclick="navigatePublicPage('about')" class="bg-white text-purple-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
-                                학교 소개 보기
-                            </button>
-                            <button onclick="showLoginModal()" class="bg-purple-800 text-white px-8 py-3 rounded-lg font-semibold hover:bg-purple-900 transition-colors">
-                                로그인
-                            </button>
+                <section class="relative text-white py-32 overflow-hidden"${sectionStyle}>
+                    ${!module.background_image ? `<div class="absolute inset-0 ${heroBgStyle}"></div>` : ''}
+                    <div class="absolute inset-0 bg-black/20"></div>
+                    <div class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/30"></div>
+                    <div class="${containerClass} text-center relative z-10">
+                        <div class="animate-fade-in-up">
+                            <h2 class="text-6xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-white to-purple-100 bg-clip-text text-transparent drop-shadow-2xl">
+                                ${escapeHtml(module.title || '꿈을 키우는 학교')}
+                            </h2>
+                            <p class="text-xl md:text-2xl mb-12 text-white/90 font-light max-w-3xl mx-auto leading-relaxed">
+                                ${escapeHtml(module.subtitle || '우리 모두가 주인공이 되는 배움의 공간')}
+                            </p>
+                            <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
+                                <button onclick="navigatePublicPage('about')" class="bg-white text-indigo-600 px-10 py-4 rounded-xl font-bold text-lg shadow-2xl hover:shadow-3xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1">
+                                    <i class="fas fa-info-circle mr-2"></i>학교 소개 보기
+                                </button>
+                                <button onclick="showLoginModal()" class="bg-indigo-600/90 backdrop-blur-sm text-white px-10 py-4 rounded-xl font-bold text-lg border-2 border-white/30 shadow-2xl hover:shadow-3xl transform transition-all duration-300 hover:scale-105 hover:-translate-y-1">
+                                    <i class="fas fa-sign-in-alt mr-2"></i>로그인
+                                </button>
+                            </div>
                         </div>
                     </div>
+                    <div class="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white to-transparent"></div>
                 </section>
             `;
             break;
@@ -427,34 +498,47 @@ function renderHomepageModule(module) {
             break;
             
         case 'values':
+            const valueColors = [
+                { bg: 'from-red-500 to-pink-500', icon: 'from-red-100 to-pink-100', text: 'text-red-600' },
+                { bg: 'from-blue-500 to-indigo-500', icon: 'from-blue-100 to-indigo-100', text: 'text-blue-600' },
+                { bg: 'from-green-500 to-emerald-500', icon: 'from-green-100 to-emerald-100', text: 'text-green-600' }
+            ];
             moduleHTML = `
-                <section class="py-16 bg-white"${sectionStyle}>
+                <section class="py-20 bg-gradient-to-br from-gray-50 to-white"${sectionStyle}>
                     <div class="${containerClass}">
-                        <h2 class="text-3xl font-bold text-center mb-12 text-gray-800">우리의 교훈</h2>
+                        <div class="text-center mb-16">
+                            <h2 class="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">우리의 교훈</h2>
+                            <p class="text-gray-600 text-lg">가치 있는 교육을 위한 우리의 약속</p>
+                        </div>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            ${[1, 2, 3].map(i => {
+                            ${[1, 2, 3].map((i, idx) => {
                                 const icon = module[`value${i}_icon`];
                                 const title = module[`value${i}_title`] || '';
                                 const desc = module[`value${i}_desc`] || '';
+                                const colors = valueColors[idx] || valueColors[0];
                                 const isFontAwesome = icon && (icon.startsWith('fa-') || icon.startsWith('fas ') || icon.startsWith('far ') || icon.startsWith('fab ') || icon.startsWith('fal ') || icon.startsWith('fad '));
                                 const iconClass = isFontAwesome ? (icon.startsWith('fa-') ? `fas ${icon}` : icon) : '';
                                 return `
-                                    <div class="text-center p-6">
-                                        ${icon ? (
-                                            isFontAwesome ? `
-                                                <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                    <i class="${iconClass} text-4xl text-red-600"></i>
+                                    <div class="group bg-white rounded-2xl p-8 shadow-lg hover:shadow-2xl transform transition-all duration-300 hover:-translate-y-2 border border-gray-100">
+                                        <div class="text-center">
+                                            ${icon ? (
+                                                isFontAwesome ? `
+                                                    <div class="w-24 h-24 bg-gradient-to-br ${colors.icon} rounded-2xl flex items-center justify-center mx-auto mb-6 transform transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-lg">
+                                                        <i class="${iconClass} text-5xl ${colors.text}"></i>
+                                                    </div>
+                                                ` : `
+                                                    <div class="w-24 h-24 bg-gradient-to-br ${colors.icon} rounded-2xl flex items-center justify-center mx-auto mb-6 transform transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-lg p-4">
+                                                        <img src="${escapeHtml(icon)}" alt="${escapeHtml(title)}" class="w-full h-full object-contain">
+                                                    </div>
+                                                `
+                                            ) : `
+                                                <div class="w-24 h-24 bg-gradient-to-br ${colors.icon} rounded-2xl flex items-center justify-center mx-auto mb-6 transform transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-lg">
+                                                    <i class="fas fa-heart text-5xl ${colors.text}"></i>
                                                 </div>
-                                            ` : `
-                                                <img src="${escapeHtml(icon)}" alt="${escapeHtml(title)}" class="w-20 h-20 mx-auto mb-4 object-contain">
-                                            `
-                                        ) : `
-                                            <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                <i class="fas fa-heart text-4xl text-red-600"></i>
-                                            </div>
-                                        `}
-                                        <h3 class="text-xl font-bold text-gray-800 mb-2">${escapeHtml(title)}</h3>
-                                        <p class="text-gray-600">${escapeHtml(desc)}</p>
+                                            `}
+                                            <h3 class="text-2xl font-bold text-gray-800 mb-3">${escapeHtml(title)}</h3>
+                                            <p class="text-gray-600 leading-relaxed">${escapeHtml(desc)}</p>
+                                        </div>
                                     </div>
                                 `;
                             }).join('')}
@@ -465,34 +549,48 @@ function renderHomepageModule(module) {
             break;
             
         case 'features':
+            const featureColors = [
+                { bg: 'from-indigo-500 to-purple-500', icon: 'from-indigo-100 to-purple-100', text: 'text-indigo-600' },
+                { bg: 'from-blue-500 to-cyan-500', icon: 'from-blue-100 to-cyan-100', text: 'text-blue-600' },
+                { bg: 'from-purple-500 to-pink-500', icon: 'from-purple-100 to-pink-100', text: 'text-purple-600' },
+                { bg: 'from-green-500 to-teal-500', icon: 'from-green-100 to-teal-100', text: 'text-green-600' }
+            ];
             moduleHTML = `
-                <section class="py-16 bg-gray-50"${sectionStyle}>
+                <section class="py-20 bg-white"${sectionStyle}>
                     <div class="${containerClass}">
-                        <h2 class="text-3xl font-bold text-center mb-12 text-gray-800">우리 학교의 특징</h2>
+                        <div class="text-center mb-16">
+                            <h2 class="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">우리 학교의 특징</h2>
+                            <p class="text-gray-600 text-lg">차별화된 교육 프로그램과 시설</p>
+                        </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                            ${[1, 2, 3, 4].map(i => {
+                            ${[1, 2, 3, 4].map((i, idx) => {
                                 const icon = module[`feature${i}_icon`];
                                 const title = module[`feature${i}_title`] || '';
                                 const desc = module[`feature${i}_desc`] || '';
+                                const colors = featureColors[idx] || featureColors[0];
                                 const isFontAwesome = icon && (icon.startsWith('fa-') || icon.startsWith('fas ') || icon.startsWith('far ') || icon.startsWith('fab ') || icon.startsWith('fal ') || icon.startsWith('fad '));
                                 const iconClass = isFontAwesome ? (icon.startsWith('fa-') ? `fas ${icon}` : icon) : '';
                                 return `
-                                    <div class="text-center p-6">
-                                        ${icon ? (
-                                            isFontAwesome ? `
-                                                <div class="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                    <i class="${iconClass} text-4xl text-purple-600"></i>
+                                    <div class="group bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 shadow-md hover:shadow-2xl transform transition-all duration-300 hover:-translate-y-2 border border-gray-100">
+                                        <div class="text-center">
+                                            ${icon ? (
+                                                isFontAwesome ? `
+                                                    <div class="w-20 h-20 bg-gradient-to-br ${colors.icon} rounded-2xl flex items-center justify-center mx-auto mb-6 transform transition-all duration-300 group-hover:scale-110 group-hover:rotate-6 shadow-lg">
+                                                        <i class="${iconClass} text-4xl ${colors.text}"></i>
+                                                    </div>
+                                                ` : `
+                                                    <div class="w-20 h-20 bg-gradient-to-br ${colors.icon} rounded-2xl flex items-center justify-center mx-auto mb-6 transform transition-all duration-300 group-hover:scale-110 group-hover:rotate-6 shadow-lg p-4">
+                                                        <img src="${escapeHtml(icon)}" alt="${escapeHtml(title)}" class="w-full h-full object-contain">
+                                                    </div>
+                                                `
+                                            ) : `
+                                                <div class="w-20 h-20 bg-gradient-to-br ${colors.icon} rounded-2xl flex items-center justify-center mx-auto mb-6 transform transition-all duration-300 group-hover:scale-110 group-hover:rotate-6 shadow-lg">
+                                                    <i class="fas fa-users text-4xl ${colors.text}"></i>
                                                 </div>
-                                            ` : `
-                                                <img src="${escapeHtml(icon)}" alt="${escapeHtml(title)}" class="w-20 h-20 mx-auto mb-4 object-contain">
-                                            `
-                                        ) : `
-                                            <div class="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                <i class="fas fa-users text-4xl text-purple-600"></i>
-                                            </div>
-                                        `}
-                                        <h4 class="font-bold text-gray-800 mb-2">${escapeHtml(title)}</h4>
-                                        <p class="text-sm text-gray-600">${escapeHtml(desc)}</p>
+                                            `}
+                                            <h4 class="font-bold text-lg text-gray-800 mb-3">${escapeHtml(title)}</h4>
+                                            <p class="text-sm text-gray-600 leading-relaxed">${escapeHtml(desc)}</p>
+                                        </div>
                                     </div>
                                 `;
                             }).join('')}
