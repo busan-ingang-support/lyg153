@@ -1308,7 +1308,7 @@ function showNotificationsPageDefault(container) {
 async function loadNotifications() {
     try {
         const response = await axios.get('/api/notifications', {
-            headers: { Authorization: \`Bearer \${authToken}\` }
+            headers: { Authorization: 'Bearer ' + authToken }
         });
         
         const { notifications, unread_count } = response.data;
@@ -1324,24 +1324,24 @@ async function loadNotifications() {
             return;
         }
         
-        container.innerHTML = notifications.map(n => \`
-            <div class="bg-white rounded-lg border \${n.is_read ? 'border-gray-200' : 'border-blue-300 bg-blue-50'} p-4 cursor-pointer hover:shadow-sm transition"
-                 onclick="markNotificationRead(\${n.id})">
+        container.innerHTML = notifications.map(n => `
+            <div class="bg-white rounded-lg border ${n.is_read ? 'border-gray-200' : 'border-blue-300 bg-blue-50'} p-4 cursor-pointer hover:shadow-sm transition"
+                 onclick="markNotificationRead(${n.id})">
                 <div class="flex items-start justify-between">
                     <div class="flex-1">
                         <div class="flex items-center gap-2">
-                            <span class="font-medium text-gray-800">\${n.title}</span>
-                            \${!n.is_read ? '<span class="w-2 h-2 bg-blue-500 rounded-full"></span>' : ''}
+                            <span class="font-medium text-gray-800">${n.title}</span>
+                            ${!n.is_read ? '<span class="w-2 h-2 bg-blue-500 rounded-full"></span>' : ''}
                         </div>
-                        <p class="text-sm text-gray-600 mt-1">\${n.message}</p>
-                        <p class="text-xs text-gray-400 mt-2">\${new Date(n.created_at).toLocaleString('ko-KR')}</p>
+                        <p class="text-sm text-gray-600 mt-1">${n.message}</p>
+                        <p class="text-xs text-gray-400 mt-2">${new Date(n.created_at).toLocaleString('ko-KR')}</p>
                     </div>
-                    <button onclick="event.stopPropagation(); deleteNotification(\${n.id})" class="text-gray-400 hover:text-red-500">
+                    <button onclick="event.stopPropagation(); deleteNotification(${n.id})" class="text-gray-400 hover:text-red-500">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
             </div>
-        \`).join('');
+        `).join('');
     } catch (error) {
         console.error('알림 로드 실패:', error);
     }
@@ -1350,8 +1350,8 @@ async function loadNotifications() {
 // 알림 읽음 처리
 async function markNotificationRead(id) {
     try {
-        await axios.put(\`/api/notifications/\${id}/read\`, {}, {
-            headers: { Authorization: \`Bearer \${authToken}\` }
+        await axios.put('/api/notifications/' + id + '/read', {}, {
+            headers: { Authorization: 'Bearer ' + authToken }
         });
         loadNotifications();
     } catch (error) {
@@ -1363,7 +1363,7 @@ async function markNotificationRead(id) {
 async function markAllNotificationsRead() {
     try {
         await axios.put('/api/notifications/read-all', {}, {
-            headers: { Authorization: \`Bearer \${authToken}\` }
+            headers: { Authorization: 'Bearer ' + authToken }
         });
         loadNotifications();
     } catch (error) {
@@ -1375,8 +1375,8 @@ async function markAllNotificationsRead() {
 async function deleteNotification(id) {
     if (!confirm('이 알림을 삭제하시겠습니까?')) return;
     try {
-        await axios.delete(\`/api/notifications/\${id}\`, {
-            headers: { Authorization: \`Bearer \${authToken}\` }
+        await axios.delete('/api/notifications/' + id, {
+            headers: { Authorization: 'Bearer ' + authToken }
         });
         loadNotifications();
     } catch (error) {
