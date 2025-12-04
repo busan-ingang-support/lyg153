@@ -12,8 +12,16 @@ export async function authMiddleware(c: Context<{ Bindings: CloudflareBindings }
   const token = authHeader.substring(7);
   
   try {
-    // 간단한 JWT 디코딩 (실제 프로덕션에서는 서명 검증 필요)
-    const payload = JSON.parse(atob(token.split('.')[1]));
+    // 토큰 디코딩 (단순 Base64 인코딩된 JSON)
+    // 토큰이 JWT 형식인지 확인 (점이 있는지)
+    let payload;
+    if (token.includes('.')) {
+      // JWT 형식인 경우
+      payload = JSON.parse(atob(token.split('.')[1]));
+    } else {
+      // 단순 Base64 인코딩인 경우
+      payload = JSON.parse(atob(token));
+    }
     
     // 토큰 만료 확인
     if (payload.exp && payload.exp < Date.now() / 1000) {
@@ -33,7 +41,39 @@ export async function authMiddleware(c: Context<{ Bindings: CloudflareBindings }
 // 역할 기반 접근 제어
 export function requireRole(...allowedRoles: string[]) {
   return async (c: Context<{ Bindings: CloudflareBindings }>, next: Next) => {
-    const userRole = c.get('userRole');
+    // 먼저 인증 미들웨어 실행 (userRole이 없으면)
+    let userRole = c.get('userRole');
+    
+    if (!userRole) {
+      // 토큰에서 직접 역할 추출
+      const authHeader = c.req.header('Authorization');
+      
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return c.json({ error: 'Unauthorized: No token provided' }, 401);
+      }
+      
+      const token = authHeader.substring(7);
+      
+      try {
+        let payload;
+        if (token.includes('.')) {
+          payload = JSON.parse(atob(token.split('.')[1]));
+        } else {
+          payload = JSON.parse(atob(token));
+        }
+        
+        // 토큰 만료 확인
+        if (payload.exp && payload.exp < Date.now() / 1000) {
+          return c.json({ error: 'Unauthorized: Token expired' }, 401);
+        }
+        
+        userRole = payload.role;
+        c.set('userId', payload.userId);
+        c.set('userRole', payload.role);
+      } catch (error) {
+        return c.json({ error: 'Unauthorized: Invalid token' }, 401);
+      }
+    }
     
     if (!userRole || !allowedRoles.includes(userRole)) {
       return c.json({ 
