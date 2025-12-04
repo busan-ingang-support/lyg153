@@ -778,6 +778,10 @@ function showDefaultSidebarMenu() {
                 <i class="fas fa-book w-5 mr-3"></i>
                 <span>과목 관리</span>
             </a>
+            <a href="#" data-page="assignments" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
+                <i class="fas fa-tasks w-5 mr-3"></i>
+                <span>과제 관리</span>
+            </a>
             <div class="border-t border-gray-200 my-4"></div>
             <a href="#" data-page="reports" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
                 <i class="fas fa-print w-5 mr-3"></i>
@@ -803,6 +807,10 @@ function showDefaultSidebarMenu() {
             <a href="#" data-page="grades" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
                 <i class="fas fa-chart-line w-5 mr-3"></i>
                 <span>성적 관리</span>
+            </a>
+            <a href="#" data-page="assignments" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
+                <i class="fas fa-tasks w-5 mr-3"></i>
+                <span>과제 관리</span>
             </a>
             <div class="border-t border-gray-200 my-4"></div>
             <a href="#" data-page="settings" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
@@ -1240,8 +1248,139 @@ function navigateToPage(page, updateURL = true) {
                 navigateToPage('dashboard');
             }
             break;
+        case 'assignments':
+            if (typeof showAssignmentManagement === 'function') {
+                showAssignmentManagement(contentArea);
+            } else {
+                contentArea.innerHTML = `
+                    <div class="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg">
+                        <p>과제 관리 기능을 로드하는 중입니다...</p>
+                    </div>
+                `;
+                let retryCount = 0;
+                const checkFunction = setInterval(() => {
+                    retryCount++;
+                    if (typeof showAssignmentManagement === 'function') {
+                        clearInterval(checkFunction);
+                        showAssignmentManagement(contentArea);
+                    } else if (retryCount >= 30) {
+                        clearInterval(checkFunction);
+                        contentArea.innerHTML = `
+                            <div class="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
+                                <p>과제 관리 기능을 불러올 수 없습니다. 페이지를 새로고침해주세요.</p>
+                            </div>
+                        `;
+                    }
+                }, 100);
+            }
+            break;
+        case 'notifications':
+            if (typeof showNotificationsPage === 'function') {
+                showNotificationsPage(contentArea);
+            } else {
+                showNotificationsPageDefault(contentArea);
+            }
+            break;
         default:
             showDashboardPage(contentArea);
+    }
+}
+
+// 기본 알림 페이지
+function showNotificationsPageDefault(container) {
+    container.innerHTML = `
+        <div class="space-y-6">
+            <div class="flex items-center justify-between">
+                <h1 class="text-2xl font-bold text-gray-800">알림</h1>
+                <button onclick="markAllNotificationsRead()" class="btn-secondary px-4 py-2 rounded-lg text-sm">
+                    <i class="fas fa-check-double mr-2"></i>모두 읽음
+                </button>
+            </div>
+            <div id="notifications-list" class="space-y-3">
+                <div class="text-center py-8 text-gray-500">로딩 중...</div>
+            </div>
+        </div>
+    `;
+    loadNotifications();
+}
+
+// 알림 목록 로드
+async function loadNotifications() {
+    try {
+        const response = await axios.get('/api/notifications', {
+            headers: { Authorization: \`Bearer \${authToken}\` }
+        });
+        
+        const { notifications, unread_count } = response.data;
+        const container = document.getElementById('notifications-list');
+        
+        if (!notifications || notifications.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-12">
+                    <i class="fas fa-bell-slash text-4xl text-gray-300 mb-3"></i>
+                    <p class="text-gray-500">알림이 없습니다</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = notifications.map(n => \`
+            <div class="bg-white rounded-lg border \${n.is_read ? 'border-gray-200' : 'border-blue-300 bg-blue-50'} p-4 cursor-pointer hover:shadow-sm transition"
+                 onclick="markNotificationRead(\${n.id})">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2">
+                            <span class="font-medium text-gray-800">\${n.title}</span>
+                            \${!n.is_read ? '<span class="w-2 h-2 bg-blue-500 rounded-full"></span>' : ''}
+                        </div>
+                        <p class="text-sm text-gray-600 mt-1">\${n.message}</p>
+                        <p class="text-xs text-gray-400 mt-2">\${new Date(n.created_at).toLocaleString('ko-KR')}</p>
+                    </div>
+                    <button onclick="event.stopPropagation(); deleteNotification(\${n.id})" class="text-gray-400 hover:text-red-500">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        \`).join('');
+    } catch (error) {
+        console.error('알림 로드 실패:', error);
+    }
+}
+
+// 알림 읽음 처리
+async function markNotificationRead(id) {
+    try {
+        await axios.put(\`/api/notifications/\${id}/read\`, {}, {
+            headers: { Authorization: \`Bearer \${authToken}\` }
+        });
+        loadNotifications();
+    } catch (error) {
+        console.error('알림 읽음 처리 실패:', error);
+    }
+}
+
+// 모든 알림 읽음 처리
+async function markAllNotificationsRead() {
+    try {
+        await axios.put('/api/notifications/read-all', {}, {
+            headers: { Authorization: \`Bearer \${authToken}\` }
+        });
+        loadNotifications();
+    } catch (error) {
+        console.error('모든 알림 읽음 처리 실패:', error);
+    }
+}
+
+// 알림 삭제
+async function deleteNotification(id) {
+    if (!confirm('이 알림을 삭제하시겠습니까?')) return;
+    try {
+        await axios.delete(\`/api/notifications/\${id}\`, {
+            headers: { Authorization: \`Bearer \${authToken}\` }
+        });
+        loadNotifications();
+    } catch (error) {
+        console.error('알림 삭제 실패:', error);
     }
 }
 
