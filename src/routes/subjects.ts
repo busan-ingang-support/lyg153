@@ -69,7 +69,7 @@ subjects.get('/:id', async (c) => {
 });
 
 // ============================================
-// 과목 생성
+// 과목 생성 (+ 자동으로 수업 생성)
 // ============================================
 subjects.post('/', async (c) => {
   const db = c.env.DB;
@@ -81,6 +81,7 @@ subjects.post('/', async (c) => {
   }
   
   try {
+    // 1. 과목 생성
     const result = await db.prepare(`
       INSERT INTO subjects (
         name, code, description, credits, subject_type, 
@@ -98,9 +99,25 @@ subjects.post('/', async (c) => {
       teacher_id || null
     ).run();
     
+    const subjectId = result.meta.last_row_id;
+    
+    // 2. 현재 활성 학기 조회
+    const activeSemester = await db.prepare(`
+      SELECT id FROM semesters WHERE is_active = 1 LIMIT 1
+    `).first() as any;
+    
+    // 3. 담당 교사가 있고 활성 학기가 있으면 자동으로 수업(course) 생성
+    if (activeSemester && teacher_id) {
+      const courseName = `${grade ? grade + '학년 ' : ''}${name}`;
+      await db.prepare(`
+        INSERT INTO courses (subject_id, semester_id, teacher_id, course_name, max_students)
+        VALUES (?, ?, ?, ?, 30)
+      `).bind(subjectId, activeSemester.id, teacher_id, courseName).run();
+    }
+    
     return c.json({ 
       message: '과목이 생성되었습니다', 
-      id: result.meta.last_row_id 
+      id: subjectId 
     }, 201);
   } catch (error: any) {
     if (error.message?.includes('UNIQUE')) {
@@ -112,7 +129,7 @@ subjects.post('/', async (c) => {
 });
 
 // ============================================
-// 과목 수정
+// 과목 수정 (+ 연결된 수업도 업데이트)
 // ============================================
 subjects.put('/:id', async (c) => {
   const db = c.env.DB;
@@ -120,6 +137,7 @@ subjects.put('/:id', async (c) => {
   const { name, code, description, credits, subject_type, grade, performance_ratio, written_ratio, teacher_id } = await c.req.json();
   
   try {
+    // 1. 과목 수정
     const result = await db.prepare(`
       UPDATE subjects 
       SET name = ?, code = ?, description = ?, credits = ?, 
@@ -140,6 +158,33 @@ subjects.put('/:id', async (c) => {
     
     if (result.meta.changes === 0) {
       return c.json({ error: '과목을 찾을 수 없습니다' }, 404);
+    }
+    
+    // 2. 현재 활성 학기 조회
+    const activeSemester = await db.prepare(`
+      SELECT id FROM semesters WHERE is_active = 1 LIMIT 1
+    `).first() as any;
+    
+    if (activeSemester) {
+      // 3. 이 과목의 현재 학기 수업이 있는지 확인
+      const existingCourse = await db.prepare(`
+        SELECT id FROM courses WHERE subject_id = ? AND semester_id = ?
+      `).bind(id, activeSemester.id).first() as any;
+      
+      if (existingCourse) {
+        // 기존 수업이 있으면 교사 정보 업데이트
+        const courseName = `${grade ? grade + '학년 ' : ''}${name}`;
+        await db.prepare(`
+          UPDATE courses SET teacher_id = ?, course_name = ? WHERE id = ?
+        `).bind(teacher_id || null, courseName, existingCourse.id).run();
+      } else if (teacher_id) {
+        // 기존 수업이 없고 담당 교사가 지정되면 새로 생성
+        const courseName = `${grade ? grade + '학년 ' : ''}${name}`;
+        await db.prepare(`
+          INSERT INTO courses (subject_id, semester_id, teacher_id, course_name, max_students)
+          VALUES (?, ?, ?, ?, 30)
+        `).bind(id, activeSemester.id, teacher_id, courseName).run();
+      }
     }
     
     return c.json({ message: '과목이 수정되었습니다' });
