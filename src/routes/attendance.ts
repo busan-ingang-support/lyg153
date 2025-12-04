@@ -393,7 +393,7 @@ attendance.get('/student/:student_id', async (c) => {
       JOIN enrollments e ON a.enrollment_id = e.id
       JOIN courses c ON e.course_id = c.id
       LEFT JOIN subjects sub ON c.subject_id = sub.id
-      WHERE e.student_id = ? AND COALESCE(a.status, 1) != 0
+      WHERE e.student_id = ? AND a.status IS NOT NULL
     `;
     const params: any[] = [studentId];
 
