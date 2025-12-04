@@ -577,7 +577,11 @@ function getModuleEditForm(module) {
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">배경색</label>
-                    <input type="color" name="background_color" value="${module.background_color || '#ffffff'}" class="w-full h-10 border border-gray-300 rounded-lg">
+                    <div class="flex items-center space-x-2">
+                        <input type="checkbox" id="use_bg_color" name="use_bg_color" ${module.background_color && module.background_color !== '#ffffff' ? 'checked' : ''} onchange="toggleBgColorInput()" class="w-4 h-4">
+                        <input type="color" id="bg_color_input" name="background_color" value="${module.background_color || '#ffffff'}" class="w-20 h-10 border border-gray-300 rounded-lg ${module.background_color && module.background_color !== '#ffffff' ? '' : 'opacity-50'}" ${module.background_color && module.background_color !== '#ffffff' ? '' : 'disabled'}>
+                        <span class="text-sm text-gray-500">${module.background_color && module.background_color !== '#ffffff' ? '' : '(기본 배경)'}</span>
+                    </div>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">배경 이미지 URL</label>
@@ -1120,6 +1124,31 @@ function removeGalleryImage(index) {
     }
 }
 
+// 배경색 입력 토글
+function toggleBgColorInput() {
+    const checkbox = document.getElementById('use_bg_color');
+    const colorInput = document.getElementById('bg_color_input');
+    const label = checkbox?.parentElement?.querySelector('span');
+    
+    if (checkbox && colorInput) {
+        if (checkbox.checked) {
+            colorInput.disabled = false;
+            colorInput.classList.remove('opacity-50');
+            if (label) label.textContent = '';
+        } else {
+            colorInput.disabled = true;
+            colorInput.classList.add('opacity-50');
+            colorInput.value = '#ffffff';
+            if (label) label.textContent = '(기본 배경)';
+        }
+        
+        // 미리보기 업데이트
+        const form = document.getElementById('edit-module-form');
+        const module = window.currentEditingModule;
+        if (form && module) updatePreview(form, module);
+    }
+}
+
 // 모듈 저장
 async function saveModule(moduleId, form) {
     try {
@@ -1133,7 +1162,7 @@ async function saveModule(moduleId, form) {
             display_order: module?.display_order || 0,
             is_active: parseInt(data.is_active),
             container_type: data.container_type,
-            background_color: data.background_color || null,
+            background_color: document.getElementById('use_bg_color')?.checked ? data.background_color : null,
             background_image: data.background_image || null,
             padding_top: parseInt(data.padding_top) || 0,
             padding_bottom: parseInt(data.padding_bottom) || 0,
@@ -1401,7 +1430,7 @@ function updatePreview(form, originalModule) {
         ...originalModule,
         container_type: data.container_type || originalModule.container_type,
         is_active: data.is_active === '1',
-        background_color: data.background_color || originalModule.background_color,
+        background_color: document.getElementById('use_bg_color')?.checked ? data.background_color : null,
         background_image: data.background_image || originalModule.background_image,
         padding_top: parseInt(data.padding_top) || originalModule.padding_top || 0,
         padding_bottom: parseInt(data.padding_bottom) || originalModule.padding_bottom || 0,

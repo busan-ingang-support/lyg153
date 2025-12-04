@@ -291,10 +291,34 @@ attendance.post('/bulk-simple', requireRole('teacher', 'admin', 'super_admin'), 
   });
 });
 
-// 학생별 출석 요약 (학부모용)
+// 학생별 출석 요약 (학부모/학생/교사/관리자)
 attendance.get('/student/:student_id/summary', async (c) => {
   const db = c.env.DB;
   const studentId = c.req.param('student_id');
+  const userId = c.get('userId');
+  const userRole = c.get('userRole');
+
+  // 권한 체크
+  if (userRole === 'parent') {
+    // 학부모: 자녀만 조회 가능
+    const relation = await db.prepare(`
+      SELECT id FROM parent_student WHERE parent_user_id = ? AND student_id = ?
+    `).bind(userId, studentId).first();
+    
+    if (!relation) {
+      return c.json({ error: 'Forbidden: Not your child' }, 403);
+    }
+  } else if (userRole === 'student') {
+    // 학생: 본인만 조회 가능
+    const student = await db.prepare(`
+      SELECT id FROM students WHERE user_id = ? AND id = ?
+    `).bind(userId, studentId).first();
+    
+    if (!student) {
+      return c.json({ error: 'Forbidden: Not your record' }, 403);
+    }
+  }
+  // 교사, 관리자, super_admin은 모두 조회 가능
 
   try {
     // 출석 통계 계산
@@ -307,7 +331,7 @@ attendance.get('/student/:student_id/summary', async (c) => {
         SUM(CASE WHEN status = 'excused' THEN 1 ELSE 0 END) as excused
       FROM attendance a
       JOIN enrollments e ON a.enrollment_id = e.id
-      WHERE e.student_id = ?
+      WHERE e.student_id = ? AND COALESCE(a.status, 'present') != ''
     `).bind(studentId).first();
 
     return c.json({
@@ -330,11 +354,38 @@ attendance.get('/student/:student_id', async (c) => {
   const db = c.env.DB;
   const studentId = c.req.param('student_id');
   const { start_date, end_date } = c.req.query();
+  const userId = c.get('userId');
+  const userRole = c.get('userRole');
+
+  // 권한 체크
+  if (userRole === 'parent') {
+    // 학부모: 자녀만 조회 가능
+    const relation = await db.prepare(`
+      SELECT id FROM parent_student WHERE parent_user_id = ? AND student_id = ?
+    `).bind(userId, studentId).first();
+    
+    if (!relation) {
+      return c.json({ error: 'Forbidden: Not your child' }, 403);
+    }
+  } else if (userRole === 'student') {
+    // 학생: 본인만 조회 가능
+    const student = await db.prepare(`
+      SELECT id FROM students WHERE user_id = ? AND id = ?
+    `).bind(userId, studentId).first();
+    
+    if (!student) {
+      return c.json({ error: 'Forbidden: Not your record' }, 403);
+    }
+  }
+  // 교사, 관리자, super_admin은 모두 조회 가능
 
   try {
     let query = `
       SELECT
-        a.*,
+        a.id,
+        a.attendance_date as date,
+        a.status,
+        a.note as notes,
         e.student_id,
         c.course_name,
         sub.name as subject_name
@@ -342,7 +393,7 @@ attendance.get('/student/:student_id', async (c) => {
       JOIN enrollments e ON a.enrollment_id = e.id
       JOIN courses c ON e.course_id = c.id
       LEFT JOIN subjects sub ON c.subject_id = sub.id
-      WHERE e.student_id = ?
+      WHERE e.student_id = ? AND COALESCE(a.status, 1) != 0
     `;
     const params: any[] = [studentId];
 

@@ -30,6 +30,8 @@ import teacherPermissions from './routes/teacher-permissions';
 import teachers from './routes/teachers';
 import homepage from './routes/homepage';
 import homepageModules from './routes/homepage-modules';
+import assignments from './routes/assignments';
+import notifications from './routes/notifications';
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -66,6 +68,8 @@ app.route('/api/teacher-permissions', teacherPermissions);
 app.route('/api/teachers', teachers);
 app.route('/api/homepage', homepage);
 app.route('/api/homepage-modules', homepageModules);
+app.route('/api/assignments', assignments);
+app.route('/api/notifications', notifications);
 
 // 기본 홈페이지
 app.get('/', (c) => {
