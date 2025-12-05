@@ -176,7 +176,7 @@ students.get('/:id', async (c) => {
     
     // 수강 과목
     const enrollments = await db.prepare(`
-      SELECT e.*, c.course_name, s.name as subject_name, u.name as teacher_name
+      SELECT e.id as enrollment_id, e.*, c.course_name, s.name as subject_name, u.name as teacher_name
       FROM enrollments e
       JOIN courses c ON e.course_id = c.id
       JOIN subjects s ON c.subject_id = s.id

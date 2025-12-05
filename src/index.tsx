@@ -179,7 +179,7 @@ app.get('/', (c) => {
         <script src="/static/student-home.js?v=202511141500"></script>
         <script src="/static/parent-home.js?v=202511212350"></script>
         <script src="/static/homepage-module-management.js?v=202511211100"></script>
-        <script src="/static/app.js?v=202511212400"></script>
+        <script src="/static/app.js?v=202512052200"></script>
         <script src="/static/add-pages-functions.js?v=202511111600" defer></script>
         <script src="/static/schedule-management.js?v=202512052100" defer></script>
         <script src="/static/subject-management.js?v=202511111700" defer></script>

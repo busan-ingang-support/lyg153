@@ -3453,14 +3453,27 @@ async function showGradeInputModal(studentId, studentName) {
             return;
         }
         
+        // 기존 모달 제거
+        const existingModal = document.getElementById('grade-modal');
+        if (existingModal) existingModal.remove();
+        
         const modal = document.createElement('div');
         modal.id = 'grade-modal';
         modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        
+        // 배경 클릭으로 닫기
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeGradeModal();
+        });
+        
+        // enrollments를 전역에 저장 (저장 시 사용)
+        window.currentEnrollments = enrollments;
+        
         modal.innerHTML = `
-            <div class="bg-white rounded-lg shadow-xl p-8 max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="bg-white rounded-lg shadow-xl p-8 max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-2xl font-bold text-gray-800">${studentName} - 성적 입력</h2>
-                    <button onclick="closeGradeModal()" class="text-gray-500 hover:text-gray-700">
+                    <button type="button" id="grade-modal-close" class="text-gray-500 hover:text-gray-700">
                         <i class="fas fa-times text-2xl"></i>
                     </button>
                 </div>
@@ -3521,10 +3534,10 @@ async function showGradeInputModal(studentId, studentName) {
                 </div>
                 
                 <div class="flex justify-end space-x-4 mt-6">
-                    <button onclick="closeGradeModal()" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                    <button type="button" id="grade-modal-cancel" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
                         취소
                     </button>
-                    <button onclick="saveGrades(${studentId}, ${enrollments.length})" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    <button type="button" id="grade-modal-save" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                         <i class="fas fa-save mr-2"></i>저장
                     </button>
                 </div>
@@ -3532,6 +3545,11 @@ async function showGradeInputModal(studentId, studentName) {
         `;
         
         document.body.appendChild(modal);
+        
+        // 이벤트 리스너 추가
+        document.getElementById('grade-modal-close').addEventListener('click', closeGradeModal);
+        document.getElementById('grade-modal-cancel').addEventListener('click', closeGradeModal);
+        document.getElementById('grade-modal-save').addEventListener('click', () => saveGrades(studentId));
     } catch (error) {
         console.error('Failed to load grade input modal:', error);
         alert('성적 입력 화면을 불러오는데 실패했습니다.');
@@ -3561,39 +3579,57 @@ function calculateTotalScore(index) {
 }
 
 // 성적 저장
-async function saveGrades(studentId, enrollmentCount) {
+async function saveGrades(studentId) {
     try {
-        const grades = [];
+        const enrollments = window.currentEnrollments || [];
+        let savedCount = 0;
         
-        for (let i = 0; i < enrollmentCount; i++) {
-            const midterm = document.getElementById(`midterm-${i}`).value;
-            const final = document.getElementById(`final-${i}`).value;
-            const performance = document.getElementById(`performance-${i}`).value;
+        for (let i = 0; i < enrollments.length; i++) {
+            const enrollment = enrollments[i];
+            const midterm = document.getElementById(`midterm-${i}`)?.value;
+            const final = document.getElementById(`final-${i}`)?.value;
+            const performance = document.getElementById(`performance-${i}`)?.value;
             
-            if (midterm || final || performance) {
-                grades.push({
-                    index: i,
-                    midterm_score: midterm ? parseFloat(midterm) : null,
-                    final_score: final ? parseFloat(final) : null,
-                    performance_score: performance ? parseFloat(performance) : null
-                });
+            // 각 시험 유형별로 API 호출
+            const examTypes = [
+                { type: 'midterm', score: midterm, weight: 0.3 },
+                { type: 'final', score: final, weight: 0.4 },
+                { type: 'performance', score: performance, weight: 0.3 }
+            ];
+            
+            for (const exam of examTypes) {
+                if (exam.score !== '' && exam.score !== null && exam.score !== undefined) {
+                    await axios.post('/api/grades', {
+                        enrollment_id: enrollment.enrollment_id,
+                        exam_type: exam.type,
+                        score: parseFloat(exam.score),
+                        max_score: 100,
+                        weight: exam.weight,
+                        recorded_by: currentUser?.id
+                    }, {
+                        headers: { 'Authorization': 'Bearer ' + authToken }
+                    });
+                    savedCount++;
+                }
             }
         }
         
-        if (grades.length === 0) {
+        if (savedCount === 0) {
             alert('입력된 성적이 없습니다.');
             return;
         }
         
-        // 여기에 실제 API 호출을 추가할 수 있습니다
-        // await axios.post('/api/grades', { student_id: studentId, grades }, ...)
-        
-        alert(`성적이 저장되었습니다! (${grades.length}개 과목)`);
+        alert(`성적이 저장되었습니다!`);
         closeGradeModal();
+        
+        // 페이지 새로고침
+        if (typeof showGradeManagement === 'function') {
+            showGradeManagement(document.getElementById('main-content'));
+        }
         
     } catch (error) {
         console.error('Failed to save grades:', error);
-        alert('성적 저장에 실패했습니다.');
+        alert('성적 저장에 실패했습니다: ' + (error.response?.data?.error || error.message));
     }
 }
 
