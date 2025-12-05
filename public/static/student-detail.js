@@ -95,7 +95,7 @@ async function editStudent(studentId) {
     
     try {
         const response = await axios.get(`/api/students/${studentId}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         console.log('학생 데이터 로드:', response.data);
         renderStudentForm(response.data.student);
@@ -110,7 +110,7 @@ async function editStudent(studentId) {
 async function loadStudentDetail() {
     try {
         const response = await axios.get(`/api/students/${currentStudentId}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         const student = response.data.student;
@@ -357,7 +357,7 @@ function renderStudentForm(student) {
                                 ${isNew ? '' : 'disabled'}
                                 class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isNew ? '' : 'bg-gray-100'}">
                             ${isNew ? `
-                            <button type="button" onclick="generateStudentNumber()" 
+                            <button type="button" onclick="generateStudentNumber(event)" 
                                 class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 whitespace-nowrap">
                                 <i class="fas fa-magic mr-1"></i>자동생성
                             </button>
@@ -690,12 +690,12 @@ async function handleStudentFormSubmit(e) {
     try {
         if (isNew) {
             await axios.post('/api/students', formData, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                headers: { 'Authorization': `Bearer ${authToken}` }
             });
             alert('학생이 성공적으로 등록되었습니다.');
         } else {
             await axios.put(`/api/students/${currentStudentId}`, formData, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                headers: { 'Authorization': `Bearer ${authToken}` }
             });
             alert('학생 정보가 수정되었습니다.');
         }
@@ -719,26 +719,28 @@ function getPreviousSchoolTypeText(type) {
 }
 
 // 학번 자동 생성
-async function generateStudentNumber() {
+async function generateStudentNumber(e) {
     try {
         const response = await axios.get('/api/students/next-student-number', {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         document.getElementById('student_number').value = response.data.student_number;
         
         // 작은 성공 메시지
-        const button = event.target;
-        const originalHTML = button.innerHTML;
-        button.innerHTML = '<i class="fas fa-check mr-1"></i>완료';
-        button.classList.remove('bg-green-600', 'hover:bg-green-700');
-        button.classList.add('bg-blue-600');
-        
-        setTimeout(() => {
-            button.innerHTML = originalHTML;
-            button.classList.remove('bg-blue-600');
-            button.classList.add('bg-green-600', 'hover:bg-green-700');
-        }, 1500);
+        const button = e?.target || document.querySelector('[onclick*="generateStudentNumber"]');
+        if (button) {
+            const originalHTML = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-check mr-1"></i>완료';
+            button.classList.remove('bg-green-600', 'hover:bg-green-700');
+            button.classList.add('bg-blue-600');
+            
+            setTimeout(() => {
+                button.innerHTML = originalHTML;
+                button.classList.remove('bg-blue-600');
+                button.classList.add('bg-green-600', 'hover:bg-green-700');
+            }, 1500);
+        }
     } catch (error) {
         console.error('학번 생성 실패:', error);
         alert('학번 생성에 실패했습니다.');
