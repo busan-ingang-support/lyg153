@@ -1293,15 +1293,50 @@ async function showAboutPageOld() {
                             </div>
                         </div>
 
-                        <div class="bg-gray-50 rounded-xl p-8">
-                            <h3 class="text-2xl font-bold text-gray-800 mb-6 text-center">연혁</h3>
-                            <div class="space-y-4">
-                                ${historyList.map(item => `
-                                    <div class="flex">
-                                        <span class="font-bold text-purple-600 w-32">${escapeHtml(item.date)}</span>
-                                        <span class="text-gray-700">${escapeHtml(item.event)}</span>
-                                    </div>
-                                `).join('')}
+                        <div class="bg-white rounded-xl p-8 md:p-12">
+                            <div class="mb-12 text-center">
+                                <h3 class="text-4xl md:text-5xl font-bold mb-2">
+                                    <span class="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">History</span>
+                                    <span class="text-gray-800 ml-3 text-2xl md:text-3xl">연혁</span>
+                                </h3>
+                                <p class="text-gray-600 mt-2">최고의 교육을 제공하는 학교로 성장해온 발자취</p>
+                            </div>
+                            
+                            <div class="relative max-w-4xl mx-auto">
+                                <!-- 세로 타임라인 -->
+                                <div class="absolute left-8 md:left-12 top-0 bottom-0 w-0.5 bg-gradient-to-b from-indigo-200 via-purple-300 to-indigo-200"></div>
+                                
+                                <!-- 연혁 항목들 -->
+                                <div class="space-y-8 md:space-y-12">
+                                    ${historyList.map((item, index) => {
+                                        // 날짜에서 연도 추출
+                                        const yearMatch = item.date.match(/(\d{4})/);
+                                        const year = yearMatch ? yearMatch[1] : '';
+                                        const month = item.date.replace(year, '').trim();
+                                        
+                                        return `
+                                            <div class="relative flex items-start gap-6 md:gap-8 group">
+                                                <!-- 연도 (왼쪽) -->
+                                                <div class="flex-shrink-0 w-16 md:w-20 text-right">
+                                                    <div class="text-3xl md:text-4xl font-black text-indigo-600 leading-none">${escapeHtml(year)}</div>
+                                                    ${month ? `<div class="text-xs md:text-sm text-gray-500 mt-1">${escapeHtml(month)}</div>` : ''}
+                                                </div>
+                                                
+                                                <!-- 타임라인 마커 -->
+                                                <div class="absolute left-8 md:left-12 top-2 transform -translate-x-1/2 z-10">
+                                                    <div class="w-4 h-4 md:w-5 md:h-5 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 border-4 border-white shadow-lg group-hover:scale-125 transition-transform duration-300"></div>
+                                                </div>
+                                                
+                                                <!-- 이벤트 설명 (오른쪽) -->
+                                                <div class="flex-1 pl-4 md:pl-6 pt-1">
+                                                    <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 md:p-6 border-l-4 border-indigo-500 shadow-sm hover:shadow-md transition-all duration-300 group-hover:translate-x-2">
+                                                        <p class="text-gray-800 text-base md:text-lg leading-relaxed">${escapeHtml(item.event)}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
                             </div>
                         </div>
                     </div>
