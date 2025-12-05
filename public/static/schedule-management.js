@@ -91,7 +91,7 @@ async function loadClassSchedule(classId) {
 async function editScheduleMode(classId) {
     // classId가 없으면 전역 변수에서 가져오기
     if (!classId || classId === 'undefined' || classId === undefined) {
-        classId = window.currentClassId || currentClassId;
+        classId = window.currentClassId;
     }
     
     if (!classId) {
@@ -312,7 +312,7 @@ async function clearScheduleSlot(day, period, classId) {
 async function manageCourses(classId) {
     // classId가 없으면 전역 변수에서 가져오기
     if (!classId || classId === 'undefined' || classId === undefined) {
-        classId = window.currentClassId || currentClassId;
+        classId = window.currentClassId;
     }
     
     if (!classId) {
