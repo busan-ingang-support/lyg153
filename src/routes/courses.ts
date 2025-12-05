@@ -135,8 +135,8 @@ courses.post('/', async (c) => {
     const result = await db.prepare(`
       INSERT INTO courses (
         subject_id, semester_id, teacher_id, class_id, 
-        course_name, schedule, max_students
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        course_name, schedule, max_students, site_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 1)
     `).bind(
       subject_id,
       semester_id,
@@ -147,13 +147,30 @@ courses.post('/', async (c) => {
       max_students || 30
     ).run();
     
+    const courseId = result.meta.last_row_id;
+    
+    // class_id가 있으면 해당 반의 학생들을 자동으로 수업에 등록
+    if (class_id) {
+      const students = await db.prepare(`
+        SELECT student_id FROM student_class_history 
+        WHERE class_id = ? AND semester_id = ? AND is_active = 1
+      `).bind(class_id, semester_id).all();
+      
+      for (const student of students.results as any[]) {
+        await db.prepare(`
+          INSERT OR IGNORE INTO enrollments (student_id, course_id, site_id)
+          VALUES (?, ?, 1)
+        `).bind(student.student_id, courseId).run();
+      }
+    }
+    
     return c.json({ 
       message: '수업이 생성되었습니다',
-      id: result.meta.last_row_id 
+      id: courseId 
     }, 201);
   } catch (error: any) {
     console.error('수업 생성 오류:', error);
-    return c.json({ error: '수업 생성 중 오류가 발생했습니다' }, 500);
+    return c.json({ error: `수업 생성 중 오류: ${error.message}` }, 500);
   }
 });
 
