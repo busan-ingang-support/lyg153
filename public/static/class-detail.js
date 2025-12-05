@@ -1,7 +1,7 @@
 // 반 상세 페이지
 
-let currentClassId = null;
-let currentClassInfo = null;
+var currentClassId = null;
+var currentClassInfo = null;
 
 // 학생 상태 색상 반환
 function getStatusColor(status) {
