@@ -193,7 +193,7 @@ subjects.put('/:id', async (c) => {
       return c.json({ error: '이미 존재하는 과목 코드입니다' }, 400);
     }
     console.error('과목 수정 오류:', error);
-    return c.json({ error: '과목 수정 중 오류가 발생했습니다' }, 500);
+    return c.json({ error: `과목 수정 중 오류: ${error.message || error}` }, 500);
   }
 });
 
