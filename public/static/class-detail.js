@@ -28,6 +28,7 @@ function getStatusText(status) {
 // 반 상세 페이지 표시
 async function showClassDetail(classId) {
     currentClassId = classId;
+    window.currentClassId = classId; // 전역 변수로도 설정
     
     const content = document.getElementById('main-content');
     content.innerHTML = `
