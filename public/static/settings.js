@@ -292,13 +292,35 @@ function setupSettingsForms() {
     // 학교 기본 정보 저장
     document.getElementById('school-info-form').addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        const schoolName = document.getElementById('setting-school-name').value;
+        const schoolPhone = document.getElementById('setting-school-phone').value;
+        const schoolAddress = document.getElementById('setting-school-address').value;
+        const principalName = document.getElementById('setting-principal-name').value;
+        const schoolEmail = document.getElementById('setting-school-email').value;
+        
+        // 시스템 설정 저장
         await saveSettings([
-            { key: 'school-name', value: document.getElementById('setting-school-name').value },
-            { key: 'school-phone', value: document.getElementById('setting-school-phone').value },
-            { key: 'school-address', value: document.getElementById('setting-school-address').value },
-            { key: 'principal-name', value: document.getElementById('setting-principal-name').value },
-            { key: 'school-email', value: document.getElementById('setting-school-email').value }
+            { key: 'school-name', value: schoolName },
+            { key: 'school-phone', value: schoolPhone },
+            { key: 'school-address', value: schoolAddress },
+            { key: 'principal-name', value: principalName },
+            { key: 'school-email', value: schoolEmail }
         ]);
+        
+        // 홈페이지 설정에도 동기화 (공개 홈페이지에서 사용)
+        try {
+            await axios.post('/api/homepage', {
+                school_name: schoolName,
+                contact_phone: schoolPhone,
+                contact_address: schoolAddress,
+                contact_email: schoolEmail
+            }, {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+        } catch (error) {
+            console.error('홈페이지 설정 동기화 실패:', error);
+        }
     });
     
     // 학사 일정 설정 저장
