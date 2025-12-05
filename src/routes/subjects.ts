@@ -103,7 +103,7 @@ subjects.post('/', async (c) => {
     
     // 2. 현재 활성 학기 조회
     const activeSemester = await db.prepare(`
-      SELECT id FROM semesters WHERE is_active = 1 LIMIT 1
+      SELECT id FROM semesters WHERE is_current = 1 LIMIT 1
     `).first() as any;
     
     // 3. 담당 교사가 있고 활성 학기가 있으면 자동으로 수업(course) 생성
@@ -162,7 +162,7 @@ subjects.put('/:id', async (c) => {
     
     // 2. 현재 활성 학기 조회
     const activeSemester = await db.prepare(`
-      SELECT id FROM semesters WHERE is_active = 1 LIMIT 1
+      SELECT id FROM semesters WHERE is_current = 1 LIMIT 1
     `).first() as any;
     
     if (activeSemester) {
