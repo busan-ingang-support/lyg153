@@ -282,40 +282,36 @@ function getPublicPageFromURL() {
 
 // 공개 네비게이션 설정
 function setupPublicNavigation() {
+    // 이미 설정되었으면 스킵
+    if (window.publicNavSetup) return;
+    window.publicNavSetup = true;
+    
+    // 네비게이션 링크 클릭 이벤트 핸들러
+    const handleNavClick = (e) => {
+        e.preventDefault();
+        const target = e.target.closest('.public-nav-item');
+        const page = target ? target.getAttribute('data-page') : null;
+        
+        if (!page) return;
+        navigatePublicPage(page);
+    };
+    
     // 네비게이션 링크 클릭 이벤트
     document.querySelectorAll('.public-nav-item').forEach(item => {
-        item.addEventListener('click', (e) => {
-            e.preventDefault();
-            // closest를 사용하여 data-page를 가진 요소 찾기
-            const target = e.target.closest('.public-nav-item');
-            const page = target ? target.getAttribute('data-page') : null;
-            
-            if (!page) return;
-            
-            // 활성 상태 업데이트
-            document.querySelectorAll('.public-nav-item').forEach(link => {
-                link.classList.remove('text-indigo-600', 'font-semibold');
-                link.classList.add('text-gray-700');
-            });
-            e.target.classList.add('text-indigo-600', 'font-semibold');
-            e.target.classList.remove('text-gray-700');
-            
-            navigatePublicPage(page);
-        });
+        item.removeEventListener('click', handleNavClick);
+        item.addEventListener('click', handleNavClick);
     });
     
     // 브라우저 뒤로가기/앞으로가기 처리
     window.addEventListener('popstate', (e) => {
         const page = e.state?.page || getPublicPageFromURL();
-        navigatePublicPage(page, false); // URL은 이미 변경되었으므로 업데이트하지 않음
-        updatePublicNavActive(page);
+        navigatePublicPage(page, false);
     });
     
     // 해시 변경 처리 (직접 URL 입력 시)
     window.addEventListener('hashchange', () => {
         const page = getPublicPageFromURL();
         navigatePublicPage(page, false);
-        updatePublicNavActive(page);
     });
 }
 
@@ -343,8 +339,17 @@ function navigatePublicPage(page, updateURL = true) {
         }
     }
     
+    // 모바일 메뉴 닫기
+    const mobileMenu = document.getElementById('mobile-menu');
+    if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
+        mobileMenu.classList.add('hidden');
+    }
+    
     // 스크롤 최상단으로
-    window.scrollTo(0, 0);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    // 네비게이션 활성 상태 업데이트
+    updatePublicNavActive(page);
     
     switch (page) {
         case 'home':
@@ -1857,7 +1862,7 @@ function renderGreetingSection(module, containerClass, sectionStyle) {
                         <div class="mt-10 pt-8 border-t border-gray-100 flex items-center justify-end">
                             <div class="text-right">
                                 <p class="text-sm text-gray-500 mb-1">학교장</p>
-                                <p class="text-xl font-bold text-gray-800">대안학교</p>
+                                <p class="text-xl font-bold text-gray-800">${escapeHtml(homepageSettings.school_name)}</p>
                             </div>
                             <div class="w-16 h-16 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center ml-4">
                                 <i class="fas fa-user-tie text-2xl text-gray-400"></i>
