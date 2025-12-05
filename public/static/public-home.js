@@ -868,22 +868,43 @@ function renderHomepageModule(module) {
             break;
             
         case 'text':
-            moduleHTML = `
-                <section class="py-10"${sectionStyle}>
-                    <div class="${containerClass}">
-                        <div class="bg-white rounded-xl p-8 shadow-md border border-gray-200">
-                            ${module.title ? `
-                                <h2 class="text-2xl font-bold text-gray-800 mb-4 pb-4 border-b border-gray-200">
-                                    <i class="fas fa-file-alt mr-2 text-blue-600"></i>${escapeHtml(module.title)}
-                                </h2>
-                            ` : ''}
-                            <div class="prose max-w-none text-gray-700 leading-relaxed">
-                                ${formatTextContent(module.content || '')}
+            // 연혁 콘텐츠인 경우 타임라인 스타일로 렌더링
+            const isHistory = module.title && (module.title.includes('연혁') || module.title.toLowerCase().includes('history'));
+            
+            if (isHistory) {
+                moduleHTML = `
+                    <section class="py-12 bg-white"${sectionStyle}>
+                        <div class="${containerClass}">
+                            <div class="bg-white rounded-xl p-8 md:p-12 shadow-md border border-gray-200">
+                                <div class="mb-10">
+                                    <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-2">
+                                        <i class="fas fa-history mr-3 text-blue-600"></i>${escapeHtml(module.title)}
+                                    </h2>
+                                    <div class="w-20 h-1 bg-blue-600 rounded-full"></div>
+                                </div>
+                                ${renderHistoryTimeline(module.content || '')}
                             </div>
                         </div>
-                    </div>
-                </section>
-            `;
+                    </section>
+                `;
+            } else {
+                moduleHTML = `
+                    <section class="py-10"${sectionStyle}>
+                        <div class="${containerClass}">
+                            <div class="bg-white rounded-xl p-8 shadow-md border border-gray-200">
+                                ${module.title ? `
+                                    <h2 class="text-2xl font-bold text-gray-800 mb-4 pb-4 border-b border-gray-200">
+                                        <i class="fas fa-file-alt mr-2 text-blue-600"></i>${escapeHtml(module.title)}
+                                    </h2>
+                                ` : ''}
+                                <div class="prose max-w-none text-gray-700 leading-relaxed">
+                                    ${formatTextContent(module.content || '')}
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                `;
+            }
             break;
             
         case 'image':
@@ -1765,6 +1786,95 @@ function renderSection(title, items) {
     if (title) {
         html += `</div>`;
     }
+    return html;
+}
+
+// 연혁 타임라인 렌더링 (하버드 스타일)
+function renderHistoryTimeline(content) {
+    if (!content) return '';
+    
+    // 리터럴 \n을 실제 줄바꿈으로 변환
+    let text = content.replace(/\\n/g, '\n');
+    
+    // 연도별로 파싱
+    const lines = text.split('\n');
+    const yearData = {};
+    let currentYear = null;
+    
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        
+        // ■ 연도 형식 체크
+        const yearMatch = trimmed.match(/■?\s*(\d{4})년?/);
+        if (yearMatch) {
+            currentYear = yearMatch[1];
+            if (!yearData[currentYear]) {
+                yearData[currentYear] = [];
+            }
+            // 같은 줄에 이벤트가 있으면 추가
+            const afterYear = trimmed.replace(/■?\s*\d{4}년?\s*/, '').trim();
+            if (afterYear && afterYear !== '•') {
+                yearData[currentYear].push(afterYear.replace(/^[•·]\s*/, ''));
+            }
+        } else if (currentYear && (trimmed.startsWith('•') || trimmed.startsWith('·') || trimmed.startsWith('-'))) {
+            // 항목 추가
+            yearData[currentYear].push(trimmed.replace(/^[•·-]\s*/, ''));
+        } else if (currentYear && trimmed) {
+            // 일반 텍스트도 현재 연도에 추가
+            yearData[currentYear].push(trimmed);
+        }
+    }
+    
+    // 연도 정렬 (최신순)
+    const sortedYears = Object.keys(yearData).sort((a, b) => parseInt(b) - parseInt(a));
+    
+    if (sortedYears.length === 0) {
+        // 파싱 실패시 일반 포맷으로 표시
+        return `<div class="text-gray-700">${escapeHtml(content).replace(/\\n/g, '<br>').replace(/\n/g, '<br>')}</div>`;
+    }
+    
+    // 타임라인 HTML 생성
+    let html = `<div class="relative">`;
+    
+    // 세로 라인
+    html += `<div class="absolute left-[60px] md:left-[80px] top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-400 via-blue-500 to-blue-400"></div>`;
+    
+    html += `<div class="space-y-0">`;
+    
+    sortedYears.forEach((year, idx) => {
+        const events = yearData[year];
+        const isFirst = idx === 0;
+        
+        html += `
+            <div class="relative flex group">
+                <!-- 연도 -->
+                <div class="flex-shrink-0 w-[60px] md:w-[80px] pt-4 text-right pr-6">
+                    <span class="text-2xl md:text-3xl font-black ${isFirst ? 'text-blue-600' : 'text-gray-400'}">${escapeHtml(year)}</span>
+                </div>
+                
+                <!-- 타임라인 도트 -->
+                <div class="absolute left-[60px] md:left-[80px] top-5 w-3 h-3 -translate-x-1/2 z-10">
+                    <div class="w-full h-full rounded-full ${isFirst ? 'bg-blue-600 ring-4 ring-blue-100' : 'bg-gray-400'} group-hover:scale-125 transition-transform"></div>
+                </div>
+                
+                <!-- 이벤트 목록 -->
+                <div class="flex-1 pl-8 pb-8 pt-3">
+                    <div class="space-y-2">
+                        ${events.map(event => `
+                            <div class="flex items-start gap-2 text-gray-700 hover:text-gray-900 transition-colors">
+                                <span class="text-blue-500 mt-1.5 text-xs">●</span>
+                                <span class="text-base leading-relaxed">${escapeHtml(event)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += `</div></div>`;
+    
     return html;
 }
 
