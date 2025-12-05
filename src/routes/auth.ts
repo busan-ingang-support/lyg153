@@ -7,18 +7,22 @@ const auth = new Hono<{ Bindings: CloudflareBindings }>();
 // 로그인
 auth.post('/login', async (c) => {
   const { username, password } = await c.req.json();
-  
+
   if (!username || !password) {
     return c.json({ error: 'Username and password are required' }, 400);
   }
-  
+
   try {
     const db = c.env.DB;
-    
-    // 사용자 조회
+    const siteId = c.get('siteId') || 1;
+
+    // 사용자 조회 (site_id 필터링 - super_admin은 모든 사이트 접근 가능)
     const user = await db.prepare(
-      'SELECT * FROM users WHERE username = ? AND is_active = 1'
-    ).bind(username).first();
+      `SELECT * FROM users
+       WHERE username = ?
+         AND is_active = 1
+         AND (site_id = ? OR role = 'super_admin')`
+    ).bind(username, siteId).first();
     
     if (!user) {
       return c.json({ error: 'Invalid credentials' }, 401);
@@ -33,24 +37,24 @@ auth.post('/login', async (c) => {
       return c.json({ error: 'Invalid credentials' }, 401);
     }
     
-    // JWT 토큰 생성
-    const token = await createToken(user.id as number, user.role as string);
-    
+    // JWT 토큰 생성 (site_id 포함)
+    const token = await createToken(user.id as number, user.role as string, siteId);
+
     // 사용자 역할에 따른 추가 정보 조회
     let additionalInfo: any = {};
-    
+
     if (user.role === 'student') {
       const student = await db.prepare(
-        'SELECT * FROM students WHERE user_id = ?'
-      ).bind(user.id).first();
+        'SELECT * FROM students WHERE user_id = ? AND site_id = ?'
+      ).bind(user.id, siteId).first();
       additionalInfo.student = student;
     } else if (user.role === 'teacher') {
       const teacher = await db.prepare(
-        'SELECT * FROM teachers WHERE user_id = ?'
-      ).bind(user.id).first();
+        'SELECT * FROM teachers WHERE user_id = ? AND site_id = ?'
+      ).bind(user.id, siteId).first();
       additionalInfo.teacher = teacher;
     }
-    
+
     return c.json({
       token,
       user: {
@@ -59,7 +63,8 @@ auth.post('/login', async (c) => {
         email: user.email,
         name: user.name,
         role: user.role,
-        phone: user.phone
+        phone: user.phone,
+        site_id: user.role === 'super_admin' ? siteId : user.site_id
       },
       ...additionalInfo
     });

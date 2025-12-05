@@ -3,10 +3,11 @@ import type { CloudflareBindings } from '../types';
 
 // 간단한 토큰 생성 (Base64 인코딩)
 // 주의: 프로덕션 환경에서는 실제 JWT 라이브러리 사용 권장
-export async function createToken(userId: number, role: string): Promise<string> {
+export async function createToken(userId: number, role: string, siteId: number = 1): Promise<string> {
   const payload = {
     userId,
     role,
+    siteId,
     exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24) // 24시간
   };
 

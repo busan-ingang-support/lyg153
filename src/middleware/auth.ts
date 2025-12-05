@@ -27,11 +27,17 @@ export async function authMiddleware(c: Context<{ Bindings: CloudflareBindings }
     if (payload.exp && payload.exp < Date.now() / 1000) {
       return c.json({ error: 'Unauthorized: Token expired' }, 401);
     }
-    
+
     // 사용자 정보를 컨텍스트에 저장
     c.set('userId', payload.userId);
     c.set('userRole', payload.role);
-    
+
+    // 토큰의 site_id를 컨텍스트에 저장 (이미 siteMiddleware에서 설정된 값을 오버라이드하지 않음)
+    // super_admin의 경우 토큰의 siteId를 사용하여 원하는 사이트에 접근 가능
+    if (payload.siteId && payload.role === 'super_admin') {
+      c.set('siteId', payload.siteId);
+    }
+
     await next();
   } catch (error) {
     return c.json({ error: 'Unauthorized: Invalid token' }, 401);
@@ -70,6 +76,11 @@ export function requireRole(...allowedRoles: string[]) {
         userRole = payload.role;
         c.set('userId', payload.userId);
         c.set('userRole', payload.role);
+
+        // super_admin의 경우 토큰의 siteId 사용
+        if (payload.siteId && payload.role === 'super_admin') {
+          c.set('siteId', payload.siteId);
+        }
       } catch (error) {
         return c.json({ error: 'Unauthorized: Invalid token' }, 401);
       }

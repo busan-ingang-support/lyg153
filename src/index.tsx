@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { serveStatic } from 'hono/cloudflare-workers';
 import type { CloudflareBindings } from './types';
+import { siteMiddleware } from './middleware/site';
 
 // 라우트 임포트
 import auth from './routes/auth';
@@ -37,6 +38,9 @@ const app = new Hono<{ Bindings: CloudflareBindings }>();
 
 // CORS 설정
 app.use('/api/*', cors());
+
+// 도메인별 site_id 매핑 미들웨어 (모든 API 요청에 적용)
+app.use('/api/*', siteMiddleware);
 
 // 정적 파일 제공
 app.use('/static/*', serveStatic({ root: './public' }));

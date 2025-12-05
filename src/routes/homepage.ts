@@ -40,13 +40,15 @@ async function checkSuperAdminPermission(c: any): Promise<boolean> {
 // 홈페이지 설정 조회 (공개 API - 인증 불필요)
 homepage.get('/', async (c) => {
   const { DB } = c.env
+  const siteId = c.get('siteId') || 1
 
   const result = await DB.prepare(`
     SELECT setting_key, setting_value, setting_type, description
     FROM system_settings
     WHERE setting_key LIKE 'homepage_%'
+      AND site_id = ?
     ORDER BY setting_key
-  `).all()
+  `).bind(siteId).all()
 
   // 설정값을 객체로 변환
   const settings: Record<string, any> = {};
@@ -78,13 +80,15 @@ homepage.get('/admin', async (c) => {
   }
 
   const { DB } = c.env
+  const siteId = c.get('siteId') || 1
 
   const result = await DB.prepare(`
     SELECT setting_key, setting_value, setting_type, description
     FROM system_settings
     WHERE setting_key LIKE 'homepage_%'
+      AND site_id = ?
     ORDER BY setting_key
-  `).all()
+  `).bind(siteId).all()
 
   // 설정값을 객체로 변환
   const settings: Record<string, any> = {};
@@ -119,7 +123,8 @@ homepage.post('/', async (c) => {
   const authHeader = c.req.header('Authorization');
   const token = authHeader?.replace('Bearer ', '');
   const user = await getUserFromToken(token!);
-  
+  const siteId = c.get('siteId') || 1
+
   const settings = await c.req.json()
 
   try {
@@ -128,7 +133,7 @@ homepage.post('/', async (c) => {
       const settingKey = `homepage_${key}`;
       let settingValue = value;
       let settingType = 'string';
-      
+
       // 값 타입에 따라 처리
       if (typeof value === 'object') {
         settingValue = JSON.stringify(value);
@@ -136,25 +141,25 @@ homepage.post('/', async (c) => {
       } else {
         settingValue = String(value);
       }
-      
-      // 기존 설정 확인
+
+      // 기존 설정 확인 (site_id 포함)
       const existing = await DB.prepare(`
-        SELECT id FROM system_settings WHERE setting_key = ?
-      `).bind(settingKey).first()
-      
+        SELECT id FROM system_settings WHERE setting_key = ? AND site_id = ?
+      `).bind(settingKey, siteId).first()
+
       if (existing) {
         // 업데이트
         await DB.prepare(`
-          UPDATE system_settings 
+          UPDATE system_settings
           SET setting_value = ?, setting_type = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
-          WHERE setting_key = ?
-        `).bind(settingValue, settingType, user?.userId || null, settingKey).run()
+          WHERE setting_key = ? AND site_id = ?
+        `).bind(settingValue, settingType, user?.userId || null, settingKey, siteId).run()
       } else {
         // 생성
         await DB.prepare(`
-          INSERT INTO system_settings (setting_key, setting_value, setting_type, description, updated_by)
-          VALUES (?, ?, ?, ?, ?)
-        `).bind(settingKey, settingValue, settingType, `홈페이지 ${key} 설정`, user?.userId || null).run()
+          INSERT INTO system_settings (site_id, setting_key, setting_value, setting_type, description, updated_by)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `).bind(siteId, settingKey, settingValue, settingType, `홈페이지 ${key} 설정`, user?.userId || null).run()
       }
     }
 
