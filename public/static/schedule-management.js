@@ -89,6 +89,16 @@ async function loadClassSchedule(classId) {
 
 // 시간표 편집 모드
 async function editScheduleMode(classId) {
+    // classId가 없으면 전역 변수에서 가져오기
+    if (!classId || classId === 'undefined' || classId === undefined) {
+        classId = window.currentClassId || currentClassId;
+    }
+    
+    if (!classId) {
+        alert('반 정보를 찾을 수 없습니다. 페이지를 새로고침 해주세요.');
+        return;
+    }
+    
     try {
         const [scheduleRes, coursesRes] = await Promise.all([
             axios.get(`/api/schedules/weekly/${classId}`, { 
@@ -300,6 +310,16 @@ async function clearScheduleSlot(day, period, classId) {
 
 // 수업 관리 모달
 async function manageCourses(classId) {
+    // classId가 없으면 전역 변수에서 가져오기
+    if (!classId || classId === 'undefined' || classId === undefined) {
+        classId = window.currentClassId || currentClassId;
+    }
+    
+    if (!classId) {
+        alert('반 정보를 찾을 수 없습니다. 페이지를 새로고침 해주세요.');
+        return;
+    }
+    
     try {
         const [coursesRes, subjectsRes, teachersRes, classRes] = await Promise.all([
             axios.get(`/api/courses?class_id=${classId}`, { headers: { 'Authorization': 'Bearer ' + authToken } }),
