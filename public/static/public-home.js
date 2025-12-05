@@ -878,7 +878,7 @@ function renderHomepageModule(module) {
                                 </h2>
                             ` : ''}
                             <div class="prose max-w-none text-gray-700 leading-relaxed">
-                                ${(module.content || '').replace(/\n/g, '<br>')}
+                                ${formatTextContent(module.content || '')}
                             </div>
                         </div>
                     </div>
@@ -1695,6 +1695,77 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// 텍스트 콘텐츠 포맷 함수 (줄바꿈 처리 및 구조화)
+function formatTextContent(text) {
+    if (!text) return '';
+    
+    // 먼저 HTML 이스케이프
+    let content = escapeHtml(text);
+    
+    // 리터럴 \n 문자열을 실제 줄바꿈으로 변환
+    content = content.replace(/\\n/g, '\n');
+    
+    // 줄 단위로 분리하여 처리
+    const lines = content.split('\n');
+    let result = '';
+    let currentSection = '';
+    let currentItems = [];
+    
+    for (const line of lines) {
+        const trimmedLine = line.trim();
+        if (!trimmedLine) continue;
+        
+        // ■ 로 시작하는 섹션 헤더 (연도 등)
+        if (trimmedLine.startsWith('■')) {
+            // 이전 섹션이 있으면 출력
+            if (currentSection || currentItems.length > 0) {
+                result += renderSection(currentSection, currentItems);
+                currentItems = [];
+            }
+            currentSection = trimmedLine.replace('■', '').trim();
+        }
+        // • 로 시작하는 항목
+        else if (trimmedLine.startsWith('•')) {
+            currentItems.push(trimmedLine.replace('•', '').trim());
+        }
+        // 일반 텍스트
+        else {
+            if (currentSection || currentItems.length > 0) {
+                result += renderSection(currentSection, currentItems);
+                currentSection = '';
+                currentItems = [];
+            }
+            result += `<p class="mb-2">${trimmedLine}</p>`;
+        }
+    }
+    
+    // 마지막 섹션 출력
+    if (currentSection || currentItems.length > 0) {
+        result += renderSection(currentSection, currentItems);
+    }
+    
+    return result || content.replace(/\n/g, '<br>');
+}
+
+// 섹션 렌더링 헬퍼
+function renderSection(title, items) {
+    let html = '';
+    if (title) {
+        html += `<div class="mb-4"><h4 class="font-bold text-gray-800 text-lg mb-2"><span class="text-blue-600 mr-2">■</span>${title}</h4>`;
+    }
+    if (items.length > 0) {
+        html += `<ul class="list-disc list-inside space-y-1 text-gray-600 ml-4">`;
+        for (const item of items) {
+            html += `<li>${item}</li>`;
+        }
+        html += `</ul>`;
+    }
+    if (title) {
+        html += `</div>`;
+    }
+    return html;
 }
 
 // 날짜 포맷 함수
