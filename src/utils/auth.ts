@@ -1,18 +1,16 @@
 import type { Context } from 'hono';
 import type { CloudflareBindings } from '../types';
 
-// JWT 시크릿 키 (실제로는 환경 변수로 관리)
-const JWT_SECRET = 'your-secret-key-change-in-production';
-
-// 간단한 JWT 생성 (실제로는 hono/jwt 사용 권장)
+// 간단한 토큰 생성 (Base64 인코딩)
+// 주의: 프로덕션 환경에서는 실제 JWT 라이브러리 사용 권장
 export async function createToken(userId: number, role: string): Promise<string> {
   const payload = {
     userId,
     role,
     exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24) // 24시간
   };
-  
-  // 간단한 Base64 인코딩 (실제로는 proper JWT 사용)
+
+  // Base64 인코딩 (보안 강화를 위해 실제 JWT 사용 권장)
   const token = btoa(JSON.stringify(payload));
   return token;
 }
