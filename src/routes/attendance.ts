@@ -302,9 +302,9 @@ attendance.get('/student/:student_id/summary', async (c) => {
   if (userRole === 'parent') {
     // 학부모: 자녀만 조회 가능
     const relation = await db.prepare(`
-      SELECT id FROM parent_student WHERE parent_user_id = ? AND student_id = ?
+      SELECT id FROM parent_student WHERE parent_user_id = ? AND student_id = ? AND COALESCE(status, 1) = 1
     `).bind(userId, studentId).first();
-    
+
     if (!relation) {
       return c.json({ error: 'Forbidden: Not your child' }, 403);
     }
@@ -313,7 +313,7 @@ attendance.get('/student/:student_id/summary', async (c) => {
     const student = await db.prepare(`
       SELECT id FROM students WHERE user_id = ? AND id = ?
     `).bind(userId, studentId).first();
-    
+
     if (!student) {
       return c.json({ error: 'Forbidden: Not your record' }, 403);
     }
@@ -361,9 +361,9 @@ attendance.get('/student/:student_id', async (c) => {
   if (userRole === 'parent') {
     // 학부모: 자녀만 조회 가능
     const relation = await db.prepare(`
-      SELECT id FROM parent_student WHERE parent_user_id = ? AND student_id = ?
+      SELECT id FROM parent_student WHERE parent_user_id = ? AND student_id = ? AND COALESCE(status, 1) = 1
     `).bind(userId, studentId).first();
-    
+
     if (!relation) {
       return c.json({ error: 'Forbidden: Not your child' }, 403);
     }
