@@ -8,11 +8,12 @@ const students = new Hono<{ Bindings: CloudflareBindings }>();
 students.get('/', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
   try {
     const db = c.env.DB;
+    const siteId = c.get('siteId') || 1;
     const { grade, class_id, semester_id, status, search, limit = 50, offset = 0 } = c.req.query();
-    
+
     // 학생의 반 정보를 students.class_id에서 직접 가져옴
     let query = `
-      SELECT 
+      SELECT
         s.*,
         u.name,
         u.email,
@@ -22,9 +23,9 @@ students.get('/', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
       FROM students s
       JOIN users u ON s.user_id = u.id
       LEFT JOIN classes c ON s.class_id = c.id
-      WHERE 1=1
+      WHERE s.site_id = ?
     `;
-    const params: any[] = [];
+    const params: any[] = [siteId];
     
     if (grade) {
       query += ' AND s.grade = ?';
@@ -63,18 +64,20 @@ students.get('/', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
 students.get('/next-student-number', async (c) => {
   try {
     const db = c.env.DB;
-    
+    const siteId = c.get('siteId') || 1;
+
     // 현재 연도
     const currentYear = new Date().getFullYear();
-    
+
     // 해당 연도의 마지막 학번 조회
     const lastStudent = await db.prepare(`
-      SELECT student_number 
-      FROM students 
+      SELECT student_number
+      FROM students
       WHERE student_number LIKE ?
-      ORDER BY student_number DESC 
+        AND site_id = ?
+      ORDER BY student_number DESC
       LIMIT 1
-    `).bind(`S${currentYear}%`).first();
+    `).bind(`S${currentYear}%`, siteId).first();
     
     let nextNumber;
     if (lastStudent) {
@@ -98,10 +101,11 @@ students.get('/user/:userId', async (c) => {
   try {
     const db = c.env.DB;
     const userId = c.req.param('userId');
-    
+    const siteId = c.get('siteId') || 1;
+
     // user_id로 학생 정보 조회
     const student = await db.prepare(`
-      SELECT 
+      SELECT
         s.*,
         u.name,
         u.email,
@@ -112,7 +116,8 @@ students.get('/user/:userId', async (c) => {
       JOIN users u ON s.user_id = u.id
       LEFT JOIN classes c ON s.class_id = c.id
       WHERE s.user_id = ?
-    `).bind(userId).first();
+        AND s.site_id = ?
+    `).bind(userId, siteId).first();
     
     if (!student) {
       return c.json({ error: 'Student not found' }, 404);
@@ -130,10 +135,11 @@ students.get('/:id', async (c) => {
   try {
     const db = c.env.DB;
     const id = c.req.param('id');
-    
+    const siteId = c.get('siteId') || 1;
+
     // 학생 기본 정보 (students.class_id에서 직접 반 정보 가져옴)
     const student = await db.prepare(`
-      SELECT 
+      SELECT
         s.*,
         u.name,
         u.email,
@@ -144,7 +150,8 @@ students.get('/:id', async (c) => {
       JOIN users u ON s.user_id = u.id
       LEFT JOIN classes c ON s.class_id = c.id
       WHERE s.id = ?
-    `).bind(id).first();
+        AND s.site_id = ?
+    `).bind(id, siteId).first();
     
     if (!student) {
       return c.json({ error: 'Student not found' }, 404);
@@ -221,27 +228,29 @@ students.get('/:id', async (c) => {
 students.post('/', requireRole('admin', 'super_admin'), async (c) => {
   try {
     const db = c.env.DB;
+    const siteId = c.get('siteId') || 1;
     const data = await c.req.json();
-    
+
     // 필수 필드 검증
     if (!data.name || !data.email || !data.student_number) {
       return c.json({ error: 'Missing required fields: name, email, student_number' }, 400);
     }
-    
+
     // 신규 학생인 경우 계정도 함께 생성
     let userId = data.user_id;
-    
+
     if (!userId && data.username && data.password) {
       // 사용자 계정 생성
       const userResult = await db.prepare(`
-        INSERT INTO users (username, password_hash, email, name, role, phone)
-        VALUES (?, ?, ?, ?, 'student', ?)
+        INSERT INTO users (username, password_hash, email, name, role, phone, site_id)
+        VALUES (?, ?, ?, ?, 'student', ?, ?)
       `).bind(
         data.username,
         data.password, // 실제로는 해시해야 함
         data.email,
         data.name,
-        data.phone || null
+        data.phone || null,
+        siteId
       ).run();
       
       if (!userResult.success) {
@@ -261,9 +270,9 @@ students.post('/', requireRole('admin', 'super_admin'), async (c) => {
         birthdate, gender, blood_type, religion, nationality,
         guardian_name, guardian_relation, guardian_phone, guardian_email, guardian_address,
         previous_school, previous_school_type,
-        medical_notes, allergy_info, special_notes
+        medical_notes, allergy_info, special_notes, site_id
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       userId,
       data.student_number,
@@ -287,7 +296,8 @@ students.post('/', requireRole('admin', 'super_admin'), async (c) => {
       data.previous_school_type || null,
       data.medical_notes || null,
       data.allergy_info || null,
-      data.special_notes || null
+      data.special_notes || null,
+      siteId
     ).run();
     
     if (!result.success) {
@@ -328,12 +338,13 @@ students.put('/:id', requireRole('admin', 'super_admin'), async (c) => {
   try {
     const db = c.env.DB;
     const id = c.req.param('id');
+    const siteId = c.get('siteId') || 1;
     const data = await c.req.json();
-    
+
     // 먼저 학생 정보 조회 (user_id 가져오기)
     const student = await db.prepare(`
-      SELECT user_id FROM students WHERE id = ?
-    `).bind(id).first();
+      SELECT user_id FROM students WHERE id = ? AND site_id = ?
+    `).bind(id, siteId).first();
     
     if (!student) {
       return c.json({ error: 'Student not found' }, 404);
