@@ -90,11 +90,21 @@ async function loadClassSchedule(classId) {
 // 시간표 편집 모드
 async function editScheduleMode(classId) {
     // classId가 없으면 전역 변수에서 가져오기
-    if (!classId || classId === 'undefined' || classId === undefined) {
-        classId = window.currentClassId;
+    if (!classId || classId === 'undefined' || classId === undefined || isNaN(classId)) {
+        classId = window.currentClassId || (typeof currentClassId !== 'undefined' ? currentClassId : null);
     }
     
-    if (!classId) {
+    // 여전히 없으면 URL에서 추출 시도
+    if (!classId || isNaN(classId)) {
+        const urlMatch = window.location.hash.match(/class\/(\d+)/);
+        if (urlMatch) {
+            classId = parseInt(urlMatch[1]);
+        }
+    }
+    
+    console.log('editScheduleMode classId:', classId);
+    
+    if (!classId || isNaN(classId)) {
         alert('반 정보를 찾을 수 없습니다. 페이지를 새로고침 해주세요.');
         return;
     }
@@ -311,11 +321,21 @@ async function clearScheduleSlot(day, period, classId) {
 // 수업 관리 모달
 async function manageCourses(classId) {
     // classId가 없으면 전역 변수에서 가져오기
-    if (!classId || classId === 'undefined' || classId === undefined) {
-        classId = window.currentClassId;
+    if (!classId || classId === 'undefined' || classId === undefined || isNaN(classId)) {
+        classId = window.currentClassId || (typeof currentClassId !== 'undefined' ? currentClassId : null);
     }
     
-    if (!classId) {
+    // 여전히 없으면 URL에서 추출 시도
+    if (!classId || isNaN(classId)) {
+        const urlMatch = window.location.hash.match(/class\/(\d+)/);
+        if (urlMatch) {
+            classId = parseInt(urlMatch[1]);
+        }
+    }
+    
+    console.log('manageCourses classId:', classId);
+    
+    if (!classId || isNaN(classId)) {
         alert('반 정보를 찾을 수 없습니다. 페이지를 새로고침 해주세요.');
         return;
     }
