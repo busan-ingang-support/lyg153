@@ -1,6 +1,10 @@
 import { Hono } from 'hono'
+import { authMiddleware, requireRole } from '../middleware/auth'
 
 const volunteer = new Hono<{ Bindings: { DB: D1Database } }>()
+
+// 모든 라우트에 인증 적용
+volunteer.use('*', authMiddleware)
 
 // ============================================
 // 봉사활동 목록 조회

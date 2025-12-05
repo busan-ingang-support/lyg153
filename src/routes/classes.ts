@@ -1,7 +1,11 @@
 import { Hono } from 'hono';
 import type { CloudflareBindings } from '../types';
+import { authMiddleware, requireRole } from '../middleware/auth';
 
 const classes = new Hono<{ Bindings: CloudflareBindings }>();
+
+// 모든 라우트에 인증 적용
+classes.use('*', authMiddleware);
 
 // 모든 반 조회
 classes.get('/', async (c) => {

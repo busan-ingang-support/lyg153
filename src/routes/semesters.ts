@@ -1,7 +1,11 @@
 import { Hono } from 'hono';
 import type { CloudflareBindings } from '../types';
+import { authMiddleware, requireRole } from '../middleware/auth';
 
 const semesters = new Hono<{ Bindings: CloudflareBindings }>();
+
+// 모든 라우트에 인증 적용
+semesters.use('*', authMiddleware);
 
 // 모든 학기 조회
 semesters.get('/', async (c) => {

@@ -1,6 +1,10 @@
 import { Hono } from 'hono'
+import { authMiddleware, requireRole } from '../middleware/auth'
 
 const counseling = new Hono<{ Bindings: { DB: D1Database } }>()
+
+// 모든 라우트에 인증 적용
+counseling.use('*', authMiddleware)
 
 // ============================================
 // 상담기록 목록 조회
@@ -10,14 +14,16 @@ counseling.get('/', async (c) => {
     const { semester_id, student_id } = c.req.query()
     
     let query = `
-      SELECT 
+      SELECT
         cr.*,
         u.name as student_name,
         s.student_number,
-        sem.name as semester_name
+        sem.name as semester_name,
+        cu.name as counselor_name
       FROM counseling_records cr
       LEFT JOIN students s ON cr.student_id = s.id
       LEFT JOIN users u ON s.user_id = u.id
+      LEFT JOIN users cu ON cr.counselor_id = cu.id
       LEFT JOIN semesters sem ON cr.semester_id = sem.id
       WHERE 1=1
     `
@@ -54,14 +60,16 @@ counseling.get('/:id', async (c) => {
     const id = parseInt(c.req.param('id'))
     
     const stmt = c.env.DB.prepare(`
-      SELECT 
+      SELECT
         cr.*,
         u.name as student_name,
         s.student_number,
-        sem.name as semester_name
+        sem.name as semester_name,
+        cu.name as counselor_name
       FROM counseling_records cr
       LEFT JOIN students s ON cr.student_id = s.id
       LEFT JOIN users u ON s.user_id = u.id
+      LEFT JOIN users cu ON cr.counselor_id = cu.id
       LEFT JOIN semesters sem ON cr.semester_id = sem.id
       WHERE cr.id = ?
     `).bind(id)
@@ -87,22 +95,25 @@ counseling.post('/', async (c) => {
     const data = await c.req.json()
     
     // 필수 필드 검증
-    if (!data.student_id || !data.semester_id || !data.counseling_date || !data.topic || !data.content) {
+    if (!data.student_id || !data.semester_id || !data.counseling_date || !data.title || !data.content) {
       return c.json({ error: '필수 필드가 누락되었습니다' }, 400)
     }
-    
+
+    // counselor_id는 현재 사용자 ID로 설정
+    const userId = c.get('userId')
+
     const stmt = c.env.DB.prepare(`
       INSERT INTO counseling_records (
-        student_id, semester_id, counseling_date, counseling_type, counselor_name,
-        topic, content, follow_up, is_confidential
+        student_id, counselor_id, semester_id, counseling_date, counseling_type,
+        title, content, follow_up, is_confidential
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       data.student_id,
+      userId,
       data.semester_id,
       data.counseling_date,
       data.counseling_type || null,
-      data.counselor_name || null,
-      data.topic,
+      data.title,
       data.content,
       data.follow_up || null,
       data.is_confidential ? 1 : 0
@@ -129,22 +140,25 @@ counseling.put('/:id', async (c) => {
     const data = await c.req.json()
     
     // 필수 필드 검증
-    if (!data.student_id || !data.semester_id || !data.counseling_date || !data.topic || !data.content) {
+    if (!data.student_id || !data.semester_id || !data.counseling_date || !data.title || !data.content) {
       return c.json({ error: '필수 필드가 누락되었습니다' }, 400)
     }
-    
+
+    // counselor_id는 현재 사용자 ID로 설정 (수정 시에도)
+    const userId = c.get('userId')
+
     const stmt = c.env.DB.prepare(`
       UPDATE counseling_records
-      SET student_id = ?, semester_id = ?, counseling_date = ?, counseling_type = ?,
-          counselor_name = ?, topic = ?, content = ?, follow_up = ?, is_confidential = ?
+      SET student_id = ?, counselor_id = ?, semester_id = ?, counseling_date = ?, counseling_type = ?,
+          title = ?, content = ?, follow_up = ?, is_confidential = ?
       WHERE id = ?
     `).bind(
       data.student_id,
+      userId,
       data.semester_id,
       data.counseling_date,
       data.counseling_type || null,
-      data.counselor_name || null,
-      data.topic,
+      data.title,
       data.content,
       data.follow_up || null,
       data.is_confidential ? 1 : 0,

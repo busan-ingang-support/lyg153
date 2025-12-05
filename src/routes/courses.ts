@@ -1,7 +1,11 @@
 import { Hono } from 'hono';
 import type { CloudflareBindings } from '../types';
+import { authMiddleware, requireRole } from '../middleware/auth';
 
 const courses = new Hono<{ Bindings: CloudflareBindings }>();
+
+// 모든 라우트에 인증 적용
+courses.use('*', authMiddleware);
 
 // ============================================
 // 수업 목록 조회 (과목+학기+교사+반 조인)
