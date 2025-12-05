@@ -181,8 +181,8 @@ subjects.put('/:id', async (c) => {
         // 기존 수업이 없고 담당 교사가 지정되면 새로 생성
         const courseName = `${grade ? grade + '학년 ' : ''}${name}`;
         await db.prepare(`
-          INSERT INTO courses (subject_id, semester_id, teacher_id, course_name, max_students)
-          VALUES (?, ?, ?, ?, 30)
+          INSERT INTO courses (subject_id, semester_id, teacher_id, course_name, max_students, site_id)
+          VALUES (?, ?, ?, ?, 30, 1)
         `).bind(id, activeSemester.id, teacher_id, courseName).run();
       }
     }
