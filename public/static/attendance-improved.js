@@ -136,7 +136,7 @@ async function queryAllAttendance() {
     
     try {
         const response = await axios.get(`/api/attendance/by-date?date=${date}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         const attendance = response.data.attendance;
@@ -173,7 +173,7 @@ async function queryAllAttendance() {
         // 반 목록 로드 (필터용)
         try {
             const classesResponse = await axios.get('/api/classes', {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                headers: { 'Authorization': `Bearer ${authToken}` }
             });
             const classFilter = document.getElementById('attendance-class-filter');
             classFilter.innerHTML = '<option value="">전체 반</option>' + 
@@ -286,7 +286,7 @@ async function loadClassAttendanceSelection() {
     
     try {
         const response = await axios.get('/api/classes', {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         const classes = response.data.classes;
@@ -375,7 +375,7 @@ async function queryClassAttendance() {
     
     try {
         const response = await axios.get(`/api/classes/${currentAttendanceClassId}/attendance?date=${date}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         const attendance = response.data.attendance;
@@ -453,7 +453,7 @@ async function loadClassAttendanceInput() {
     try {
         // 반의 학생 목록 가져오기
         const studentsResponse = await axios.get(`/api/classes/${currentAttendanceClassId}/students`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         const students = studentsResponse.data.students;
@@ -470,7 +470,7 @@ async function loadClassAttendanceInput() {
         
         // 해당 날짜의 출석 기록 가져오기
         const attendanceResponse = await axios.get(`/api/attendance/by-date?date=${date}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         const attendanceRecords = attendanceResponse.data.attendance || [];
@@ -693,7 +693,7 @@ async function saveClassAttendance() {
             attendance_date: window.currentClassAttendanceDate,
             records: recordsToSave
         }, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         if (response.data.success) {
@@ -885,7 +885,7 @@ async function saveAllAttendance() {
             attendance_date: window.currentAttendanceDate,
             records: recordsToSave
         }, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         if (response.data.success) {
