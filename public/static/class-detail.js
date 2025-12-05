@@ -1286,10 +1286,15 @@ async function loadClassSchedule() {
     const container = document.getElementById('class-tab-content');
     container.innerHTML = `
         <div class="mb-4 flex justify-between items-center">
-            <h3 class="text-xl font-bold text-gray-800">시간표</h4>
-            <button onclick="navigateToPage('schedules')" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-                <i class="fas fa-calendar-alt mr-2"></i>시간표 관리 페이지로
-            </button>
+            <h3 class="text-xl font-bold text-gray-800">시간표</h3>
+            <div class="flex gap-2">
+                <button onclick="editScheduleMode(currentClassId)" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                    <i class="fas fa-edit mr-2"></i>시간표 편집
+                </button>
+                <button onclick="manageCourses(currentClassId)" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+                    <i class="fas fa-book mr-2"></i>수업 관리
+                </button>
+            </div>
         </div>
         <div id="schedule-content">
             <div class="text-center py-8">
