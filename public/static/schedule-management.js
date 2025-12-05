@@ -351,7 +351,7 @@ async function manageCourses(classId) {
         const courses = coursesRes.data.courses || [];
         let subjects = subjectsRes.data.subjects || [];
         const teachers = teachersRes.data.users || [];
-        const classInfo = classRes.data;
+        const classInfo = classRes.data.class || classRes.data;
         
         // 교사인 경우 자신의 전공 과목만 필터링
         let currentTeacher = null;
