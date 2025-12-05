@@ -507,14 +507,41 @@ function renderHomepageModule(module) {
             const heroVideo = module.video_url || null;
             const heroBgImage = module.background_image || module.hero_background_image || null;
             
+            // 동영상 배경 HTML 생성
+            let videoBackgroundHTML = '';
+            if (heroVideo) {
+                // YouTube URL 체크
+                const youtubeMatch = heroVideo.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+                if (youtubeMatch) {
+                    const videoId = youtubeMatch[1];
+                    videoBackgroundHTML = `
+                        <div class="absolute inset-0 w-full h-full overflow-hidden">
+                            <iframe 
+                                class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[180%] h-[180%] md:w-[120%] md:h-[120%] pointer-events-none"
+                                src="https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&showinfo=0&rel=0&modestbranding=1&playsinline=1&enablejsapi=1"
+                                frameborder="0"
+                                allow="autoplay; encrypted-media"
+                                allowfullscreen>
+                            </iframe>
+                        </div>
+                    `;
+                } else {
+                    // 일반 동영상 파일
+                    const videoType = heroVideo.endsWith('.webm') ? 'video/webm' : 
+                                     heroVideo.endsWith('.ogg') ? 'video/ogg' : 'video/mp4';
+                    videoBackgroundHTML = `
+                        <video autoplay muted loop playsinline class="absolute inset-0 w-full h-full object-cover" style="object-fit: cover;">
+                            <source src="${escapeHtml(heroVideo)}" type="${videoType}">
+                            Your browser does not support the video tag.
+                        </video>
+                    `;
+                }
+            }
+            
             moduleHTML = `
                 <section class="hero-visual relative min-h-[70vh] md:min-h-[85vh] overflow-hidden"${sectionStyle}>
                     <!-- 배경 -->
-                    ${heroVideo ? `
-                        <video autoplay muted loop playsinline class="absolute inset-0 w-full h-full object-cover">
-                            <source src="${escapeHtml(heroVideo)}" type="video/mp4">
-                        </video>
-                    ` : heroBgImage ? `
+                    ${videoBackgroundHTML ? videoBackgroundHTML : heroBgImage ? `
                         <div class="absolute inset-0 w-full h-full">
                             <img src="${escapeHtml(heroBgImage)}" alt="" class="w-full h-full object-cover">
                         </div>

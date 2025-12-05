@@ -175,7 +175,7 @@ app.get('/', (c) => {
         </div>
         
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
-        <script src="/static/public-home.js?v=202512051220"></script>
+        <script src="/static/public-home.js?v=202512051230"></script>
         <script src="/static/student-home.js?v=202511141500"></script>
         <script src="/static/parent-home.js?v=202511212350"></script>
         <script src="/static/homepage-module-management.js?v=202511211100"></script>
