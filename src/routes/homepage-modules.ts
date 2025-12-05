@@ -24,21 +24,22 @@ async function getUserFromToken(token: string): Promise<{ userId: number; role: 
 async function checkSuperAdminPermission(c: any): Promise<boolean> {
   const authHeader = c.req.header('Authorization');
   const token = authHeader?.replace('Bearer ', '');
-  
+
   if (!token) {
     return false;
   }
-  
+
   const user = await getUserFromToken(token);
   if (!user) {
     return false;
   }
-  
+
   return user.role === 'super_admin';
 }
 
 // 모든 모듈 조회 (공개 API)
 modules.get('/', async (c) => {
+  const siteId = c.get('siteId') || 1
   const { DB } = c.env
   const page = c.req.query('page') || 'home' // 쿼리 파라미터로 페이지 지정
 
@@ -46,9 +47,9 @@ modules.get('/', async (c) => {
     // 먼저 모듈 목록 조회 (페이지별 필터링)
     const result = await DB.prepare(`
       SELECT * FROM homepage_modules
-      WHERE is_active = 1 AND page = ?
+      WHERE is_active = 1 AND page = ? AND site_id = ?
       ORDER BY display_order ASC
-    `).bind(page).all()
+    `).bind(page, siteId).all()
 
     // 각 모듈의 설정과 슬라이드 항목도 함께 조회
     const modulesWithData = await Promise.all(
@@ -71,8 +72,8 @@ modules.get('/', async (c) => {
         const settingsResult = await DB.prepare(`
           SELECT setting_key, setting_value, setting_type
           FROM homepage_module_settings
-          WHERE module_id = ?
-        `).bind(row.id).all();
+          WHERE module_id = ? AND site_id = ?
+        `).bind(row.id, siteId).all();
 
         settingsResult.results.forEach((setting: any) => {
           let value = setting.setting_value;
@@ -92,9 +93,9 @@ modules.get('/', async (c) => {
         if (row.module_type === 'slides') {
           const slides = await DB.prepare(`
             SELECT * FROM homepage_slides
-            WHERE module_id = ? AND is_active = 1
+            WHERE module_id = ? AND is_active = 1 AND site_id = ?
             ORDER BY slide_order ASC
-          `).bind(row.id).all();
+          `).bind(row.id, siteId).all();
           module.slides = slides.results;
         }
 
@@ -116,24 +117,23 @@ modules.get('/admin', async (c) => {
     return c.json({ success: false, message: '최고 관리자만 접근할 수 있습니다.' }, 403);
   }
 
+  const siteId = c.get('siteId') || 1
   const { DB } = c.env
   const page = c.req.query('page') // 페이지 파라미터 (선택)
 
   try {
     // 먼저 모듈 목록 조회
-    let query = 'SELECT * FROM homepage_modules';
-    let params: any[] = [];
-    
+    let query = 'SELECT * FROM homepage_modules WHERE site_id = ?';
+    let params: any[] = [siteId];
+
     if (page) {
-      query += ' WHERE page = ?';
+      query += ' AND page = ?';
       params.push(page);
     }
-    
+
     query += ' ORDER BY page, display_order ASC';
-    
-    const result = params.length > 0 
-      ? await DB.prepare(query).bind(...params).all()
-      : await DB.prepare(query).all()
+
+    const result = await DB.prepare(query).bind(...params).all()
 
     // 각 모듈의 설정과 슬라이드 항목도 함께 조회
     const modulesWithData = await Promise.all(
@@ -157,8 +157,8 @@ modules.get('/admin', async (c) => {
         const settingsResult = await DB.prepare(`
           SELECT setting_key, setting_value, setting_type
           FROM homepage_module_settings
-          WHERE module_id = ?
-        `).bind(row.id).all();
+          WHERE module_id = ? AND site_id = ?
+        `).bind(row.id, siteId).all();
 
         settingsResult.results.forEach((setting: any) => {
           let value = setting.setting_value;
@@ -178,9 +178,9 @@ modules.get('/admin', async (c) => {
         if (row.module_type === 'slides') {
           const slides = await DB.prepare(`
             SELECT * FROM homepage_slides
-            WHERE module_id = ?
+            WHERE module_id = ? AND site_id = ?
             ORDER BY slide_order ASC
-          `).bind(row.id).all();
+          `).bind(row.id, siteId).all();
           module.slides = slides.results;
         }
 
@@ -202,11 +202,12 @@ modules.post('/', async (c) => {
     return c.json({ success: false, message: '최고 관리자만 접근할 수 있습니다.' }, 403);
   }
 
+  const siteId = c.get('siteId') || 1
   const { DB } = c.env
   const authHeader = c.req.header('Authorization');
   const token = authHeader?.replace('Bearer ', '');
   const user = await getUserFromToken(token!);
-  
+
   const data = await c.req.json()
   const {
     module_type,
@@ -231,8 +232,8 @@ modules.post('/', async (c) => {
         module_type, page, display_order, is_active, container_type,
         background_color, background_image,
         padding_top, padding_bottom, margin_top, margin_bottom,
-        updated_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        updated_by, site_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       module_type,
       page,
@@ -245,7 +246,8 @@ modules.post('/', async (c) => {
       padding_bottom,
       margin_top,
       margin_bottom,
-      user?.userId || null
+      user?.userId || null,
+      siteId
     ).run()
 
     const moduleId = result.meta.last_row_id
@@ -254,7 +256,7 @@ modules.post('/', async (c) => {
     for (const [key, value] of Object.entries(settings)) {
       let settingValue = value;
       let settingType = 'string';
-      
+
       if (typeof value === 'object') {
         settingValue = JSON.stringify(value);
         settingType = 'json';
@@ -268,9 +270,9 @@ modules.post('/', async (c) => {
       }
 
       await DB.prepare(`
-        INSERT INTO homepage_module_settings (module_id, setting_key, setting_value, setting_type)
-        VALUES (?, ?, ?, ?)
-      `).bind(moduleId, key, settingValue, settingType).run()
+        INSERT INTO homepage_module_settings (module_id, setting_key, setting_value, setting_type, site_id)
+        VALUES (?, ?, ?, ?, ?)
+      `).bind(moduleId, key, settingValue, settingType, siteId).run()
     }
 
     // 슬라이드 항목 저장
@@ -279,8 +281,8 @@ modules.post('/', async (c) => {
         const slide = slides[i];
         await DB.prepare(`
           INSERT INTO homepage_slides (
-            module_id, slide_order, title, subtitle, image_url, image_alt, link_url, link_text, is_active
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            module_id, slide_order, title, subtitle, image_url, image_alt, link_url, link_text, is_active, site_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).bind(
           moduleId,
           i,
@@ -290,7 +292,8 @@ modules.post('/', async (c) => {
           slide.image_alt || null,
           slide.link_url || null,
           slide.link_text || null,
-          slide.is_active !== false ? 1 : 0
+          slide.is_active !== false ? 1 : 0,
+          siteId
         ).run()
       }
     }
@@ -309,12 +312,13 @@ modules.put('/:id', async (c) => {
     return c.json({ success: false, message: '최고 관리자만 접근할 수 있습니다.' }, 403);
   }
 
+  const siteId = c.get('siteId') || 1
   const { DB } = c.env
   const moduleId = parseInt(c.req.param('id'))
   const authHeader = c.req.header('Authorization');
   const token = authHeader?.replace('Bearer ', '');
   const user = await getUserFromToken(token!);
-  
+
   const data = await c.req.json()
   const {
     page,
@@ -335,7 +339,7 @@ modules.put('/:id', async (c) => {
     // 모듈 업데이트
     await DB.prepare(`
       UPDATE homepage_modules
-      SET 
+      SET
         page = ?,
         display_order = ?,
         is_active = ?,
@@ -348,7 +352,7 @@ modules.put('/:id', async (c) => {
         margin_bottom = ?,
         updated_by = ?,
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
+      WHERE id = ? AND site_id = ?
     `).bind(
       page,
       display_order,
@@ -361,17 +365,18 @@ modules.put('/:id', async (c) => {
       margin_top,
       margin_bottom,
       user?.userId || null,
-      moduleId
+      moduleId,
+      siteId
     ).run()
 
     // 기존 설정 삭제 후 재생성
-    await DB.prepare(`DELETE FROM homepage_module_settings WHERE module_id = ?`).bind(moduleId).run()
+    await DB.prepare(`DELETE FROM homepage_module_settings WHERE module_id = ? AND site_id = ?`).bind(moduleId, siteId).run()
 
     // 새 설정 저장
     for (const [key, value] of Object.entries(settings)) {
       let settingValue = value;
       let settingType = 'string';
-      
+
       if (typeof value === 'object') {
         settingValue = JSON.stringify(value);
         settingType = 'json';
@@ -385,24 +390,24 @@ modules.put('/:id', async (c) => {
       }
 
       await DB.prepare(`
-        INSERT INTO homepage_module_settings (module_id, setting_key, setting_value, setting_type)
-        VALUES (?, ?, ?, ?)
-      `).bind(moduleId, key, settingValue, settingType).run()
+        INSERT INTO homepage_module_settings (module_id, setting_key, setting_value, setting_type, site_id)
+        VALUES (?, ?, ?, ?, ?)
+      `).bind(moduleId, key, settingValue, settingType, siteId).run()
     }
 
     // 슬라이드 모듈인 경우 슬라이드 항목 업데이트
-    const module = await DB.prepare(`SELECT module_type FROM homepage_modules WHERE id = ?`).bind(moduleId).first() as any;
+    const module = await DB.prepare(`SELECT module_type FROM homepage_modules WHERE id = ? AND site_id = ?`).bind(moduleId, siteId).first() as any;
     if (module?.module_type === 'slides' && Array.isArray(slides)) {
       // 기존 슬라이드 삭제
-      await DB.prepare(`DELETE FROM homepage_slides WHERE module_id = ?`).bind(moduleId).run()
-      
+      await DB.prepare(`DELETE FROM homepage_slides WHERE module_id = ? AND site_id = ?`).bind(moduleId, siteId).run()
+
       // 새 슬라이드 저장
       for (let i = 0; i < slides.length; i++) {
         const slide = slides[i];
         await DB.prepare(`
           INSERT INTO homepage_slides (
-            module_id, slide_order, title, subtitle, image_url, image_alt, link_url, link_text, is_active
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            module_id, slide_order, title, subtitle, image_url, image_alt, link_url, link_text, is_active, site_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).bind(
           moduleId,
           i,
@@ -412,7 +417,8 @@ modules.put('/:id', async (c) => {
           slide.image_alt || null,
           slide.link_url || null,
           slide.link_text || null,
-          slide.is_active !== false ? 1 : 0
+          slide.is_active !== false ? 1 : 0,
+          siteId
         ).run()
       }
     }
@@ -431,12 +437,13 @@ modules.delete('/:id', async (c) => {
     return c.json({ success: false, message: '최고 관리자만 접근할 수 있습니다.' }, 403);
   }
 
+  const siteId = c.get('siteId') || 1
   const { DB } = c.env
   const moduleId = parseInt(c.req.param('id'))
 
   try {
     // CASCADE로 설정되어 있어서 관련 데이터도 자동 삭제됨
-    await DB.prepare(`DELETE FROM homepage_modules WHERE id = ?`).bind(moduleId).run()
+    await DB.prepare(`DELETE FROM homepage_modules WHERE id = ? AND site_id = ?`).bind(moduleId, siteId).run()
 
     return c.json({ success: true, message: '모듈이 삭제되었습니다.' })
   } catch (error: any) {
@@ -452,6 +459,7 @@ modules.post('/reorder', async (c) => {
     return c.json({ success: false, message: '최고 관리자만 접근할 수 있습니다.' }, 403);
   }
 
+  const siteId = c.get('siteId') || 1
   const { DB } = c.env
   const { moduleOrders } = await c.req.json() // [{id: 1, display_order: 0}, {id: 2, display_order: 1}, ...]
 
@@ -460,8 +468,8 @@ modules.post('/reorder', async (c) => {
       await DB.prepare(`
         UPDATE homepage_modules
         SET display_order = ?
-        WHERE id = ?
-      `).bind(item.display_order, item.id).run()
+        WHERE id = ? AND site_id = ?
+      `).bind(item.display_order, item.id, siteId).run()
     }
 
     return c.json({ success: true, message: '모듈 순서가 업데이트되었습니다.' })
@@ -472,4 +480,3 @@ modules.post('/reorder', async (c) => {
 })
 
 export default modules
-

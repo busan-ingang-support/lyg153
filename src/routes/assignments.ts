@@ -14,6 +14,7 @@ const assignments = new Hono<{ Bindings: CloudflareBindings }>();
 // Bug 3 Fix: 적절한 권한 검증 추가
 assignments.get('/student/:student_id', async (c) => {
   const db = c.env.DB;
+  const siteId = c.get('siteId') || 1;
   const studentId = c.req.param('student_id');
   const userId = c.get('userId');
   const userRole = c.get('userRole');
@@ -22,8 +23,8 @@ assignments.get('/student/:student_id', async (c) => {
   if (userRole === 'student') {
     // 학생 본인인지 확인
     const student = await db.prepare(`
-      SELECT id FROM students WHERE user_id = ? AND id = ?
-    `).bind(userId, studentId).first();
+      SELECT id FROM students WHERE user_id = ? AND id = ? AND site_id = ?
+    `).bind(userId, studentId, siteId).first();
 
     if (!student) {
       return c.json({ error: 'Forbidden: You can only view your own assignments' }, 403);
@@ -31,8 +32,8 @@ assignments.get('/student/:student_id', async (c) => {
   } else if (userRole === 'parent') {
     // 학부모인 경우 자녀 확인
     const relation = await db.prepare(`
-      SELECT id FROM parent_student WHERE parent_user_id = ? AND student_id = ? AND COALESCE(status, 1) = 1
-    `).bind(userId, studentId).first();
+      SELECT id FROM parent_student WHERE parent_user_id = ? AND student_id = ? AND COALESCE(status, 1) = 1 AND site_id = ?
+    `).bind(userId, studentId, siteId).first();
 
     if (!relation) {
       return c.json({ error: 'Forbidden: Not your child' }, 403);
@@ -40,8 +41,8 @@ assignments.get('/student/:student_id', async (c) => {
   } else if (userRole === 'teacher') {
     // 교사인 경우: 해당 학생이 본인이 담당하는 반/과목에 속해있는지 확인
     const teacher = await db.prepare(`
-      SELECT id FROM teachers WHERE user_id = ?
-    `).bind(userId).first() as any;
+      SELECT id FROM teachers WHERE user_id = ? AND site_id = ?
+    `).bind(userId, siteId).first() as any;
 
     if (!teacher) {
       return c.json({ error: 'Teacher not found' }, 404);
@@ -52,10 +53,10 @@ assignments.get('/student/:student_id', async (c) => {
       SELECT 1 FROM enrollments e
       JOIN courses c ON e.course_id = c.id
       LEFT JOIN classes cl ON c.class_id = cl.id
-      WHERE e.student_id = ? AND e.status = 'active'
+      WHERE e.student_id = ? AND e.status = 'active' AND e.site_id = ?
         AND (c.teacher_id = ? OR cl.homeroom_teacher_id = ?)
       LIMIT 1
-    `).bind(studentId, teacher.id, teacher.id).first();
+    `).bind(studentId, siteId, teacher.id, teacher.id).first();
 
     if (!hasAccess) {
       return c.json({ error: 'Forbidden: You can only view assignments of students in your classes' }, 403);
@@ -66,7 +67,7 @@ assignments.get('/student/:student_id', async (c) => {
   }
 
   const { results } = await db.prepare(`
-    SELECT 
+    SELECT
       a.*,
       c.course_name,
       sub.name as subject_name,
@@ -79,9 +80,9 @@ assignments.get('/student/:student_id', async (c) => {
     LEFT JOIN subjects sub ON c.subject_id = sub.id
     JOIN enrollments e ON e.course_id = c.id AND e.student_id = ?
     LEFT JOIN assignment_submissions asub ON asub.assignment_id = a.id AND asub.student_id = ?
-    WHERE a.status = 1 AND a.is_published = 1 AND e.status = 'active'
+    WHERE a.status = 1 AND a.is_published = 1 AND e.status = 'active' AND a.site_id = ?
     ORDER BY a.due_date ASC
-  `).bind(studentId, studentId).all();
+  `).bind(studentId, studentId, siteId).all();
 
   return c.json({ assignments: results });
 });
@@ -89,25 +90,26 @@ assignments.get('/student/:student_id', async (c) => {
 // 과제 목록 조회
 assignments.get('/', async (c) => {
   const db = c.env.DB;
+  const siteId = c.get('siteId') || 1;
   const { course_id, teacher_id, is_published, status } = c.req.query();
   const userId = c.get('userId');
   const userRole = c.get('userRole');
-  
+
   let query = `
-    SELECT 
+    SELECT
       a.*,
       c.course_name,
       sub.name as subject_name,
       u.name as teacher_name,
-      (SELECT COUNT(*) FROM assignment_submissions asub WHERE asub.assignment_id = a.id AND asub.status > 0) as submission_count,
-      (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = a.course_id AND e.status = 'active') as total_students
+      (SELECT COUNT(*) FROM assignment_submissions asub WHERE asub.assignment_id = a.id AND asub.status > 0 AND asub.site_id = ?) as submission_count,
+      (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = a.course_id AND e.status = 'active' AND e.site_id = ?) as total_students
     FROM assignments a
     JOIN courses c ON a.course_id = c.id
     LEFT JOIN subjects sub ON c.subject_id = sub.id
     JOIN users u ON a.created_by = u.id
-    WHERE a.status = 1
+    WHERE a.status = 1 AND a.site_id = ?
   `;
-  const params: any[] = [];
+  const params: any[] = [siteId, siteId, siteId];
 
   if (course_id) {
     query += ' AND a.course_id = ?';
@@ -127,33 +129,33 @@ assignments.get('/', async (c) => {
   // 학생인 경우: 본인이 수강하는 과목의 공개된 과제만
   if (userRole === 'student') {
     const student = await db.prepare(`
-      SELECT id FROM students WHERE user_id = ?
-    `).bind(userId).first();
+      SELECT id FROM students WHERE user_id = ? AND site_id = ?
+    `).bind(userId, siteId).first();
 
     if (student) {
       query += ` AND a.course_id IN (
-        SELECT course_id FROM enrollments WHERE student_id = ? AND status = 'active'
+        SELECT course_id FROM enrollments WHERE student_id = ? AND status = 'active' AND site_id = ?
       ) AND a.is_published = 1`;
-      params.push(student.id);
+      params.push(student.id, siteId);
     }
   }
 
   // 학부모인 경우: 자녀가 수강하는 과목의 공개된 과제만
   if (userRole === 'parent') {
     query += ` AND a.course_id IN (
-      SELECT e.course_id 
+      SELECT e.course_id
       FROM enrollments e
       JOIN parent_student ps ON e.student_id = ps.student_id
-      WHERE ps.parent_user_id = ? AND e.status = 'active' AND COALESCE(ps.status, 1) = 1
+      WHERE ps.parent_user_id = ? AND e.status = 'active' AND COALESCE(ps.status, 1) = 1 AND e.site_id = ? AND ps.site_id = ?
     ) AND a.is_published = 1`;
-    params.push(userId);
+    params.push(userId, siteId, siteId);
   }
 
   // 교사인 경우: 본인이 담당하는 과목의 과제만
   if (userRole === 'teacher') {
     const teacher = await db.prepare(`
-      SELECT id FROM teachers WHERE user_id = ?
-    `).bind(userId).first();
+      SELECT id FROM teachers WHERE user_id = ? AND site_id = ?
+    `).bind(userId, siteId).first();
 
     if (teacher) {
       query += ' AND c.teacher_id = ?';
@@ -170,10 +172,11 @@ assignments.get('/', async (c) => {
 // 과제 상세 조회 (/:id 라우트는 /student/:student_id 보다 뒤에 정의)
 assignments.get('/:id', async (c) => {
   const db = c.env.DB;
+  const siteId = c.get('siteId') || 1;
   const assignmentId = c.req.param('id');
 
   const assignment = await db.prepare(`
-    SELECT 
+    SELECT
       a.*,
       c.course_name,
       sub.name as subject_name,
@@ -182,8 +185,8 @@ assignments.get('/:id', async (c) => {
     JOIN courses c ON a.course_id = c.id
     LEFT JOIN subjects sub ON c.subject_id = sub.id
     JOIN users u ON a.created_by = u.id
-    WHERE a.id = ? AND a.status = 1
-  `).bind(assignmentId).first();
+    WHERE a.id = ? AND a.status = 1 AND a.site_id = ?
+  `).bind(assignmentId, siteId).first();
 
   if (!assignment) {
     return c.json({ error: 'Assignment not found' }, 404);
@@ -195,6 +198,7 @@ assignments.get('/:id', async (c) => {
 // 과제 생성 (교사, 관리자만)
 assignments.post('/', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
   const db = c.env.DB;
+  const siteId = c.get('siteId') || 1;
   const userId = c.get('userId');
   const data = await c.req.json();
 
@@ -220,8 +224,8 @@ assignments.post('/', requireRole('teacher', 'admin', 'super_admin'), async (c) 
     const result = await db.prepare(`
       INSERT INTO assignments (
         course_id, title, description, assignment_type, due_date,
-        max_score, weight, file_url, is_published, published_at, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        max_score, weight, file_url, is_published, published_at, created_by, site_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       course_id,
       title,
@@ -233,20 +237,21 @@ assignments.post('/', requireRole('teacher', 'admin', 'super_admin'), async (c) 
       file_url || null,
       is_published,
       is_published ? new Date().toISOString() : null,
-      userId
+      userId,
+      siteId
     ).run();
 
     const assignmentId = result.meta.last_row_id;
 
     // 공개된 과제인 경우 알림 발송
     if (is_published && (notify_students || notify_parents)) {
-      await sendAssignmentNotifications(db, assignmentId, course_id, title, due_date, notify_students, notify_parents);
+      await sendAssignmentNotifications(db, assignmentId, course_id, title, due_date, notify_students, notify_parents, siteId);
     }
 
-    return c.json({ 
-      success: true, 
-      message: 'Assignment created', 
-      id: assignmentId 
+    return c.json({
+      success: true,
+      message: 'Assignment created',
+      id: assignmentId
     });
   } catch (error: any) {
     console.error('과제 생성 실패:', error);
@@ -257,6 +262,7 @@ assignments.post('/', requireRole('teacher', 'admin', 'super_admin'), async (c) 
 // 과제 수정 (교사, 관리자만)
 assignments.put('/:id', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
   const db = c.env.DB;
+  const siteId = c.get('siteId') || 1;
   const userId = c.get('userId');
   const userRole = c.get('userRole');
   const assignmentId = c.req.param('id');
@@ -267,8 +273,8 @@ assignments.put('/:id', requireRole('teacher', 'admin', 'super_admin'), async (c
     SELECT a.*, c.teacher_id
     FROM assignments a
     JOIN courses c ON a.course_id = c.id
-    WHERE a.id = ? AND a.status = 1
-  `).bind(assignmentId).first() as any;
+    WHERE a.id = ? AND a.status = 1 AND a.site_id = ?
+  `).bind(assignmentId, siteId).first() as any;
 
   if (!existing) {
     return c.json({ error: 'Assignment not found' }, 404);
@@ -277,8 +283,8 @@ assignments.put('/:id', requireRole('teacher', 'admin', 'super_admin'), async (c
   // 교사인 경우 본인 과제만 수정 가능
   if (userRole === 'teacher') {
     const teacher = await db.prepare(`
-      SELECT id FROM teachers WHERE user_id = ?
-    `).bind(userId).first() as any;
+      SELECT id FROM teachers WHERE user_id = ? AND site_id = ?
+    `).bind(userId, siteId).first() as any;
 
     if (!teacher || teacher.id !== existing.teacher_id) {
       return c.json({ error: 'Forbidden: You can only edit your own assignments' }, 403);
@@ -316,7 +322,7 @@ assignments.put('/:id', requireRole('teacher', 'admin', 'super_admin'), async (c
         is_published = COALESCE(?, is_published),
         published_at = CASE WHEN ? = 1 AND is_published = 0 THEN CURRENT_TIMESTAMP ELSE published_at END,
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
+      WHERE id = ? AND site_id = ?
     `).bind(
       title,
       description !== undefined ? description : existing.description,
@@ -327,19 +333,21 @@ assignments.put('/:id', requireRole('teacher', 'admin', 'super_admin'), async (c
       file_url !== undefined ? file_url : existing.file_url,
       is_published,
       is_published,
-      assignmentId
+      assignmentId,
+      siteId
     ).run();
 
     // 방금 공개된 경우 알림 발송
     if (justPublished && (notify_students || notify_parents)) {
       await sendAssignmentNotifications(
-        db, 
-        Number(assignmentId), 
-        existing.course_id, 
-        title || existing.title, 
-        due_date || existing.due_date, 
-        notify_students, 
-        notify_parents
+        db,
+        Number(assignmentId),
+        existing.course_id,
+        title || existing.title,
+        due_date || existing.due_date,
+        notify_students,
+        notify_parents,
+        siteId
       );
     }
 
@@ -353,6 +361,7 @@ assignments.put('/:id', requireRole('teacher', 'admin', 'super_admin'), async (c
 // 과제 삭제 (Soft Delete)
 assignments.delete('/:id', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
   const db = c.env.DB;
+  const siteId = c.get('siteId') || 1;
   const userId = c.get('userId');
   const userRole = c.get('userRole');
   const assignmentId = c.req.param('id');
@@ -362,8 +371,8 @@ assignments.delete('/:id', requireRole('teacher', 'admin', 'super_admin'), async
     SELECT a.*, c.teacher_id
     FROM assignments a
     JOIN courses c ON a.course_id = c.id
-    WHERE a.id = ? AND a.status = 1
-  `).bind(assignmentId).first() as any;
+    WHERE a.id = ? AND a.status = 1 AND a.site_id = ?
+  `).bind(assignmentId, siteId).first() as any;
 
   if (!existing) {
     return c.json({ error: 'Assignment not found' }, 404);
@@ -372,8 +381,8 @@ assignments.delete('/:id', requireRole('teacher', 'admin', 'super_admin'), async
   // 교사인 경우 본인 과제만 삭제 가능
   if (userRole === 'teacher') {
     const teacher = await db.prepare(`
-      SELECT id FROM teachers WHERE user_id = ?
-    `).bind(userId).first() as any;
+      SELECT id FROM teachers WHERE user_id = ? AND site_id = ?
+    `).bind(userId, siteId).first() as any;
 
     if (!teacher || teacher.id !== existing.teacher_id) {
       return c.json({ error: 'Forbidden: You can only delete your own assignments' }, 403);
@@ -382,8 +391,8 @@ assignments.delete('/:id', requireRole('teacher', 'admin', 'super_admin'), async
 
   // Soft Delete
   await db.prepare(`
-    UPDATE assignments SET status = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?
-  `).bind(assignmentId).run();
+    UPDATE assignments SET status = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND site_id = ?
+  `).bind(assignmentId, siteId).run();
 
   return c.json({ success: true, message: 'Assignment deleted' });
 });
@@ -391,6 +400,7 @@ assignments.delete('/:id', requireRole('teacher', 'admin', 'super_admin'), async
 // 과제 제출 (학생)
 assignments.post('/:id/submit', requireRole('student'), async (c) => {
   const db = c.env.DB;
+  const siteId = c.get('siteId') || 1;
   const userId = c.get('userId');
   const assignmentId = c.req.param('id');
   const data = await c.req.json();
@@ -399,8 +409,8 @@ assignments.post('/:id/submit', requireRole('student'), async (c) => {
 
   // 학생 ID 조회
   const student = await db.prepare(`
-    SELECT id FROM students WHERE user_id = ?
-  `).bind(userId).first() as any;
+    SELECT id FROM students WHERE user_id = ? AND site_id = ?
+  `).bind(userId, siteId).first() as any;
 
   if (!student) {
     return c.json({ error: 'Student not found' }, 404);
@@ -408,12 +418,12 @@ assignments.post('/:id/submit', requireRole('student'), async (c) => {
 
   // 과제 존재 및 수강 확인
   const assignment = await db.prepare(`
-    SELECT a.* 
+    SELECT a.*
     FROM assignments a
     JOIN enrollments e ON e.course_id = a.course_id
-    WHERE a.id = ? AND a.status = 1 AND a.is_published = 1
-      AND e.student_id = ? AND e.status = 'active'
-  `).bind(assignmentId, student.id).first();
+    WHERE a.id = ? AND a.status = 1 AND a.is_published = 1 AND a.site_id = ?
+      AND e.student_id = ? AND e.status = 'active' AND e.site_id = ?
+  `).bind(assignmentId, siteId, student.id, siteId).first();
 
   if (!assignment) {
     return c.json({ error: 'Assignment not found or not enrolled' }, 404);
@@ -422,8 +432,8 @@ assignments.post('/:id/submit', requireRole('student'), async (c) => {
   try {
     // UPSERT
     await db.prepare(`
-      INSERT INTO assignment_submissions (assignment_id, student_id, content, file_url, status)
-      VALUES (?, ?, ?, ?, 1)
+      INSERT INTO assignment_submissions (assignment_id, student_id, content, file_url, status, site_id)
+      VALUES (?, ?, ?, ?, 1, ?)
       ON CONFLICT(assignment_id, student_id)
       DO UPDATE SET content = ?, file_url = ?, submitted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
     `).bind(
@@ -431,6 +441,7 @@ assignments.post('/:id/submit', requireRole('student'), async (c) => {
       student.id,
       content || null,
       file_url || null,
+      siteId,
       content || null,
       file_url || null
     ).run();
@@ -445,10 +456,11 @@ assignments.post('/:id/submit', requireRole('student'), async (c) => {
 // 과제 제출 목록 조회 (교사, 관리자)
 assignments.get('/:id/submissions', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
   const db = c.env.DB;
+  const siteId = c.get('siteId') || 1;
   const assignmentId = c.req.param('id');
 
   const { results } = await db.prepare(`
-    SELECT 
+    SELECT
       asub.*,
       s.student_number,
       u.name as student_name,
@@ -457,9 +469,9 @@ assignments.get('/:id/submissions', requireRole('teacher', 'admin', 'super_admin
     JOIN students s ON asub.student_id = s.id
     JOIN users u ON s.user_id = u.id
     LEFT JOIN users grader ON asub.graded_by = grader.id
-    WHERE asub.assignment_id = ? AND asub.status > 0
+    WHERE asub.assignment_id = ? AND asub.status > 0 AND asub.site_id = ?
     ORDER BY asub.submitted_at DESC
-  `).bind(assignmentId).all();
+  `).bind(assignmentId, siteId).all();
 
   return c.json({ submissions: results });
 });
@@ -467,6 +479,7 @@ assignments.get('/:id/submissions', requireRole('teacher', 'admin', 'super_admin
 // 과제 채점 (교사, 관리자)
 assignments.put('/:id/submissions/:submission_id/grade', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
   const db = c.env.DB;
+  const siteId = c.get('siteId') || 1;
   const userId = c.get('userId');
   const submissionId = c.req.param('submission_id');
   const data = await c.req.json();
@@ -486,8 +499,8 @@ assignments.put('/:id/submissions/:submission_id/grade', requireRole('teacher', 
         graded_at = CURRENT_TIMESTAMP,
         status = 2,
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `).bind(score, feedback || null, userId, submissionId).run();
+      WHERE id = ? AND site_id = ?
+    `).bind(score, feedback || null, userId, submissionId, siteId).run();
 
     // 학생에게 알림 발송
     const submission = await db.prepare(`
@@ -495,18 +508,19 @@ assignments.put('/:id/submissions/:submission_id/grade', requireRole('teacher', 
       FROM assignment_submissions asub
       JOIN assignments a ON asub.assignment_id = a.id
       JOIN students s ON asub.student_id = s.id
-      WHERE asub.id = ?
-    `).bind(submissionId).first() as any;
+      WHERE asub.id = ? AND asub.site_id = ?
+    `).bind(submissionId, siteId).first() as any;
 
     if (submission) {
       await db.prepare(`
-        INSERT INTO notifications (user_id, notification_type, title, message, reference_type, reference_id)
-        VALUES (?, 'grade', ?, ?, 'assignment_submission', ?)
+        INSERT INTO notifications (user_id, notification_type, title, message, reference_type, reference_id, site_id)
+        VALUES (?, 'grade', ?, ?, 'assignment_submission', ?, ?)
       `).bind(
         submission.student_user_id,
         '과제 채점 완료',
         `"${submission.assignment_title}" 과제가 채점되었습니다. 점수: ${score}점`,
-        submissionId
+        submissionId,
+        siteId
       ).run();
     }
 
@@ -525,7 +539,8 @@ async function sendAssignmentNotifications(
   title: string,
   dueDate: string | null,
   notifyStudents: boolean,
-  notifyParents: boolean
+  notifyParents: boolean,
+  siteId: number
 ) {
   try {
     // 수강 학생 조회
@@ -533,8 +548,8 @@ async function sendAssignmentNotifications(
       SELECT e.student_id, s.user_id as student_user_id
       FROM enrollments e
       JOIN students s ON e.student_id = s.id
-      WHERE e.course_id = ? AND e.status = 'active'
-    `).bind(courseId).all();
+      WHERE e.course_id = ? AND e.status = 'active' AND e.site_id = ?
+    `).bind(courseId, siteId).all();
 
     const dueDateStr = dueDate ? ` (마감: ${new Date(dueDate).toLocaleDateString('ko-KR')})` : '';
     const message = `새로운 과제가 등록되었습니다: "${title}"${dueDateStr}`;
@@ -543,13 +558,14 @@ async function sendAssignmentNotifications(
     if (notifyStudents) {
       for (const enrollment of enrollments) {
         await db.prepare(`
-          INSERT INTO notifications (user_id, notification_type, title, message, reference_type, reference_id)
-          VALUES (?, 'assignment', ?, ?, 'assignment', ?)
+          INSERT INTO notifications (user_id, notification_type, title, message, reference_type, reference_id, site_id)
+          VALUES (?, 'assignment', ?, ?, 'assignment', ?, ?)
         `).bind(
           enrollment.student_user_id,
           '새 과제 등록',
           message,
-          assignmentId
+          assignmentId,
+          siteId
         ).run();
       }
     }
@@ -559,18 +575,19 @@ async function sendAssignmentNotifications(
       for (const enrollment of enrollments) {
         // 해당 학생의 학부모 조회
         const { results: parents } = await db.prepare(`
-          SELECT parent_user_id FROM parent_student WHERE student_id = ? AND COALESCE(status, 1) = 1
-        `).bind(enrollment.student_id).all();
+          SELECT parent_user_id FROM parent_student WHERE student_id = ? AND COALESCE(status, 1) = 1 AND site_id = ?
+        `).bind(enrollment.student_id, siteId).all();
 
         for (const parent of parents) {
           await db.prepare(`
-            INSERT INTO notifications (user_id, notification_type, title, message, reference_type, reference_id)
-            VALUES (?, 'assignment', ?, ?, 'assignment', ?)
+            INSERT INTO notifications (user_id, notification_type, title, message, reference_type, reference_id, site_id)
+            VALUES (?, 'assignment', ?, ?, 'assignment', ?, ?)
           `).bind(
             parent.parent_user_id,
             '자녀 새 과제 등록',
             message,
-            assignmentId
+            assignmentId,
+            siteId
           ).run();
         }
       }

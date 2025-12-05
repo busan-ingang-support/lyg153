@@ -5,15 +5,16 @@ const notifications = new Hono<{ Bindings: CloudflareBindings }>();
 
 // 내 알림 목록 조회
 notifications.get('/', async (c) => {
+  const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const userId = c.get('userId');
   const { is_read, limit = '20', offset = '0' } = c.req.query();
 
   let query = `
     SELECT * FROM notifications
-    WHERE user_id = ?
+    WHERE user_id = ? AND site_id = ?
   `;
-  const params: any[] = [userId];
+  const params: any[] = [userId, siteId];
 
   if (is_read !== undefined) {
     query += ' AND is_read = ?';
@@ -27,10 +28,10 @@ notifications.get('/', async (c) => {
 
   // 읽지 않은 알림 수
   const unreadCount = await db.prepare(`
-    SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0
-  `).bind(userId).first() as any;
+    SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND site_id = ? AND is_read = 0
+  `).bind(userId, siteId).first() as any;
 
-  return c.json({ 
+  return c.json({
     notifications: results,
     unread_count: unreadCount?.count || 0
   });
@@ -38,38 +39,41 @@ notifications.get('/', async (c) => {
 
 // 알림 읽음 처리
 notifications.put('/:id/read', async (c) => {
+  const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const userId = c.get('userId');
   const notificationId = c.req.param('id');
 
   await db.prepare(`
-    UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?
-  `).bind(notificationId, userId).run();
+    UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ? AND site_id = ?
+  `).bind(notificationId, userId, siteId).run();
 
   return c.json({ success: true, message: 'Notification marked as read' });
 });
 
 // 모든 알림 읽음 처리
 notifications.put('/read-all', async (c) => {
+  const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const userId = c.get('userId');
 
   await db.prepare(`
-    UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0
-  `).bind(userId).run();
+    UPDATE notifications SET is_read = 1 WHERE user_id = ? AND site_id = ? AND is_read = 0
+  `).bind(userId, siteId).run();
 
   return c.json({ success: true, message: 'All notifications marked as read' });
 });
 
 // 알림 삭제
 notifications.delete('/:id', async (c) => {
+  const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const userId = c.get('userId');
   const notificationId = c.req.param('id');
 
   await db.prepare(`
-    DELETE FROM notifications WHERE id = ? AND user_id = ?
-  `).bind(notificationId, userId).run();
+    DELETE FROM notifications WHERE id = ? AND user_id = ? AND site_id = ?
+  `).bind(notificationId, userId, siteId).run();
 
   return c.json({ success: true, message: 'Notification deleted' });
 });

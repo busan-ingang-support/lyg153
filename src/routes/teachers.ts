@@ -12,15 +12,16 @@ teachers.use('*', authMiddleware);
 // ============================================
 teachers.get('/', async (c) => {
   const db = c.env.DB;
+  const siteId = c.get('siteId') || 1;
 
   try {
     const { results } = await db.prepare(`
       SELECT t.*, u.name, u.email, u.phone
       FROM teachers t
       JOIN users u ON t.user_id = u.id
-      WHERE COALESCE(t.status, 1) = 1
+      WHERE t.site_id = ? AND COALESCE(t.status, 1) = 1
       ORDER BY t.teacher_number
-    `).all();
+    `).bind(siteId).all();
 
     return c.json({ teachers: results });
   } catch (error: any) {
@@ -35,14 +36,15 @@ teachers.get('/', async (c) => {
 teachers.get('/:id', async (c) => {
   const db = c.env.DB;
   const id = c.req.param('id');
+  const siteId = c.get('siteId') || 1;
 
   try {
     const teacher = await db.prepare(`
       SELECT t.*, u.name, u.email, u.phone
       FROM teachers t
       JOIN users u ON t.user_id = u.id
-      WHERE t.id = ? AND COALESCE(t.status, 1) = 1
-    `).bind(id).first();
+      WHERE t.id = ? AND t.site_id = ? AND COALESCE(t.status, 1) = 1
+    `).bind(id, siteId).first();
 
     if (!teacher) {
       return c.json({ error: '교사를 찾을 수 없습니다' }, 404);
@@ -60,6 +62,7 @@ teachers.get('/:id', async (c) => {
 // ============================================
 teachers.post('/', requireRole('admin', 'super_admin'), async (c) => {
   const db = c.env.DB;
+  const siteId = c.get('siteId') || 1;
   const { user_id, teacher_number, subject, hire_date, position, department } = await c.req.json();
 
   if (!user_id || !teacher_number) {
@@ -67,7 +70,7 @@ teachers.post('/', requireRole('admin', 'super_admin'), async (c) => {
   }
 
   // 사용자가 teacher 역할인지 확인
-  const targetUser = await db.prepare('SELECT role FROM users WHERE id = ?').bind(user_id).first();
+  const targetUser = await db.prepare('SELECT role FROM users WHERE id = ? AND site_id = ?').bind(user_id, siteId).first();
   if (!targetUser) {
     return c.json({ error: '해당 사용자를 찾을 수 없습니다' }, 404);
   }
@@ -77,15 +80,16 @@ teachers.post('/', requireRole('admin', 'super_admin'), async (c) => {
 
   try {
     const result = await db.prepare(`
-      INSERT INTO teachers (user_id, teacher_number, subject, hire_date, position, department)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO teachers (user_id, teacher_number, subject, hire_date, position, department, site_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `).bind(
       user_id,
       teacher_number,
       subject || null,
       hire_date || null,
       position || null,
-      department || null
+      department || null,
+      siteId
     ).run();
 
     if (!result.success) {
@@ -111,20 +115,22 @@ teachers.post('/', requireRole('admin', 'super_admin'), async (c) => {
 teachers.put('/:id', requireRole('admin', 'super_admin'), async (c) => {
   const db = c.env.DB;
   const id = c.req.param('id');
+  const siteId = c.get('siteId') || 1;
   const { teacher_number, subject, hire_date, position, department } = await c.req.json();
 
   try {
     const result = await db.prepare(`
       UPDATE teachers
       SET teacher_number = ?, subject = ?, hire_date = ?, position = ?, department = ?
-      WHERE id = ?
+      WHERE id = ? AND site_id = ?
     `).bind(
       teacher_number,
       subject || null,
       hire_date || null,
       position || null,
       department || null,
-      id
+      id,
+      siteId
     ).run();
 
     if (result.meta.changes === 0) {
@@ -147,13 +153,14 @@ teachers.put('/:id', requireRole('admin', 'super_admin'), async (c) => {
 teachers.delete('/:id', requireRole('admin', 'super_admin'), async (c) => {
   const db = c.env.DB;
   const id = c.req.param('id');
+  const siteId = c.get('siteId') || 1;
 
   try {
     const result = await db.prepare(`
       UPDATE teachers
       SET status = 0
-      WHERE id = ?
-    `).bind(id).run();
+      WHERE id = ? AND site_id = ?
+    `).bind(id, siteId).run();
 
     if (result.meta.changes === 0) {
       return c.json({ error: '교사를 찾을 수 없습니다' }, 404);
@@ -167,4 +174,3 @@ teachers.delete('/:id', requireRole('admin', 'super_admin'), async (c) => {
 });
 
 export default teachers;
-

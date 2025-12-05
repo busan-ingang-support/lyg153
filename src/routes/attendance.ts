@@ -6,9 +6,10 @@ const attendance = new Hono<{ Bindings: CloudflareBindings }>();
 
 // 출석 기록 조회
 attendance.get('/', async (c) => {
+  const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const { student_id, course_id, date_from, date_to } = c.req.query();
-  
+
   let query = `
     SELECT a.*, e.student_id, e.course_id, s.student_number, u.name as student_name, c.course_name
     FROM attendance a
@@ -16,10 +17,10 @@ attendance.get('/', async (c) => {
     JOIN students s ON e.student_id = s.id
     JOIN users u ON s.user_id = u.id
     JOIN courses c ON e.course_id = c.id
-    WHERE 1=1
+    WHERE a.site_id = ?
   `;
-  const params: any[] = [];
-  
+  const params: any[] = [siteId];
+
   if (student_id) {
     query += ' AND e.student_id = ?';
     params.push(Number(student_id));
@@ -36,38 +37,40 @@ attendance.get('/', async (c) => {
     query += ' AND a.attendance_date <= ?';
     params.push(date_to);
   }
-  
+
   query += ' ORDER BY a.attendance_date DESC';
-  
+
   const { results } = await db.prepare(query).bind(...params).all();
   return c.json({ attendance: results });
 });
 
 // 출석 체크 (교사, 관리자만 가능)
 attendance.post('/', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
+  const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const { enrollment_id, attendance_date, status, note, recorded_by } = await c.req.json();
-  
+
   const result = await db.prepare(`
-    INSERT INTO attendance (enrollment_id, attendance_date, status, note, recorded_by)
-    VALUES (?, ?, ?, ?, ?)
-    ON CONFLICT(enrollment_id, attendance_date) 
+    INSERT INTO attendance (enrollment_id, attendance_date, status, note, recorded_by, site_id)
+    VALUES (?, ?, ?, ?, ?, ?)
+    ON CONFLICT(enrollment_id, attendance_date)
     DO UPDATE SET status = ?, note = ?, recorded_by = ?
-  `).bind(enrollment_id, attendance_date, status, note || null, recorded_by, status, note || null, recorded_by).run();
-  
+  `).bind(enrollment_id, attendance_date, status, note || null, recorded_by, siteId, status, note || null, recorded_by).run();
+
   return c.json({ message: 'Attendance recorded', id: result.meta.last_row_id });
 });
 
 // 일괄 출석 체크 (반 전체, 교사/관리자만 가능)
 attendance.post('/bulk', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
+  const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const { course_id, attendance_date, records, recorded_by } = await c.req.json();
-  
+
   // records: [{ enrollment_id, status, note }]
   for (const record of records) {
     await db.prepare(`
-      INSERT INTO attendance (enrollment_id, attendance_date, status, note, recorded_by)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO attendance (enrollment_id, attendance_date, status, note, recorded_by, site_id)
+      VALUES (?, ?, ?, ?, ?, ?)
       ON CONFLICT(enrollment_id, attendance_date)
       DO UPDATE SET status = ?, note = ?, recorded_by = ?
     `).bind(
@@ -76,27 +79,29 @@ attendance.post('/bulk', requireRole('teacher', 'admin', 'super_admin'), async (
       record.status,
       record.note || null,
       recorded_by,
+      siteId,
       record.status,
       record.note || null,
       recorded_by
     ).run();
   }
-  
+
   return c.json({ message: 'Bulk attendance recorded' });
 });
 
 // 날짜별 학생 출석 체크용 API (간단 버전)
 attendance.get('/by-date', async (c) => {
+  const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const { date } = c.req.query();
-  
+
   if (!date) {
     return c.json({ error: 'date parameter is required' }, 400);
   }
-  
+
   // 모든 학생과 해당 날짜의 출석 기록을 가져옴
   const query = `
-    SELECT 
+    SELECT
       s.id as student_id,
       s.student_number,
       u.name as student_name,
@@ -104,11 +109,12 @@ attendance.get('/by-date', async (c) => {
       cl.name as class_name,
       COALESCE(
         (
-          SELECT a.status 
+          SELECT a.status
           FROM attendance a
           JOIN enrollments e ON a.enrollment_id = e.id
-          WHERE e.student_id = s.id 
+          WHERE e.student_id = s.id
           AND a.attendance_date = ?
+          AND a.site_id = ?
           LIMIT 1
         ),
         'not_recorded'
@@ -118,27 +124,29 @@ attendance.get('/by-date', async (c) => {
           SELECT a.note
           FROM attendance a
           JOIN enrollments e ON a.enrollment_id = e.id
-          WHERE e.student_id = s.id 
+          WHERE e.student_id = s.id
           AND a.attendance_date = ?
+          AND a.site_id = ?
           LIMIT 1
         ),
         ''
       ) as notes
     FROM students s
     JOIN users u ON s.user_id = u.id
-    LEFT JOIN student_class_history sch ON s.id = sch.student_id 
-      AND sch.semester_id = (SELECT id FROM semesters WHERE is_current = 1 LIMIT 1)
+    LEFT JOIN student_class_history sch ON s.id = sch.student_id
+      AND sch.semester_id = (SELECT id FROM semesters WHERE is_current = 1 AND site_id = ? LIMIT 1)
     LEFT JOIN classes cl ON sch.class_id = cl.id
-    WHERE s.status IN ('active', 'enrolled')
+    WHERE s.status IN ('active', 'enrolled') AND s.site_id = ?
     ORDER BY s.student_number
   `;
-  
-  const { results } = await db.prepare(query).bind(date, date).all();
+
+  const { results } = await db.prepare(query).bind(date, siteId, date, siteId, siteId, siteId).all();
   return c.json({ success: true, attendance: results });
 });
 
 // 학생별 출석 저장 (간단 버전, 교사/관리자만 가능)
 attendance.post('/simple', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
+  const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const { student_id, attendance_date, status, notes } = await c.req.json();
 
@@ -155,9 +163,9 @@ attendance.post('/simple', requireRole('teacher', 'admin', 'super_admin'), async
   // 현재 학생의 enrollment 찾기 (아무 과목이나)
   const enrollment = await db.prepare(`
     SELECT id FROM enrollments
-    WHERE student_id = ?
+    WHERE student_id = ? AND site_id = ?
     LIMIT 1
-  `).bind(student_id).first();
+  `).bind(student_id, siteId).first();
 
   if (!enrollment) {
     // enrollment가 없으면 임시로 하나 생성 (나중에 제대로 처리 필요)
@@ -166,8 +174,8 @@ attendance.post('/simple', requireRole('teacher', 'admin', 'super_admin'), async
 
   // 출석 저장
   const result = await db.prepare(`
-    INSERT INTO attendance (enrollment_id, attendance_date, status, note, recorded_by)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO attendance (enrollment_id, attendance_date, status, note, recorded_by, site_id)
+    VALUES (?, ?, ?, ?, ?, ?)
     ON CONFLICT(enrollment_id, attendance_date)
     DO UPDATE SET status = ?, note = ?
   `).bind(
@@ -176,6 +184,7 @@ attendance.post('/simple', requireRole('teacher', 'admin', 'super_admin'), async
     status,
     notes || null,
     recordedBy,
+    siteId,
     status,
     notes || null
   ).run();
@@ -185,6 +194,7 @@ attendance.post('/simple', requireRole('teacher', 'admin', 'super_admin'), async
 
 // 일괄 출석 저장 (날짜별 전체 학생, 교사/관리자만 가능)
 attendance.post('/bulk-simple', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
+  const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const { attendance_date, records } = await c.req.json();
 
@@ -204,67 +214,67 @@ attendance.post('/bulk-simple', requireRole('teacher', 'admin', 'super_admin'), 
   for (const record of records) {
     try {
       const { student_id, status, notes } = record;
-      
+
       // 학생의 enrollment 찾기 (우선순위: 현재 학기)
       let enrollment = await db.prepare(`
         SELECT e.id FROM enrollments e
         JOIN courses co ON e.course_id = co.id
         JOIN semesters sem ON co.semester_id = sem.id
-        WHERE e.student_id = ? AND sem.is_current = TRUE
+        WHERE e.student_id = ? AND sem.is_current = TRUE AND e.site_id = ?
         LIMIT 1
-      `).bind(student_id).first();
-      
+      `).bind(student_id, siteId).first();
+
       // 현재 학기 enrollment가 없으면 아무 enrollment나 사용
       if (!enrollment) {
         enrollment = await db.prepare(`
-          SELECT id FROM enrollments 
-          WHERE student_id = ? 
+          SELECT id FROM enrollments
+          WHERE student_id = ? AND site_id = ?
           LIMIT 1
-        `).bind(student_id).first();
+        `).bind(student_id, siteId).first();
       }
-      
+
       // enrollment가 아예 없으면 임시로 더미 enrollment 생성
       if (!enrollment) {
         // 현재 학기 찾기
         const currentSemester = await db.prepare(`
-          SELECT id FROM semesters WHERE is_current = TRUE LIMIT 1
-        `).first();
-        
+          SELECT id FROM semesters WHERE is_current = TRUE AND site_id = ? LIMIT 1
+        `).bind(siteId).first();
+
         if (!currentSemester) {
           errorCount++;
           console.error('No current semester found for student:', student_id);
           continue;
         }
-        
+
         // 기본 과목 찾기 (또는 생성)
         let defaultCourse = await db.prepare(`
-          SELECT id FROM courses 
-          WHERE semester_id = ? AND subject_id = 1 
+          SELECT id FROM courses
+          WHERE semester_id = ? AND subject_id = 1 AND site_id = ?
           LIMIT 1
-        `).bind(currentSemester.id).first();
-        
+        `).bind(currentSemester.id, siteId).first();
+
         if (!defaultCourse) {
           // 기본 과목이 없으면 생성
           const courseResult = await db.prepare(`
-            INSERT INTO courses (semester_id, subject_id, teacher_id)
-            VALUES (?, 1, 1)
-          `).bind(currentSemester.id).run();
+            INSERT INTO courses (semester_id, subject_id, teacher_id, site_id)
+            VALUES (?, 1, 1, ?)
+          `).bind(currentSemester.id, siteId).run();
           defaultCourse = { id: courseResult.meta.last_row_id };
         }
-        
+
         // enrollment 생성
         const enrollmentResult = await db.prepare(`
-          INSERT INTO enrollments (student_id, course_id)
-          VALUES (?, ?)
-        `).bind(student_id, defaultCourse.id).run();
-        
+          INSERT INTO enrollments (student_id, course_id, site_id)
+          VALUES (?, ?, ?)
+        `).bind(student_id, defaultCourse.id, siteId).run();
+
         enrollment = { id: enrollmentResult.meta.last_row_id };
       }
-      
+
       // 출석 기록 저장
       await db.prepare(`
-        INSERT INTO attendance (enrollment_id, attendance_date, status, note, recorded_by)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO attendance (enrollment_id, attendance_date, status, note, recorded_by, site_id)
+        VALUES (?, ?, ?, ?, ?, ?)
         ON CONFLICT(enrollment_id, attendance_date)
         DO UPDATE SET status = ?, note = ?
       `).bind(
@@ -273,6 +283,7 @@ attendance.post('/bulk-simple', requireRole('teacher', 'admin', 'super_admin'), 
         status,
         notes || null,
         recordedBy,
+        siteId,
         status,
         notes || null
       ).run();
@@ -282,7 +293,7 @@ attendance.post('/bulk-simple', requireRole('teacher', 'admin', 'super_admin'), 
       console.error('Error recording attendance for student:', record.student_id, err);
     }
   }
-  
+
   return c.json({
     success: true,
     message: `${successCount} records saved, ${errorCount} errors`,
@@ -293,6 +304,7 @@ attendance.post('/bulk-simple', requireRole('teacher', 'admin', 'super_admin'), 
 
 // 학생별 출석 요약 (학부모/학생/교사/관리자)
 attendance.get('/student/:student_id/summary', async (c) => {
+  const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const studentId = c.req.param('student_id');
   const userId = c.get('userId');
@@ -302,8 +314,8 @@ attendance.get('/student/:student_id/summary', async (c) => {
   if (userRole === 'parent') {
     // 학부모: 자녀만 조회 가능
     const relation = await db.prepare(`
-      SELECT id FROM parent_student WHERE parent_user_id = ? AND student_id = ? AND COALESCE(status, 1) = 1
-    `).bind(userId, studentId).first();
+      SELECT id FROM parent_student WHERE parent_user_id = ? AND student_id = ? AND COALESCE(status, 1) = 1 AND site_id = ?
+    `).bind(userId, studentId, siteId).first();
 
     if (!relation) {
       return c.json({ error: 'Forbidden: Not your child' }, 403);
@@ -311,8 +323,8 @@ attendance.get('/student/:student_id/summary', async (c) => {
   } else if (userRole === 'student') {
     // 학생: 본인만 조회 가능
     const student = await db.prepare(`
-      SELECT id FROM students WHERE user_id = ? AND id = ?
-    `).bind(userId, studentId).first();
+      SELECT id FROM students WHERE user_id = ? AND id = ? AND site_id = ?
+    `).bind(userId, studentId, siteId).first();
 
     if (!student) {
       return c.json({ error: 'Forbidden: Not your record' }, 403);
@@ -331,8 +343,8 @@ attendance.get('/student/:student_id/summary', async (c) => {
         SUM(CASE WHEN status = 'excused' THEN 1 ELSE 0 END) as excused
       FROM attendance a
       JOIN enrollments e ON a.enrollment_id = e.id
-      WHERE e.student_id = ? AND COALESCE(a.status, 'present') != ''
-    `).bind(studentId).first();
+      WHERE e.student_id = ? AND COALESCE(a.status, 'present') != '' AND a.site_id = ?
+    `).bind(studentId, siteId).first();
 
     return c.json({
       summary: {
@@ -351,6 +363,7 @@ attendance.get('/student/:student_id/summary', async (c) => {
 
 // 학생별 출석 기록 조회 (날짜 범위)
 attendance.get('/student/:student_id', async (c) => {
+  const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const studentId = c.req.param('student_id');
   const { start_date, end_date } = c.req.query();
@@ -361,8 +374,8 @@ attendance.get('/student/:student_id', async (c) => {
   if (userRole === 'parent') {
     // 학부모: 자녀만 조회 가능
     const relation = await db.prepare(`
-      SELECT id FROM parent_student WHERE parent_user_id = ? AND student_id = ? AND COALESCE(status, 1) = 1
-    `).bind(userId, studentId).first();
+      SELECT id FROM parent_student WHERE parent_user_id = ? AND student_id = ? AND COALESCE(status, 1) = 1 AND site_id = ?
+    `).bind(userId, studentId, siteId).first();
 
     if (!relation) {
       return c.json({ error: 'Forbidden: Not your child' }, 403);
@@ -370,9 +383,9 @@ attendance.get('/student/:student_id', async (c) => {
   } else if (userRole === 'student') {
     // 학생: 본인만 조회 가능
     const student = await db.prepare(`
-      SELECT id FROM students WHERE user_id = ? AND id = ?
-    `).bind(userId, studentId).first();
-    
+      SELECT id FROM students WHERE user_id = ? AND id = ? AND site_id = ?
+    `).bind(userId, studentId, siteId).first();
+
     if (!student) {
       return c.json({ error: 'Forbidden: Not your record' }, 403);
     }
@@ -393,9 +406,9 @@ attendance.get('/student/:student_id', async (c) => {
       JOIN enrollments e ON a.enrollment_id = e.id
       JOIN courses c ON e.course_id = c.id
       LEFT JOIN subjects sub ON c.subject_id = sub.id
-      WHERE e.student_id = ? AND a.status IS NOT NULL
+      WHERE e.student_id = ? AND a.status IS NOT NULL AND a.site_id = ?
     `;
-    const params: any[] = [studentId];
+    const params: any[] = [studentId, siteId];
 
     if (start_date) {
       query += ' AND a.attendance_date >= ?';

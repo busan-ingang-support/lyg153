@@ -6,11 +6,12 @@ const grades = new Hono<{ Bindings: CloudflareBindings }>();
 
 // 성적 조회
 grades.get('/', async (c) => {
+  const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const { student_id, course_id, semester_id } = c.req.query();
-  
+
   let query = `
-    SELECT g.*, e.student_id, e.course_id, s.student_number, u.name as student_name, 
+    SELECT g.*, e.student_id, e.course_id, s.student_number, u.name as student_name,
            c.course_name, sub.name as subject_name
     FROM grades g
     JOIN enrollments e ON g.enrollment_id = e.id
@@ -18,10 +19,10 @@ grades.get('/', async (c) => {
     JOIN users u ON s.user_id = u.id
     JOIN courses c ON e.course_id = c.id
     JOIN subjects sub ON c.subject_id = sub.id
-    WHERE 1=1
+    WHERE g.site_id = ?
   `;
-  const params: any[] = [];
-  
+  const params: any[] = [siteId];
+
   if (student_id) {
     query += ' AND e.student_id = ?';
     params.push(Number(student_id));
@@ -34,21 +35,22 @@ grades.get('/', async (c) => {
     query += ' AND c.semester_id = ?';
     params.push(Number(semester_id));
   }
-  
+
   query += ' ORDER BY g.exam_date DESC';
-  
+
   const { results } = await db.prepare(query).bind(...params).all();
   return c.json({ grades: results });
 });
 
 // 성적 입력 (교사, 관리자만 가능)
 grades.post('/', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
+  const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const { enrollment_id, exam_type, score, max_score, weight, exam_date, note, recorded_by } = await c.req.json();
-  
+
   const result = await db.prepare(`
-    INSERT INTO grades (enrollment_id, exam_type, score, max_score, weight, exam_date, note, recorded_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO grades (enrollment_id, exam_type, score, max_score, weight, exam_date, note, recorded_by, site_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).bind(
     enrollment_id,
     exam_type,
@@ -57,21 +59,23 @@ grades.post('/', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
     weight || 1.0,
     exam_date || null,
     note || null,
-    recorded_by
+    recorded_by,
+    siteId
   ).run();
-  
+
   return c.json({ message: 'Grade recorded', gradeId: result.meta.last_row_id }, 201);
 });
 
 // 최종 성적 계산 및 저장 (교사, 관리자만 가능)
 grades.post('/final', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
+  const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const { enrollment_id, approved_by } = await c.req.json();
 
   // 모든 성적 조회
   const { results: allGrades } = await db.prepare(
-    'SELECT * FROM grades WHERE enrollment_id = ?'
-  ).bind(enrollment_id).all();
+    'SELECT * FROM grades WHERE enrollment_id = ? AND site_id = ?'
+  ).bind(enrollment_id, siteId).all();
 
   // 가중 평균 계산
   let totalScore = 0;
@@ -98,8 +102,8 @@ grades.post('/final', requireRole('teacher', 'admin', 'super_admin'), async (c) 
 
   // 최종 성적 저장
   await db.prepare(`
-    INSERT INTO final_grades (enrollment_id, total_score, letter_grade, approved_by, approved_at)
-    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+    INSERT INTO final_grades (enrollment_id, total_score, letter_grade, approved_by, approved_at, site_id)
+    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
     ON CONFLICT(enrollment_id)
     DO UPDATE SET total_score = ?, letter_grade = ?, approved_by = ?, approved_at = CURRENT_TIMESTAMP
   `).bind(
@@ -107,6 +111,7 @@ grades.post('/final', requireRole('teacher', 'admin', 'super_admin'), async (c) 
     finalScore,
     letterGrade,
     approved_by,
+    siteId,
     finalScore,
     letterGrade,
     approved_by
@@ -117,6 +122,7 @@ grades.post('/final', requireRole('teacher', 'admin', 'super_admin'), async (c) 
 
 // 학생별 성적 조회 (학부모/학생/교사/관리자)
 grades.get('/student/:student_id', async (c) => {
+  const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const studentId = c.req.param('student_id');
   const userId = c.get('userId');
@@ -126,8 +132,8 @@ grades.get('/student/:student_id', async (c) => {
   if (userRole === 'parent') {
     // 학부모: 자녀만 조회 가능
     const relation = await db.prepare(`
-      SELECT id FROM parent_student WHERE parent_user_id = ? AND student_id = ? AND COALESCE(status, 1) = 1
-    `).bind(userId, studentId).first();
+      SELECT id FROM parent_student WHERE parent_user_id = ? AND student_id = ? AND COALESCE(status, 1) = 1 AND site_id = ?
+    `).bind(userId, studentId, siteId).first();
 
     if (!relation) {
       return c.json({ error: 'Forbidden: Not your child' }, 403);
@@ -135,8 +141,8 @@ grades.get('/student/:student_id', async (c) => {
   } else if (userRole === 'student') {
     // 학생: 본인만 조회 가능
     const student = await db.prepare(`
-      SELECT id FROM students WHERE user_id = ? AND id = ?
-    `).bind(userId, studentId).first();
+      SELECT id FROM students WHERE user_id = ? AND id = ? AND site_id = ?
+    `).bind(userId, studentId, siteId).first();
 
     if (!student) {
       return c.json({ error: 'Forbidden: Not your record' }, 403);
@@ -163,9 +169,9 @@ grades.get('/student/:student_id', async (c) => {
       JOIN courses c ON e.course_id = c.id
       JOIN subjects sub ON c.subject_id = sub.id
       JOIN semesters sem ON c.semester_id = sem.id
-      WHERE e.student_id = ?
+      WHERE e.student_id = ? AND g.site_id = ?
       ORDER BY g.exam_date DESC, sub.name, g.exam_type
-    `).bind(studentId).all();
+    `).bind(studentId, siteId).all();
 
     return c.json({ grades: results });
   } catch (error: any) {

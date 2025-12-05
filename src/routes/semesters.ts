@@ -10,21 +10,22 @@ semesters.use('*', authMiddleware);
 // 모든 학기 조회
 semesters.get('/', async (c) => {
   try {
+    const siteId = c.get('siteId') || 1;
     const db = c.env.DB;
     const { year } = c.req.query();
-    
-    let query = 'SELECT * FROM semesters WHERE 1=1';
-    const params: any[] = [];
-    
+
+    let query = 'SELECT * FROM semesters WHERE site_id = ?';
+    const params: any[] = [siteId];
+
     if (year) {
       query += ' AND year = ?';
       params.push(Number(year));
     }
-    
+
     query += ' ORDER BY year DESC, semester DESC';
-    
+
     const { results } = await db.prepare(query).bind(...params).all();
-    
+
     return c.json({ semesters: results });
   } catch (error) {
     console.error('Get semesters error:', error);
@@ -35,16 +36,17 @@ semesters.get('/', async (c) => {
 // 현재 학기 조회
 semesters.get('/current', async (c) => {
   try {
+    const siteId = c.get('siteId') || 1;
     const db = c.env.DB;
-    
+
     const semester = await db.prepare(
-      'SELECT * FROM semesters WHERE is_current = 1'
-    ).first();
-    
+      'SELECT * FROM semesters WHERE site_id = ? AND is_current = 1'
+    ).bind(siteId).first();
+
     if (!semester) {
       return c.json({ error: 'No current semester found' }, 404);
     }
-    
+
     return c.json({ semester });
   } catch (error) {
     console.error('Get current semester error:', error);
@@ -55,23 +57,24 @@ semesters.get('/current', async (c) => {
 // 학기 생성 (관리자 전용)
 semesters.post('/', async (c) => {
   try {
+    const siteId = c.get('siteId') || 1;
     const db = c.env.DB;
     const { name, year, semester, start_date, end_date, is_current } = await c.req.json();
-    
+
     if (!name || !year || !semester || !start_date || !end_date) {
       return c.json({ error: 'Missing required fields' }, 400);
     }
-    
+
     // 현재 학기로 설정하는 경우 다른 학기의 is_current를 0으로
     if (is_current) {
-      await db.prepare('UPDATE semesters SET is_current = 0').run();
+      await db.prepare('UPDATE semesters SET is_current = 0 WHERE site_id = ?').bind(siteId).run();
     }
-    
+
     const result = await db.prepare(`
-      INSERT INTO semesters (name, year, semester, start_date, end_date, is_current)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).bind(name, year, semester, start_date, end_date, is_current ? 1 : 0).run();
-    
+      INSERT INTO semesters (name, year, semester, start_date, end_date, is_current, site_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).bind(name, year, semester, start_date, end_date, is_current ? 1 : 0, siteId).run();
+
     return c.json({
       message: 'Semester created successfully',
       semesterId: result.meta.last_row_id
@@ -88,13 +91,14 @@ semesters.post('/', async (c) => {
 // 학기 수정
 semesters.put('/:id', async (c) => {
   try {
+    const siteId = c.get('siteId') || 1;
     const db = c.env.DB;
     const id = c.req.param('id');
     const { name, start_date, end_date, is_current } = await c.req.json();
-    
+
     const updates: string[] = [];
     const params: any[] = [];
-    
+
     if (name) {
       updates.push('name = ?');
       params.push(name);
@@ -110,22 +114,23 @@ semesters.put('/:id', async (c) => {
     if (is_current !== undefined) {
       // 현재 학기로 설정하는 경우 다른 학기의 is_current를 0으로
       if (is_current) {
-        await db.prepare('UPDATE semesters SET is_current = 0').run();
+        await db.prepare('UPDATE semesters SET is_current = 0 WHERE site_id = ?').bind(siteId).run();
       }
       updates.push('is_current = ?');
       params.push(is_current ? 1 : 0);
     }
-    
+
     if (updates.length === 0) {
       return c.json({ error: 'No fields to update' }, 400);
     }
-    
+
     params.push(id);
-    
+    params.push(siteId);
+
     await db.prepare(
-      `UPDATE semesters SET ${updates.join(', ')} WHERE id = ?`
+      `UPDATE semesters SET ${updates.join(', ')} WHERE id = ? AND site_id = ?`
     ).bind(...params).run();
-    
+
     return c.json({ message: 'Semester updated successfully' });
   } catch (error) {
     console.error('Update semester error:', error);

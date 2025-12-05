@@ -8,38 +8,42 @@ const users = new Hono<{ Bindings: CloudflareBindings }>();
 users.get('/', async (c) => {
   try {
     const db = c.env.DB;
+    const siteId = c.get('siteId') || 1;
     const { role, search, limit = 50, offset = 0 } = c.req.query();
-    
+
     // teacher 역할인 경우 teachers 테이블과 조인하여 teacher_id 포함
     let query: string;
     if (role === 'teacher') {
       query = `
-        SELECT 
-          u.id, 
-          u.username, 
-          u.email, 
-          u.name, 
-          u.role, 
-          u.phone, 
-          u.is_active, 
+        SELECT
+          u.id,
+          u.username,
+          u.email,
+          u.name,
+          u.role,
+          u.phone,
+          u.is_active,
           u.created_at,
           t.id as teacher_id,
           t.subject as teacher_subject
         FROM users u
         LEFT JOIN teachers t ON u.id = t.user_id
-        WHERE u.role = ?
+        WHERE u.role = ? AND u.site_id = ?
       `;
     } else {
-      query = 'SELECT id, username, email, name, role, phone, is_active, created_at FROM users WHERE 1=1';
+      query = 'SELECT id, username, email, name, role, phone, is_active, created_at FROM users WHERE site_id = ?';
     }
-    
+
     const params: any[] = [];
-    
+
     if (role && role !== 'teacher') {
+      params.push(siteId);
       query += ' AND role = ?';
       params.push(role);
     } else if (role === 'teacher') {
-      params.push(role);
+      params.push(role, siteId);
+    } else {
+      params.push(siteId);
     }
     
     if (search) {
@@ -73,10 +77,11 @@ users.get('/:id', async (c) => {
   try {
     const db = c.env.DB;
     const id = c.req.param('id');
-    
+    const siteId = c.get('siteId') || 1;
+
     const user = await db.prepare(
-      'SELECT id, username, email, name, role, phone, is_active, created_at FROM users WHERE id = ?'
-    ).bind(id).first();
+      'SELECT id, username, email, name, role, phone, is_active, created_at FROM users WHERE id = ? AND site_id = ?'
+    ).bind(id, siteId).first();
     
     if (!user) {
       return c.json({ error: 'User not found' }, 404);
@@ -127,19 +132,20 @@ users.get('/:id', async (c) => {
 users.post('/', async (c) => {
   try {
     const db = c.env.DB;
+    const siteId = c.get('siteId') || 1;
     const { username, password, email, name, role, phone } = await c.req.json();
-    
+
     if (!username || !password || !email || !name || !role) {
       return c.json({ error: 'Missing required fields' }, 400);
     }
-    
+
     // 비밀번호 해싱
     const passwordHash = await hashPassword(password);
-    
+
     // 사용자 생성
     const result = await db.prepare(
-      'INSERT INTO users (username, password_hash, email, name, role, phone) VALUES (?, ?, ?, ?, ?, ?)'
-    ).bind(username, passwordHash, email, name, role, phone || null).run();
+      'INSERT INTO users (username, password_hash, email, name, role, phone, site_id) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    ).bind(username, passwordHash, email, name, role, phone || null, siteId).run();
     
     if (!result.success) {
       return c.json({ error: 'Failed to create user' }, 500);
@@ -163,6 +169,7 @@ users.put('/:id', async (c) => {
   try {
     const db = c.env.DB;
     const id = c.req.param('id');
+    const siteId = c.get('siteId') || 1;
     const { email, name, phone, is_active, password } = await c.req.json();
     
     const updates: string[] = [];
@@ -195,10 +202,10 @@ users.put('/:id', async (c) => {
     }
     
     updates.push('updated_at = CURRENT_TIMESTAMP');
-    params.push(id);
-    
+    params.push(id, siteId);
+
     await db.prepare(
-      `UPDATE users SET ${updates.join(', ')} WHERE id = ?`
+      `UPDATE users SET ${updates.join(', ')} WHERE id = ? AND site_id = ?`
     ).bind(...params).run();
     
     return c.json({ message: 'User updated successfully' });
@@ -213,20 +220,21 @@ users.put('/:id/role', async (c) => {
   try {
     const db = c.env.DB;
     const id = c.req.param('id');
+    const siteId = c.get('siteId') || 1;
     const { role } = await c.req.json();
-    
+
     if (!role) {
       return c.json({ error: 'Role is required' }, 400);
     }
-    
+
     const validRoles = ['super_admin', 'admin', 'teacher', 'student', 'parent'];
     if (!validRoles.includes(role)) {
       return c.json({ error: 'Invalid role' }, 400);
     }
-    
+
     await db.prepare(
-      'UPDATE users SET role = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-    ).bind(role, id).run();
+      'UPDATE users SET role = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND site_id = ?'
+    ).bind(role, id, siteId).run();
     
     return c.json({ message: 'User role updated successfully' });
   } catch (error) {
@@ -240,9 +248,10 @@ users.delete('/:id', async (c) => {
   try {
     const db = c.env.DB;
     const id = c.req.param('id');
-    
+    const siteId = c.get('siteId') || 1;
+
     // 사용자 삭제 (CASCADE로 관련 데이터도 삭제됨)
-    await db.prepare('DELETE FROM users WHERE id = ?').bind(id).run();
+    await db.prepare('DELETE FROM users WHERE id = ? AND site_id = ?').bind(id, siteId).run();
     
     return c.json({ message: 'User deleted successfully' });
   } catch (error) {

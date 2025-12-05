@@ -6,6 +6,7 @@ const app = new Hono<{ Bindings: CloudflareBindings }>();
 // 수상 목록 조회 (특정 학생 또는 전체)
 app.get('/', async (c) => {
   const { DB } = c.env;
+  const siteId = c.get('siteId') || 1;
   const studentId = c.req.query('student_id');
   const semesterId = c.req.query('semester_id');
   const limit = parseInt(c.req.query('limit') || '50');
@@ -13,7 +14,7 @@ app.get('/', async (c) => {
 
   try {
     let query = `
-      SELECT 
+      SELECT
         a.*,
         u.name as student_name,
         s.student_number,
@@ -22,9 +23,9 @@ app.get('/', async (c) => {
       LEFT JOIN students s ON a.student_id = s.id
       LEFT JOIN users u ON s.user_id = u.id
       LEFT JOIN semesters sem ON a.semester_id = sem.id
-      WHERE 1=1
+      WHERE a.site_id = ?
     `;
-    const params: any[] = [];
+    const params: any[] = [siteId];
 
     if (studentId) {
       query += ` AND a.student_id = ?`;
@@ -42,14 +43,14 @@ app.get('/', async (c) => {
     const result = await DB.prepare(query).bind(...params).all();
 
     // 전체 개수 조회
-    let countQuery = `SELECT COUNT(*) as total FROM awards WHERE 1=1`;
-    const countParams: any[] = [];
-    
+    let countQuery = `SELECT COUNT(*) as total FROM awards WHERE site_id = ?`;
+    const countParams: any[] = [siteId];
+
     if (studentId) {
       countQuery += ` AND student_id = ?`;
       countParams.push(studentId);
     }
-    
+
     if (semesterId) {
       countQuery += ` AND semester_id = ?`;
       countParams.push(semesterId);
@@ -72,11 +73,12 @@ app.get('/', async (c) => {
 // 특정 수상 조회
 app.get('/:id', async (c) => {
   const { DB } = c.env;
+  const siteId = c.get('siteId') || 1;
   const id = c.req.param('id');
 
   try {
     const result = await DB.prepare(`
-      SELECT 
+      SELECT
         a.*,
         u.name as student_name,
         s.student_number,
@@ -85,8 +87,8 @@ app.get('/:id', async (c) => {
       LEFT JOIN students s ON a.student_id = s.id
       LEFT JOIN users u ON s.user_id = u.id
       LEFT JOIN semesters sem ON a.semester_id = sem.id
-      WHERE a.id = ?
-    `).bind(id).first();
+      WHERE a.id = ? AND a.site_id = ?
+    `).bind(id, siteId).first();
 
     if (!result) {
       return c.json({ error: '수상 정보를 찾을 수 없습니다.' }, 404);
@@ -102,36 +104,38 @@ app.get('/:id', async (c) => {
 // 수상 추가
 app.post('/', async (c) => {
   const { DB } = c.env;
-  
+  const siteId = c.get('siteId') || 1;
+
   try {
     const body = await c.req.json();
-    const { 
-      student_id, 
-      semester_id, 
-      award_name, 
+    const {
+      student_id,
+      semester_id,
+      award_name,
       award_category,
       award_level,
       award_date,
       organizer,
-      description 
+      description
     } = body;
 
     // 필수 필드 검증
     if (!student_id || !semester_id || !award_name || !award_date) {
-      return c.json({ 
-        error: '필수 필드가 누락되었습니다. (student_id, semester_id, award_name, award_date)' 
+      return c.json({
+        error: '필수 필드가 누락되었습니다. (student_id, semester_id, award_name, award_date)'
       }, 400);
     }
 
     const result = await DB.prepare(`
       INSERT INTO awards (
-        student_id, semester_id, award_name, award_category, 
+        site_id, student_id, semester_id, award_name, award_category,
         award_level, award_date, organizer, description
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
-      student_id, 
-      semester_id, 
-      award_name, 
+      siteId,
+      student_id,
+      semester_id,
+      award_name,
       award_category || null,
       award_level || null,
       award_date,
@@ -143,9 +147,9 @@ app.post('/', async (c) => {
       throw new Error('수상 추가 실패');
     }
 
-    return c.json({ 
+    return c.json({
       message: '수상이 추가되었습니다.',
-      id: result.meta.last_row_id 
+      id: result.meta.last_row_id
     }, 201);
   } catch (error: any) {
     console.error('수상 추가 실패:', error);
@@ -156,22 +160,23 @@ app.post('/', async (c) => {
 // 수상 수정
 app.put('/:id', async (c) => {
   const { DB } = c.env;
+  const siteId = c.get('siteId') || 1;
   const id = c.req.param('id');
 
   try {
     const body = await c.req.json();
-    const { 
-      award_name, 
+    const {
+      award_name,
       award_category,
       award_level,
       award_date,
       organizer,
-      description 
+      description
     } = body;
 
     const result = await DB.prepare(`
-      UPDATE awards 
-      SET 
+      UPDATE awards
+      SET
         award_name = COALESCE(?, award_name),
         award_category = COALESCE(?, award_category),
         award_level = COALESCE(?, award_level),
@@ -179,7 +184,7 @@ app.put('/:id', async (c) => {
         organizer = COALESCE(?, organizer),
         description = COALESCE(?, description),
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
+      WHERE id = ? AND site_id = ?
     `).bind(
       award_name || null,
       award_category || null,
@@ -187,7 +192,8 @@ app.put('/:id', async (c) => {
       award_date || null,
       organizer || null,
       description || null,
-      id
+      id,
+      siteId
     ).run();
 
     if (!result.success) {
@@ -204,10 +210,11 @@ app.put('/:id', async (c) => {
 // 수상 삭제
 app.delete('/:id', async (c) => {
   const { DB } = c.env;
+  const siteId = c.get('siteId') || 1;
   const id = c.req.param('id');
 
   try {
-    const result = await DB.prepare('DELETE FROM awards WHERE id = ?').bind(id).run();
+    const result = await DB.prepare('DELETE FROM awards WHERE id = ? AND site_id = ?').bind(id, siteId).run();
 
     if (!result.success) {
       throw new Error('수상 삭제 실패');
@@ -223,18 +230,19 @@ app.delete('/:id', async (c) => {
 // 학생별 수상 통계
 app.get('/stats/by-student/:studentId', async (c) => {
   const { DB } = c.env;
+  const siteId = c.get('siteId') || 1;
   const studentId = c.req.param('studentId');
 
   try {
     const result = await DB.prepare(`
-      SELECT 
+      SELECT
         COUNT(*) as total_awards,
         award_category,
         COUNT(*) as count
       FROM awards
-      WHERE student_id = ?
+      WHERE student_id = ? AND site_id = ?
       GROUP BY award_category
-    `).bind(studentId).all();
+    `).bind(studentId, siteId).all();
 
     return c.json({
       student_id: studentId,

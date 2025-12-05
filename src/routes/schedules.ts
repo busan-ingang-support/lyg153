@@ -7,13 +7,14 @@ const schedules = new Hono<{ Bindings: CloudflareBindings }>();
 // 시간표 목록 조회 (반별/요일별)
 // ============================================
 schedules.get('/', async (c) => {
+  const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const class_id = c.req.query('class_id');
   const day_of_week = c.req.query('day_of_week');
-  
+
   try {
     let query = `
-      SELECT 
+      SELECT
         sch.*,
         c.course_name,
         s.name as subject_name,
@@ -26,25 +27,25 @@ schedules.get('/', async (c) => {
       LEFT JOIN teachers t ON c.teacher_id = t.id
       LEFT JOIN users u ON t.user_id = u.id
       LEFT JOIN classes cl ON sch.class_id = cl.id
-      WHERE 1=1
+      WHERE sch.site_id = ?
     `;
-    
-    const params: any[] = [];
-    
+
+    const params: any[] = [siteId];
+
     if (class_id) {
       query += ' AND sch.class_id = ?';
       params.push(parseInt(class_id));
     }
-    
+
     if (day_of_week) {
       query += ' AND sch.day_of_week = ?';
       params.push(day_of_week);
     }
-    
+
     query += ' ORDER BY sch.day_of_week, sch.period';
-    
+
     const { results } = await db.prepare(query).bind(...params).all();
-    
+
     return c.json({ schedules: results || [] });
   } catch (error: any) {
     console.error('시간표 조회 오류:', error);
@@ -56,12 +57,13 @@ schedules.get('/', async (c) => {
 // 반별 주간 시간표 조회 (그리드 형태)
 // ============================================
 schedules.get('/weekly/:classId', async (c) => {
+  const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const classId = c.req.param('classId');
-  
+
   try {
     const { results } = await db.prepare(`
-      SELECT 
+      SELECT
         sch.*,
         c.course_name,
         s.name as subject_name,
@@ -72,9 +74,9 @@ schedules.get('/weekly/:classId', async (c) => {
       LEFT JOIN subjects s ON c.subject_id = s.id
       LEFT JOIN teachers t ON c.teacher_id = t.id
       LEFT JOIN users u ON t.user_id = u.id
-      WHERE sch.class_id = ?
+      WHERE sch.class_id = ? AND sch.site_id = ?
       ORDER BY sch.day_of_week, sch.period
-    `).bind(classId).all();
+    `).bind(classId, siteId).all();
     
     // 요일별, 교시별로 그룹화
     const weekDays = ['월', '화', '수', '목', '금'];
@@ -129,34 +131,36 @@ schedules.post('/', async (c) => {
   }
   
   try {
+    const siteId = c.get('siteId') || 1;
+
     // 기존 시간표 확인 (같은 반, 요일, 교시)
     const existing = await db.prepare(`
-      SELECT id FROM schedules 
-      WHERE class_id = ? AND day_of_week = ? AND period = ?
-    `).bind(class_id, day_of_week, period).first();
-    
+      SELECT id FROM schedules
+      WHERE class_id = ? AND day_of_week = ? AND period = ? AND site_id = ?
+    `).bind(class_id, day_of_week, period, siteId).first();
+
     if (existing) {
       // 업데이트
       await db.prepare(`
-        UPDATE schedules 
+        UPDATE schedules
         SET course_id = ?, room_number = ?
-        WHERE id = ?
-      `).bind(course_id, room_number || null, existing.id).run();
-      
-      return c.json({ 
+        WHERE id = ? AND site_id = ?
+      `).bind(course_id, room_number || null, existing.id, siteId).run();
+
+      return c.json({
         message: '시간표가 수정되었습니다',
         id: existing.id
       });
     } else {
       // 삽입
       const result = await db.prepare(`
-        INSERT INTO schedules (class_id, course_id, day_of_week, period, room_number)
-        VALUES (?, ?, ?, ?, ?)
-      `).bind(class_id, course_id, day_of_week, period, room_number || null).run();
-      
-      return c.json({ 
+        INSERT INTO schedules (site_id, class_id, course_id, day_of_week, period, room_number)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).bind(siteId, class_id, course_id, day_of_week, period, room_number || null).run();
+
+      return c.json({
         message: '시간표가 생성되었습니다',
-        id: result.meta.last_row_id 
+        id: result.meta.last_row_id
       }, 201);
     }
   } catch (error: any) {
@@ -169,16 +173,17 @@ schedules.post('/', async (c) => {
 // 시간표 항목 삭제
 // ============================================
 schedules.delete('/:id', async (c) => {
+  const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const id = c.req.param('id');
-  
+
   try {
-    const result = await db.prepare('DELETE FROM schedules WHERE id = ?').bind(id).run();
-    
+    const result = await db.prepare('DELETE FROM schedules WHERE id = ? AND site_id = ?').bind(id, siteId).run();
+
     if (result.meta.changes === 0) {
       return c.json({ error: '시간표 항목을 찾을 수 없습니다' }, 404);
     }
-    
+
     return c.json({ message: '시간표 항목이 삭제되었습니다' });
   } catch (error: any) {
     console.error('시간표 삭제 오류:', error);
@@ -190,21 +195,22 @@ schedules.delete('/:id', async (c) => {
 // 특정 시간표 항목 삭제 (반, 요일, 교시로)
 // ============================================
 schedules.delete('/slot/:classId/:dayOfWeek/:period', async (c) => {
+  const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const classId = c.req.param('classId');
   const dayOfWeek = c.req.param('dayOfWeek');
   const period = c.req.param('period');
-  
+
   try {
     const result = await db.prepare(`
-      DELETE FROM schedules 
-      WHERE class_id = ? AND day_of_week = ? AND period = ?
-    `).bind(classId, dayOfWeek, period).run();
-    
+      DELETE FROM schedules
+      WHERE class_id = ? AND day_of_week = ? AND period = ? AND site_id = ?
+    `).bind(classId, dayOfWeek, period, siteId).run();
+
     if (result.meta.changes === 0) {
       return c.json({ error: '시간표 항목을 찾을 수 없습니다' }, 404);
     }
-    
+
     return c.json({ message: '시간표 항목이 삭제되었습니다' });
   } catch (error: any) {
     console.error('시간표 삭제 오류:', error);
@@ -216,33 +222,35 @@ schedules.delete('/slot/:classId/:dayOfWeek/:period', async (c) => {
 // 시간표 충돌 체크
 // ============================================
 schedules.post('/check-conflict', async (c) => {
+  const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const { teacher_id, day_of_week, period, exclude_class_id } = await c.req.json();
-  
+
   try {
     let query = `
-      SELECT 
+      SELECT
         sch.*,
         cl.name as class_name,
         c.course_name
       FROM schedules sch
       LEFT JOIN courses c ON sch.course_id = c.id
       LEFT JOIN classes cl ON sch.class_id = cl.id
-      WHERE c.teacher_id = ? 
-        AND sch.day_of_week = ? 
+      WHERE c.teacher_id = ?
+        AND sch.day_of_week = ?
         AND sch.period = ?
+        AND sch.site_id = ?
     `;
-    
-    const params: any[] = [teacher_id, day_of_week, period];
-    
+
+    const params: any[] = [teacher_id, day_of_week, period, siteId];
+
     if (exclude_class_id) {
       query += ' AND sch.class_id != ?';
       params.push(exclude_class_id);
     }
-    
+
     const { results } = await db.prepare(query).bind(...params).all();
-    
-    return c.json({ 
+
+    return c.json({
       has_conflict: (results?.length || 0) > 0,
       conflicts: results || []
     });
@@ -256,15 +264,16 @@ schedules.post('/check-conflict', async (c) => {
 // 교시별 시간 정보 조회
 // ============================================
 schedules.get('/periods', async (c) => {
+  const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
-  
+
   try {
     const { results } = await db.prepare(`
-      SELECT * FROM schedule_periods 
-      WHERE is_active = 1
+      SELECT * FROM schedule_periods
+      WHERE is_active = 1 AND site_id = ?
       ORDER BY period_number
-    `).all();
-    
+    `).bind(siteId).all();
+
     return c.json({ periods: results || [] });
   } catch (error: any) {
     console.error('교시 시간 조회 오류:', error);
