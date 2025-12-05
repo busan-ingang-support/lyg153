@@ -17,14 +17,15 @@ INSERT OR IGNORE INTO semesters (site_id, name, start_date, end_date, is_current
 (2, '2024학년도 2학기', '2024-09-01', '2025-02-28', 0);
 
 -- 4. 반 정보 (site_id 2)
-INSERT OR IGNORE INTO classes (site_id, name, grade, description) VALUES
-(2, '1학년 1반', 1, '2024학년도 1학년 1반'),
-(2, '1학년 2반', 1, '2024학년도 1학년 2반'),
-(2, '2학년 1반', 2, '2024학년도 2학년 1반'),
-(2, '3학년 1반', 3, '2024학년도 3학년 1반');
+-- 먼저 현재 학기 ID를 가져와야 함 (site_id 2의 첫 번째 학기)
+INSERT OR IGNORE INTO classes (site_id, name, grade, semester_id) VALUES
+(2, '1학년 1반', 1, (SELECT id FROM semesters WHERE site_id = 2 AND name = '2024학년도 1학기')),
+(2, '1학년 2반', 1, (SELECT id FROM semesters WHERE site_id = 2 AND name = '2024학년도 1학기')),
+(2, '2학년 1반', 2, (SELECT id FROM semesters WHERE site_id = 2 AND name = '2024학년도 1학기')),
+(2, '3학년 1반', 3, (SELECT id FROM semesters WHERE site_id = 2 AND name = '2024학년도 1학기'));
 
 -- 5. 과목 정보 (site_id 2)
-INSERT OR IGNORE INTO subjects (site_id, name, grade_level, subject_code, description, credit_hours) VALUES
+INSERT OR IGNORE INTO subjects (site_id, name, grade, code, description, credits) VALUES
 (2, '국어', 1, 'KOR1', '1학년 국어', 4),
 (2, '수학', 1, 'MATH1', '1학년 수학', 4),
 (2, '영어', 1, 'ENG1', '1학년 영어', 4),
