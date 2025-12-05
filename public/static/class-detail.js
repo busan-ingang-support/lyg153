@@ -1288,10 +1288,10 @@ async function loadClassSchedule() {
         <div class="mb-4 flex justify-between items-center">
             <h3 class="text-xl font-bold text-gray-800">시간표</h3>
             <div class="flex gap-2">
-                <button onclick="editScheduleMode(currentClassId)" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                <button onclick="editScheduleMode(${currentClassId})" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
                     <i class="fas fa-edit mr-2"></i>시간표 편집
                 </button>
-                <button onclick="manageCourses(currentClassId)" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+                <button onclick="manageCourses(${currentClassId})" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
                     <i class="fas fa-book mr-2"></i>수업 관리
                 </button>
             </div>
