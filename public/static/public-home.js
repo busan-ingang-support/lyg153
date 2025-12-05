@@ -66,17 +66,6 @@ async function showPublicHome() {
                                 <p class="text-sm text-blue-600 font-medium">${escapeHtml(homepageSettings.school_slogan)}</p>
                             </div>
                         </div>
-                        <div class="hidden lg:flex items-center space-x-2">
-                            <a href="#" onclick="navigatePublicPage('about')" class="px-3 py-2 text-sm text-gray-600 hover:text-blue-600">
-                                <i class="fas fa-info-circle mr-1"></i>학교소개
-                            </a>
-                            <a href="#" onclick="navigatePublicPage('notice')" class="px-3 py-2 text-sm text-gray-600 hover:text-blue-600">
-                                <i class="fas fa-bullhorn mr-1"></i>공지사항
-                            </a>
-                            <a href="#" onclick="navigatePublicPage('location')" class="px-3 py-2 text-sm text-gray-600 hover:text-blue-600">
-                                <i class="fas fa-map-marker-alt mr-1"></i>오시는 길
-                            </a>
-                        </div>
                     </div>
                     
                     <!-- 메인 네비게이션 -->
