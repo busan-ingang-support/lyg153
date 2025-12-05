@@ -41,15 +41,17 @@ async function checkAdminPermission(c: any): Promise<boolean> {
 // Get all system settings
 settings.get('/', async (c) => {
   const { DB } = c.env
+  const siteId = c.get('siteId') || 1
 
   const result = await DB.prepare(`
-    SELECT 
+    SELECT
       ss.*,
       u.name as updated_by_name
     FROM system_settings ss
     LEFT JOIN users u ON ss.updated_by = u.id
+    WHERE ss.site_id = ?
     ORDER BY ss.setting_key
-  `).all()
+  `).bind(siteId).all()
 
   return c.json({ success: true, settings: result.results })
 })
@@ -58,15 +60,17 @@ settings.get('/', async (c) => {
 settings.get('/:key', async (c) => {
   const { DB } = c.env
   const key = c.req.param('key')
+  const siteId = c.get('siteId') || 1
 
   const result = await DB.prepare(`
-    SELECT 
+    SELECT
       ss.*,
       u.name as updated_by_name
     FROM system_settings ss
     LEFT JOIN users u ON ss.updated_by = u.id
     WHERE ss.setting_key = ?
-  `).bind(key).first()
+      AND ss.site_id = ?
+  `).bind(key, siteId).first()
 
   if (!result) {
     return c.json({ success: false, message: '설정을 찾을 수 없습니다.' }, 404)
@@ -82,9 +86,10 @@ settings.put('/:key', async (c) => {
   if (!hasPermission) {
     return c.json({ success: false, message: '시스템 설정은 관리자만 수정할 수 있습니다.' }, 403);
   }
-  
+
   const { DB } = c.env
   const key = c.req.param('key')
+  const siteId = c.get('siteId') || 1
   const { setting_value, setting_type, description, updated_by } = await c.req.json()
 
   // Validation
@@ -98,26 +103,27 @@ settings.put('/:key', async (c) => {
   try {
     // Check if setting exists
     const existing = await DB.prepare(`
-      SELECT id FROM system_settings WHERE setting_key = ?
-    `).bind(key).first()
+      SELECT id FROM system_settings WHERE setting_key = ? AND site_id = ?
+    `).bind(key, siteId).first()
 
     if (existing) {
       // Update existing setting
       const result = await DB.prepare(`
-        UPDATE system_settings 
-        SET 
+        UPDATE system_settings
+        SET
           setting_value = ?,
           setting_type = ?,
           description = ?,
           updated_by = ?,
           updated_at = CURRENT_TIMESTAMP
-        WHERE setting_key = ?
+        WHERE setting_key = ? AND site_id = ?
       `).bind(
         setting_value,
         setting_type || 'string',
         description || null,
         updated_by || null,
-        key
+        key,
+        siteId
       ).run()
 
       if (result.success) {
@@ -129,13 +135,15 @@ settings.put('/:key', async (c) => {
       // Create new setting
       const result = await DB.prepare(`
         INSERT INTO system_settings (
+          site_id,
           setting_key,
           setting_value,
           setting_type,
           description,
           updated_by
-        ) VALUES (?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?)
       `).bind(
+        siteId,
         key,
         setting_value,
         setting_type || 'string',
@@ -165,8 +173,9 @@ settings.post('/batch', async (c) => {
   if (!hasPermission) {
     return c.json({ success: false, message: '시스템 설정은 관리자만 수정할 수 있습니다.' }, 403);
   }
-  
+
   const { DB } = c.env
+  const siteId = c.get('siteId') || 1
   const { settings: settingsToUpdate, updated_by } = await c.req.json()
 
   if (!Array.isArray(settingsToUpdate) || settingsToUpdate.length === 0) {
@@ -184,26 +193,27 @@ settings.post('/batch', async (c) => {
 
       // Check if setting exists
       const existing = await DB.prepare(`
-        SELECT id FROM system_settings WHERE setting_key = ?
-      `).bind(setting_key).first()
+        SELECT id FROM system_settings WHERE setting_key = ? AND site_id = ?
+      `).bind(setting_key, siteId).first()
 
       if (existing) {
         // Update existing
         const result = await DB.prepare(`
-          UPDATE system_settings 
-          SET 
+          UPDATE system_settings
+          SET
             setting_value = ?,
             setting_type = ?,
             description = ?,
             updated_by = ?,
             updated_at = CURRENT_TIMESTAMP
-          WHERE setting_key = ?
+          WHERE setting_key = ? AND site_id = ?
         `).bind(
           setting_value,
           setting_type || 'string',
           description || null,
           updated_by || null,
-          setting_key
+          setting_key,
+          siteId
         ).run()
 
         results.push({
@@ -215,13 +225,15 @@ settings.post('/batch', async (c) => {
         // Create new
         const result = await DB.prepare(`
           INSERT INTO system_settings (
+            site_id,
             setting_key,
             setting_value,
             setting_type,
             description,
             updated_by
-          ) VALUES (?, ?, ?, ?, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?)
         `).bind(
+          siteId,
           setting_key,
           setting_value,
           setting_type || 'string',
@@ -255,14 +267,15 @@ settings.delete('/:key', async (c) => {
   if (!hasPermission) {
     return c.json({ success: false, message: '시스템 설정은 관리자만 삭제할 수 있습니다.' }, 403);
   }
-  
+
   const { DB } = c.env
   const key = c.req.param('key')
+  const siteId = c.get('siteId') || 1
 
   try {
     const result = await DB.prepare(`
-      DELETE FROM system_settings WHERE setting_key = ?
-    `).bind(key).run()
+      DELETE FROM system_settings WHERE setting_key = ? AND site_id = ?
+    `).bind(key, siteId).run()
 
     if (result.success) {
       return c.json({ success: true, message: '설정이 삭제되었습니다.' })
@@ -278,16 +291,18 @@ settings.delete('/:key', async (c) => {
 settings.get('/category/:prefix', async (c) => {
   const { DB } = c.env
   const prefix = c.req.param('prefix')
+  const siteId = c.get('siteId') || 1
 
   const result = await DB.prepare(`
-    SELECT 
+    SELECT
       ss.*,
       u.name as updated_by_name
     FROM system_settings ss
     LEFT JOIN users u ON ss.updated_by = u.id
     WHERE ss.setting_key LIKE ?
+      AND ss.site_id = ?
     ORDER BY ss.setting_key
-  `).bind(`${prefix}%`).all()
+  `).bind(`${prefix}%`, siteId).all()
 
   return c.json({ success: true, settings: result.results })
 })
