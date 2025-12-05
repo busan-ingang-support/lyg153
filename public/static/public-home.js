@@ -868,10 +868,15 @@ function renderHomepageModule(module) {
             break;
             
         case 'text':
-            // 연혁 콘텐츠인 경우 타임라인 스타일로 렌더링
-            const isHistory = module.title && (module.title.includes('연혁') || module.title.toLowerCase().includes('history'));
+            const titleLower = (module.title || '').toLowerCase();
+            const isHistory = titleLower.includes('연혁') || titleLower.includes('history');
+            const isGreeting = titleLower.includes('인사말') || titleLower.includes('교장') || titleLower.includes('greeting');
+            const isMotto = titleLower.includes('교훈') || titleLower.includes('motto');
+            const isVision = titleLower.includes('비전') || titleLower.includes('vision');
+            const isPurpose = titleLower.includes('설립목적') || titleLower.includes('설립 목적') || titleLower.includes('목적');
             
             if (isHistory) {
+                // 연혁 - 타임라인 스타일
                 moduleHTML = `
                     <section class="py-12 bg-white"${sectionStyle}>
                         <div class="${containerClass}">
@@ -887,7 +892,17 @@ function renderHomepageModule(module) {
                         </div>
                     </section>
                 `;
+            } else if (isGreeting) {
+                // 교장 인사말 - 프리미엄 카드 스타일
+                moduleHTML = renderGreetingSection(module, containerClass, sectionStyle);
+            } else if (isMotto) {
+                // 교훈 - 대형 타이포그래피 스타일
+                moduleHTML = renderMottoSection(module, containerClass, sectionStyle);
+            } else if (isVision || isPurpose) {
+                // 비전/설립목적 - 아이콘 리스트 스타일
+                moduleHTML = renderVisionSection(module, containerClass, sectionStyle);
             } else {
+                // 일반 텍스트
                 moduleHTML = `
                     <section class="py-10"${sectionStyle}>
                         <div class="${containerClass}">
@@ -1787,6 +1802,166 @@ function renderSection(title, items) {
         html += `</div>`;
     }
     return html;
+}
+
+// 교장 인사말 렌더링
+function renderGreetingSection(module, containerClass, sectionStyle) {
+    const content = (module.content || '').replace(/\\n/g, '\n');
+    const paragraphs = content.split('\n').filter(p => p.trim());
+    
+    return `
+        <section class="py-16 md:py-24 relative overflow-hidden"${sectionStyle || ' style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);"'}>
+            <!-- 배경 장식 -->
+            <div class="absolute top-0 right-0 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+            <div class="absolute bottom-0 left-0 w-72 h-72 bg-purple-500/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
+            
+            <div class="${containerClass} relative z-10">
+                <div class="max-w-4xl mx-auto">
+                    <!-- 헤더 -->
+                    <div class="text-center mb-12">
+                        <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 shadow-xl mb-6">
+                            <i class="fas fa-quote-left text-3xl text-white"></i>
+                        </div>
+                        <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-2">${escapeHtml(module.title || '교장 인사말')}</h2>
+                        <div class="w-16 h-1 bg-gradient-to-r from-blue-500 to-indigo-600 mx-auto rounded-full"></div>
+                    </div>
+                    
+                    <!-- 인사말 카드 -->
+                    <div class="bg-white rounded-3xl shadow-xl p-8 md:p-12 relative">
+                        <!-- 인용 장식 -->
+                        <div class="absolute top-6 left-8 text-8xl text-blue-100 font-serif leading-none">"</div>
+                        
+                        <div class="relative z-10 space-y-6 text-gray-700 leading-relaxed text-lg">
+                            ${paragraphs.map((p, idx) => `
+                                <p class="${idx === 0 ? 'text-xl md:text-2xl font-medium text-gray-800 first-letter:text-5xl first-letter:font-bold first-letter:text-blue-600 first-letter:float-left first-letter:mr-3 first-letter:mt-1' : ''}">${escapeHtml(p.trim())}</p>
+                            `).join('')}
+                        </div>
+                        
+                        <!-- 서명 영역 -->
+                        <div class="mt-10 pt-8 border-t border-gray-100 flex items-center justify-end">
+                            <div class="text-right">
+                                <p class="text-sm text-gray-500 mb-1">학교장</p>
+                                <p class="text-xl font-bold text-gray-800">대안학교</p>
+                            </div>
+                            <div class="w-16 h-16 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center ml-4">
+                                <i class="fas fa-user-tie text-2xl text-gray-400"></i>
+                            </div>
+                        </div>
+                        
+                        <!-- 인용 닫기 장식 -->
+                        <div class="absolute bottom-6 right-8 text-8xl text-blue-100 font-serif leading-none rotate-180">"</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    `;
+}
+
+// 교훈 렌더링 (대형 타이포그래피)
+function renderMottoSection(module, containerClass, sectionStyle) {
+    const content = (module.content || '').replace(/\\n/g, '\n');
+    const items = content.split('\n').filter(line => line.trim()).map(line => line.trim().replace(/^[•·■-]\s*/, ''));
+    
+    // 교훈이 3개 이하면 대형 카드로, 그 이상이면 리스트로
+    if (items.length <= 3 && items.length > 0) {
+        const gradients = [
+            'from-blue-600 to-indigo-700',
+            'from-emerald-500 to-teal-600', 
+            'from-amber-500 to-orange-600'
+        ];
+        const icons = ['fa-heart', 'fa-lightbulb', 'fa-star'];
+        
+        return `
+            <section class="py-20 md:py-28 bg-gradient-to-b from-slate-50 to-white relative overflow-hidden"${sectionStyle}>
+                <div class="absolute top-0 left-1/4 w-96 h-96 bg-blue-100/50 rounded-full blur-3xl"></div>
+                <div class="absolute bottom-0 right-1/4 w-72 h-72 bg-amber-100/50 rounded-full blur-3xl"></div>
+                <div class="${containerClass} relative z-10">
+                    <div class="text-center mb-16">
+                        <h2 class="text-4xl md:text-5xl font-black text-gray-900 mb-4">${escapeHtml(module.title || '교훈')}</h2>
+                        <div class="w-24 h-1.5 bg-gradient-to-r from-amber-400 to-amber-600 mx-auto rounded-full"></div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-${items.length} gap-8 max-w-5xl mx-auto">
+                        ${items.map((item, idx) => `
+                            <div class="group relative bg-white rounded-3xl p-10 shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100">
+                                <div class="absolute inset-0 bg-gradient-to-br ${gradients[idx % 3]} opacity-0 group-hover:opacity-5 rounded-3xl transition-opacity"></div>
+                                <div class="w-20 h-20 bg-gradient-to-br ${gradients[idx % 3]} rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg group-hover:scale-110 transition-transform">
+                                    <i class="fas ${icons[idx % 3]} text-3xl text-white"></i>
+                                </div>
+                                <h3 class="text-2xl md:text-3xl font-bold text-gray-900 text-center">${escapeHtml(item)}</h3>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </section>
+        `;
+    } else {
+        // 여러 항목은 가로 스크롤 또는 그리드
+        return `
+            <section class="py-16 bg-gradient-to-br from-blue-900 via-indigo-900 to-purple-900 relative overflow-hidden"${sectionStyle}>
+                <div class="absolute inset-0 opacity-10">
+                    <div class="absolute top-10 left-10 w-40 h-40 border border-white/20 rounded-full"></div>
+                    <div class="absolute bottom-10 right-10 w-60 h-60 border border-white/20 rounded-full"></div>
+                </div>
+                <div class="${containerClass} relative z-10">
+                    <div class="text-center mb-12">
+                        <h2 class="text-4xl md:text-5xl font-black text-white mb-4">${escapeHtml(module.title || '교훈')}</h2>
+                        <div class="w-24 h-1.5 bg-gradient-to-r from-amber-400 to-amber-600 mx-auto rounded-full"></div>
+                    </div>
+                    <div class="flex flex-wrap justify-center gap-6">
+                        ${items.map((item, idx) => `
+                            <div class="px-8 py-4 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 hover:bg-white/20 transition-all">
+                                <span class="text-xl md:text-2xl font-bold text-white">${escapeHtml(item)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </section>
+        `;
+    }
+}
+
+// 비전/설립목적 렌더링
+function renderVisionSection(module, containerClass, sectionStyle) {
+    const content = (module.content || '').replace(/\\n/g, '\n');
+    const items = content.split('\n').filter(line => line.trim()).map(line => line.trim().replace(/^[•·■-]\s*/, ''));
+    
+    const icons = ['fa-bullseye', 'fa-rocket', 'fa-users', 'fa-graduation-cap', 'fa-lightbulb', 'fa-heart'];
+    const colors = [
+        'from-blue-500 to-blue-600',
+        'from-purple-500 to-purple-600',
+        'from-green-500 to-green-600',
+        'from-amber-500 to-amber-600',
+        'from-pink-500 to-pink-600',
+        'from-cyan-500 to-cyan-600'
+    ];
+    
+    return `
+        <section class="py-16 bg-white"${sectionStyle}>
+            <div class="${containerClass}">
+                <div class="max-w-4xl mx-auto">
+                    <!-- 헤더 -->
+                    <div class="text-center mb-12">
+                        <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-3">${escapeHtml(module.title || '설립목적')}</h2>
+                        <div class="w-16 h-1 bg-gradient-to-r from-blue-500 to-purple-600 mx-auto rounded-full"></div>
+                    </div>
+                    
+                    <!-- 목록 -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        ${items.map((item, idx) => `
+                            <div class="flex items-start gap-4 p-6 bg-gradient-to-br from-gray-50 to-white rounded-2xl border border-gray-100 hover:shadow-lg transition-all group">
+                                <div class="flex-shrink-0 w-12 h-12 bg-gradient-to-br ${colors[idx % colors.length]} rounded-xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                                    <i class="fas ${icons[idx % icons.length]} text-white text-lg"></i>
+                                </div>
+                                <div class="flex-1 pt-1">
+                                    <p class="text-gray-700 text-lg leading-relaxed">${escapeHtml(item)}</p>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        </section>
+    `;
 }
 
 // 연혁 타임라인 렌더링 (하버드 스타일)
