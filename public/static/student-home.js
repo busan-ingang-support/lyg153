@@ -197,8 +197,8 @@ async function showStudentMainHome() {
             </div>
         </div>
 
-        <!-- 최근 공지사항 -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- 최근 공지사항 및 과제 -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div class="card-modern">
                 <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
                     <i class="fas fa-bullhorn text-purple-600 mr-2"></i>
@@ -225,12 +225,127 @@ async function showStudentMainHome() {
                     전체 시간표 보기 →
                 </button>
             </div>
+
+            <!-- 내 과제 목록 -->
+            <div class="card-modern">
+                <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-tasks text-orange-600 mr-2"></i>
+                    내 과제
+                </h3>
+                <div id="my-assignments" class="space-y-3">
+                    <p class="text-gray-500 text-center py-8">로딩 중...</p>
+                </div>
+            </div>
         </div>
     `;
 
     // 데이터 로드
     loadRecentNotices();
     loadTodaySchedule();
+    loadMyAssignments();
+}
+
+// 내 과제 로드
+async function loadMyAssignments() {
+    try {
+        // 현재 학생 ID 조회
+        const studentResponse = await axios.get(`/api/students/user/${currentUser.id}`, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+
+        const studentId = studentResponse.data.student.id;
+
+        // 과제 목록 조회
+        const response = await axios.get(`/api/assignments/student/${studentId}`, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+
+        const assignments = response.data.assignments || [];
+        const container = document.getElementById('my-assignments');
+
+        if (!container) return;
+
+        if (assignments.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-8">
+                    <i class="fas fa-check-circle text-green-500 text-3xl mb-2"></i>
+                    <p class="text-gray-600">제출할 과제가 없습니다</p>
+                </div>
+            `;
+            return;
+        }
+
+        // 마감일 임박 순으로 정렬
+        const sortedAssignments = assignments.sort((a, b) => {
+            if (!a.due_date) return 1;
+            if (!b.due_date) return -1;
+            return new Date(a.due_date) - new Date(b.due_date);
+        });
+
+        // 최근 5개만 표시
+        const recentAssignments = sortedAssignments.slice(0, 5);
+
+        const assignmentsHtml = recentAssignments.map(assignment => {
+            const dueDate = assignment.due_date ? new Date(assignment.due_date) : null;
+            const isOverdue = dueDate && dueDate < new Date();
+            const isSubmitted = assignment.submission_id != null;
+
+            let dueDateStr = '기한 없음';
+            let dueDateClass = 'text-gray-500';
+
+            if (dueDate) {
+                const daysLeft = Math.ceil((dueDate - new Date()) / (1000 * 60 * 60 * 24));
+                if (isOverdue) {
+                    dueDateStr = '마감됨';
+                    dueDateClass = 'text-red-600 font-medium';
+                } else if (daysLeft === 0) {
+                    dueDateStr = '오늘 마감';
+                    dueDateClass = 'text-red-600 font-medium';
+                } else if (daysLeft === 1) {
+                    dueDateStr = '내일 마감';
+                    dueDateClass = 'text-orange-600 font-medium';
+                } else if (daysLeft <= 3) {
+                    dueDateStr = `${daysLeft}일 남음`;
+                    dueDateClass = 'text-yellow-600 font-medium';
+                } else {
+                    dueDateStr = dueDate.toLocaleDateString('ko-KR');
+                    dueDateClass = 'text-gray-600';
+                }
+            }
+
+            return `
+                <div class="p-3 border border-gray-200 rounded-lg hover:shadow-md transition ${isOverdue && !isSubmitted ? 'border-red-300 bg-red-50' : ''}">
+                    <div class="flex items-start justify-between mb-2">
+                        <div class="flex-1">
+                            <h4 class="font-medium text-gray-800 text-sm mb-1">${assignment.title}</h4>
+                            <p class="text-xs text-gray-500">${assignment.subject_name || assignment.course_name}</p>
+                        </div>
+                        ${isSubmitted ?
+                            `<span class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">제출완료</span>` :
+                            `<span class="inline-block px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">미제출</span>`
+                        }
+                    </div>
+                    <div class="flex items-center justify-between text-xs ${dueDateClass}">
+                        <span><i class="fas fa-clock mr-1"></i>${dueDateStr}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = assignmentsHtml;
+
+    } catch (error) {
+        console.error('과제 목록 로드 실패:', error);
+        const container = document.getElementById('my-assignments');
+        if (container) {
+            container.innerHTML = `
+                <div class="text-center py-8">
+                    <i class="fas fa-exclamation-circle text-red-500 text-3xl mb-2"></i>
+                    <p class="text-gray-600">과제 목록을 불러오지 못했습니다</p>
+                </div>
+            `;
+        }
+    }
 }
 
 // 최근 공지사항 로드

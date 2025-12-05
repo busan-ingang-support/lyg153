@@ -141,6 +141,9 @@ async function navigateParentPage(page) {
         case 'counseling':
             await showParentCounseling();
             break;
+        case 'assignments':
+            await showParentAssignments();
+            break;
         default:
             await showParentMainHome();
     }
@@ -169,7 +172,7 @@ async function showParentMainHome() {
             </div>
 
             <!-- 빠른 메뉴 -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <a href="#" class="parent-quick-menu bg-white rounded-lg shadow p-6 hover:shadow-lg transition text-center" data-page="attendance">
                     <div class="w-12 h-12 rounded-full bg-green-100 mx-auto mb-3 flex items-center justify-center">
                         <i class="fas fa-calendar-check text-green-600 text-xl"></i>
@@ -184,6 +187,14 @@ async function showParentMainHome() {
                     </div>
                     <h3 class="font-semibold text-gray-800 mb-1">성적 확인</h3>
                     <p class="text-sm text-gray-500">자녀의 성적 조회</p>
+                </a>
+
+                <a href="#" class="parent-quick-menu bg-white rounded-lg shadow p-6 hover:shadow-lg transition text-center" data-page="assignments">
+                    <div class="w-12 h-12 rounded-full bg-yellow-100 mx-auto mb-3 flex items-center justify-center">
+                        <i class="fas fa-tasks text-yellow-600 text-xl"></i>
+                    </div>
+                    <h3 class="font-semibold text-gray-800 mb-1">과제 확인</h3>
+                    <p class="text-sm text-gray-500">자녀의 과제 현황</p>
                 </a>
 
                 <a href="#" class="parent-quick-menu bg-white rounded-lg shadow p-6 hover:shadow-lg transition text-center" data-page="schedule">
@@ -1099,6 +1110,224 @@ async function loadCounselingData(children) {
                 <div class="text-center py-8 text-red-600">
                     <i class="fas fa-exclamation-circle text-3xl mb-2"></i>
                     <p>상담 데이터를 불러오는데 실패했습니다.</p>
+                </div>
+            `;
+        }
+    }
+}
+
+// ============================================
+// 과제 페이지
+// ============================================
+async function showParentAssignments(selectedStudentId = null) {
+    const content = document.getElementById('parent-content');
+
+    try {
+        // 자녀 목록 가져오기
+        const response = await axios.get(`/api/users/${currentUser.id}`, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+
+        const children = response.data.children || [];
+
+        if (children.length === 0) {
+            content.innerHTML = `
+                <div class="bg-white rounded-lg shadow p-8 text-center">
+                    <i class="fas fa-user-friends text-gray-400 text-5xl mb-4"></i>
+                    <p class="text-gray-600">등록된 자녀 정보가 없습니다.</p>
+                </div>
+            `;
+            return;
+        }
+
+        const studentId = selectedStudentId || children[0].id;
+
+        content.innerHTML = `
+            <div class="space-y-6">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-2xl font-bold text-gray-800">
+                        <i class="fas fa-tasks text-yellow-600 mr-2"></i>
+                        자녀 과제 현황
+                    </h2>
+                    ${children.length > 1 ? `
+                        <select id="student-selector-assignments" class="form-select w-64">
+                            ${children.map(child => `
+                                <option value="${child.id}" ${child.id == studentId ? 'selected' : ''}>
+                                    ${child.student_name || '이름 없음'}
+                                </option>
+                            `).join('')}
+                        </select>
+                    ` : ''}
+                </div>
+
+                <!-- 과제 목록 -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">과제 목록</h3>
+                    <div id="assignments-list">
+                        <div class="text-center py-8">
+                            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-600"></div>
+                            <p class="mt-4 text-gray-600">과제 목록을 불러오는 중...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // 자녀 선택 이벤트
+        const selector = document.getElementById('student-selector-assignments');
+        if (selector) {
+            selector.addEventListener('change', (e) => {
+                showParentAssignments(e.target.value);
+            });
+        }
+
+        // 과제 데이터 로드
+        await loadAssignmentsData(studentId);
+
+    } catch (error) {
+        console.error('과제 페이지 로드 실패:', error);
+        content.innerHTML = `
+            <div class="bg-red-50 border border-red-200 rounded-lg p-6">
+                <i class="fas fa-exclamation-circle text-red-500 mr-2"></i>
+                <span class="text-red-700">과제 정보를 불러오는데 실패했습니다: ${error.message}</span>
+            </div>
+        `;
+    }
+}
+
+async function loadAssignmentsData(studentId) {
+    try {
+        const response = await axios.get(`/api/assignments/student/${studentId}`, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+
+        const assignments = response.data.assignments || [];
+        const listSection = document.getElementById('assignments-list');
+
+        if (!listSection) return;
+
+        if (assignments.length === 0) {
+            listSection.innerHTML = `
+                <div class="text-center py-12">
+                    <div class="w-20 h-20 rounded-full bg-gray-100 mx-auto mb-4 flex items-center justify-center">
+                        <i class="fas fa-tasks text-gray-400 text-3xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">등록된 과제가 없습니다</h3>
+                    <p class="text-sm text-gray-500">아직 자녀에게 부여된 과제가 없습니다.</p>
+                </div>
+            `;
+            return;
+        }
+
+        // 마감일 기준으로 정렬
+        const sortedAssignments = assignments.sort((a, b) => {
+            if (!a.due_date) return 1;
+            if (!b.due_date) return -1;
+            return new Date(a.due_date) - new Date(b.due_date);
+        });
+
+        const assignmentsHtml = sortedAssignments.map(assignment => {
+            const dueDate = assignment.due_date ? new Date(assignment.due_date) : null;
+            const isOverdue = dueDate && dueDate < new Date();
+            const isSubmitted = assignment.submission_id != null;
+            const score = assignment.score;
+
+            let dueDateStr = '기한 없음';
+            let dueDateClass = 'text-gray-500';
+
+            if (dueDate) {
+                const daysLeft = Math.ceil((dueDate - new Date()) / (1000 * 60 * 60 * 24));
+                if (isOverdue) {
+                    dueDateStr = '마감됨';
+                    dueDateClass = 'text-red-600 font-medium';
+                } else if (daysLeft === 0) {
+                    dueDateStr = '오늘 마감';
+                    dueDateClass = 'text-red-600 font-medium';
+                } else if (daysLeft === 1) {
+                    dueDateStr = '내일 마감';
+                    dueDateClass = 'text-orange-600 font-medium';
+                } else if (daysLeft <= 3) {
+                    dueDateStr = `${daysLeft}일 남음`;
+                    dueDateClass = 'text-yellow-600 font-medium';
+                } else {
+                    dueDateStr = dueDate.toLocaleDateString('ko-KR');
+                    dueDateClass = 'text-gray-600';
+                }
+            }
+
+            let statusBadge = '';
+            if (score !== null && score !== undefined) {
+                statusBadge = `<span class="inline-block px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-full">채점완료 (${score}점)</span>`;
+            } else if (isSubmitted) {
+                statusBadge = `<span class="inline-block px-3 py-1 bg-green-100 text-green-700 text-sm rounded-full">제출완료</span>`;
+            } else {
+                statusBadge = `<span class="inline-block px-3 py-1 bg-orange-100 text-orange-700 text-sm rounded-full">미제출</span>`;
+            }
+
+            return `
+                <div class="border rounded-lg p-6 hover:shadow-md transition ${isOverdue && !isSubmitted ? 'border-red-300 bg-red-50' : ''}">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex-1">
+                            <h4 class="text-lg font-semibold text-gray-800 mb-2">${assignment.title}</h4>
+                            <p class="text-sm text-gray-600 mb-2">${assignment.subject_name || assignment.course_name}</p>
+                            ${assignment.description ? `<p class="text-sm text-gray-500 mt-2">${assignment.description}</p>` : ''}
+                        </div>
+                        ${statusBadge}
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
+                        <div>
+                            <p class="text-xs text-gray-500">마감일</p>
+                            <p class="text-sm font-medium ${dueDateClass}">
+                                <i class="fas fa-clock mr-1"></i>${dueDateStr}
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500">배점</p>
+                            <p class="text-sm font-medium text-gray-700">${assignment.max_score || 100}점</p>
+                        </div>
+                        ${assignment.submitted_at ? `
+                            <div>
+                                <p class="text-xs text-gray-500">제출일</p>
+                                <p class="text-sm font-medium text-gray-700">
+                                    ${new Date(assignment.submitted_at).toLocaleDateString('ko-KR')}
+                                </p>
+                            </div>
+                        ` : '<div></div>'}
+                        ${score !== null && score !== undefined ? `
+                            <div>
+                                <p class="text-xs text-gray-500">취득점수</p>
+                                <p class="text-sm font-medium text-blue-600">${score}점</p>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        listSection.innerHTML = `
+            <div class="space-y-4">
+                ${assignmentsHtml}
+            </div>
+        `;
+
+    } catch (error) {
+        console.error('과제 데이터 로드 실패:', error);
+        const listSection = document.getElementById('assignments-list');
+        if (listSection) {
+            const errorMessage = error.response?.status === 404
+                ? '과제 정보를 찾을 수 없습니다.'
+                : error.response?.status === 403
+                ? '과제 조회 권한이 없습니다.'
+                : '과제 데이터를 불러오는데 실패했습니다.';
+
+            listSection.innerHTML = `
+                <div class="text-center py-12">
+                    <div class="w-20 h-20 rounded-full bg-red-50 mx-auto mb-4 flex items-center justify-center">
+                        <i class="fas fa-exclamation-circle text-red-500 text-3xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">${errorMessage}</h3>
+                    <p class="text-sm text-gray-500">문제가 계속되면 관리자에게 문의해주세요.</p>
                 </div>
             `;
         }
