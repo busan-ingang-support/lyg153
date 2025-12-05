@@ -4,6 +4,8 @@ let currentModules = [];
 let draggedModule = null;
 let draggedOverModule = null;
 let currentPage = 'home'; // 현재 선택된 페이지
+let currentTab = 'modules'; // 현재 탭: 'modules' 또는 'settings'
+let homepageBasicSettings = {}; // 기본 설정
 
 // 홈페이지 모듈 관리 페이지 표시
 async function showHomepageManagement(container) {
@@ -20,9 +22,9 @@ async function showHomepageManagement(container) {
     content.innerHTML = `
         <div class="mb-6">
             <h2 class="text-3xl font-bold text-gray-800">
-                <i class="fas fa-globe mr-2"></i>홈페이지 모듈 관리
+                <i class="fas fa-globe mr-2"></i>홈페이지 관리
             </h2>
-            <p class="text-gray-600 mt-2">모듈을 조합하여 홈페이지를 자유롭게 구성합니다</p>
+            <p class="text-gray-600 mt-2">홈페이지 기본 설정 및 모듈을 관리합니다</p>
         </div>
         <div class="bg-white rounded-lg shadow-md p-6">
             <p class="text-center text-gray-500 py-8">로딩 중...</p>
@@ -31,22 +33,35 @@ async function showHomepageManagement(container) {
     
     try {
         // 현재 모듈 로드
-        const response = await axios.get('/api/homepage-modules/admin', {
-            headers: { 'Authorization': 'Bearer ' + authToken }
-        });
+        const [modulesResponse, settingsResponse] = await Promise.all([
+            axios.get('/api/homepage-modules/admin', {
+                headers: { 'Authorization': 'Bearer ' + authToken }
+            }),
+            axios.get('/api/homepage/admin', {
+                headers: { 'Authorization': 'Bearer ' + authToken }
+            })
+        ]);
         
-        currentModules = response.data.modules || [];
+        currentModules = modulesResponse.data.modules || [];
+        homepageBasicSettings = settingsResponse.data.settings || {};
         
         renderModuleManagement(content);
         
     } catch (error) {
-        console.error('홈페이지 모듈 로드 실패:', error);
+        console.error('홈페이지 데이터 로드 실패:', error);
         content.innerHTML = `
             <div class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
-                홈페이지 모듈을 불러오는데 실패했습니다. 페이지를 새로고침해주세요.
+                홈페이지 데이터를 불러오는데 실패했습니다. 페이지를 새로고침해주세요.
             </div>
         `;
     }
+}
+
+// 탭 전환
+function switchTab(tab) {
+    currentTab = tab;
+    const container = document.getElementById('main-content');
+    renderModuleManagement(container);
 }
 
 // 페이지 전환
@@ -66,39 +81,175 @@ function renderModuleManagement(container) {
             <div class="flex justify-between items-center mb-4">
                 <div>
                     <h2 class="text-3xl font-bold text-gray-800">
-                        <i class="fas fa-globe mr-2"></i>홈페이지 모듈 관리
+                        <i class="fas fa-globe mr-2"></i>홈페이지 관리
                     </h2>
-                    <p class="text-gray-600 mt-2">모듈을 드래그하여 순서를 변경하고, 각 모듈을 클릭하여 편집할 수 있습니다</p>
+                    <p class="text-gray-600 mt-2">홈페이지 기본 설정 및 모듈을 관리합니다</p>
                 </div>
-                <button onclick="showAddModuleModal()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
-                    <i class="fas fa-plus mr-2"></i>모듈 추가
-                </button>
+                <div class="flex space-x-2">
+                    <button onclick="window.open('/', '_blank')" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">
+                        <i class="fas fa-external-link-alt mr-2"></i>미리보기
+                    </button>
+                    ${currentTab === 'modules' ? `
+                        <button onclick="showAddModuleModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                            <i class="fas fa-plus mr-2"></i>모듈 추가
+                        </button>
+                    ` : ''}
+                </div>
             </div>
             
-            <!-- 페이지 탭 -->
-            <div class="border-b border-gray-200">
+            <!-- 메인 탭 (기본설정 / 모듈 관리) -->
+            <div class="border-b border-gray-200 mb-6">
                 <nav class="flex space-x-4">
-                    <button onclick="switchPage('home')" class="page-tab ${currentPage === 'home' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600 hover:text-gray-800'} py-3 px-4 border-b-2 font-medium transition-colors">
-                        <i class="fas fa-home mr-2"></i>홈
+                    <button onclick="switchTab('settings')" class="${currentTab === 'settings' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600 hover:text-gray-800'} py-3 px-6 border-b-2 font-semibold transition-colors">
+                        <i class="fas fa-cog mr-2"></i>기본 설정
                     </button>
-                    <button onclick="switchPage('about')" class="page-tab ${currentPage === 'about' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600 hover:text-gray-800'} py-3 px-4 border-b-2 font-medium transition-colors">
-                        <i class="fas fa-info-circle mr-2"></i>학교소개
-                    </button>
-                    <button onclick="switchPage('education')" class="page-tab ${currentPage === 'education' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600 hover:text-gray-800'} py-3 px-4 border-b-2 font-medium transition-colors">
-                        <i class="fas fa-book mr-2"></i>교육과정
-                    </button>
-                    <button onclick="switchPage('notice')" class="page-tab ${currentPage === 'notice' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600 hover:text-gray-800'} py-3 px-4 border-b-2 font-medium transition-colors">
-                        <i class="fas fa-bullhorn mr-2"></i>공지사항
-                    </button>
-                    <button onclick="switchPage('location')" class="page-tab ${currentPage === 'location' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600 hover:text-gray-800'} py-3 px-4 border-b-2 font-medium transition-colors">
-                        <i class="fas fa-map-marker-alt mr-2"></i>오시는 길
+                    <button onclick="switchTab('modules')" class="${currentTab === 'modules' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600 hover:text-gray-800'} py-3 px-6 border-b-2 font-semibold transition-colors">
+                        <i class="fas fa-puzzle-piece mr-2"></i>모듈 관리
                     </button>
                 </nav>
             </div>
         </div>
         
+        ${currentTab === 'settings' ? renderBasicSettingsTab() : renderModulesTab(pageModules)}
+    `;
+    
+    // 드래그 앤 드롭 이벤트 설정 (모듈 탭에서만)
+    if (currentTab === 'modules') {
+        setupDragAndDrop();
+    }
+    
+    // 기본 설정 폼 이벤트 설정
+    if (currentTab === 'settings') {
+        setupBasicSettingsForm();
+    }
+}
+
+// 기본 설정 탭 렌더링
+function renderBasicSettingsTab() {
+    return `
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <form id="basic-settings-form" class="space-y-8">
+                <!-- 학교 기본 정보 -->
+                <div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 pb-2 border-b border-gray-200">
+                        <i class="fas fa-school mr-2 text-blue-600"></i>학교 기본 정보
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">학교명</label>
+                            <input type="text" id="setting-school_name" 
+                                   value="${escapeHtmlAttr(homepageBasicSettings.school_name || '')}"
+                                   placeholder="예: 대안학교"
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">학교 슬로건</label>
+                            <input type="text" id="setting-school_slogan" 
+                                   value="${escapeHtmlAttr(homepageBasicSettings.school_slogan || '')}"
+                                   placeholder="예: 꿈을 키우는 학교"
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 연락처 정보 -->
+                <div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 pb-2 border-b border-gray-200">
+                        <i class="fas fa-address-card mr-2 text-green-600"></i>연락처 정보
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">대표전화</label>
+                            <input type="text" id="setting-contact_phone" 
+                                   value="${escapeHtmlAttr(homepageBasicSettings.contact_phone || '')}"
+                                   placeholder="예: 02-1234-5678"
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">이메일</label>
+                            <input type="email" id="setting-contact_email" 
+                                   value="${escapeHtmlAttr(homepageBasicSettings.contact_email || '')}"
+                                   placeholder="예: school@example.com"
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">주소</label>
+                            <input type="text" id="setting-contact_address" 
+                                   value="${escapeHtmlAttr(homepageBasicSettings.contact_address || '')}"
+                                   placeholder="예: 서울시 강남구 테헤란로 123"
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 기타 설정 -->
+                <div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 pb-2 border-b border-gray-200">
+                        <i class="fas fa-palette mr-2 text-purple-600"></i>디자인 설정
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">메인 컬러</label>
+                            <div class="flex items-center space-x-3">
+                                <input type="color" id="setting-primary_color" 
+                                       value="${homepageBasicSettings.primary_color || '#1e40af'}"
+                                       class="w-16 h-12 border border-gray-300 rounded-lg cursor-pointer">
+                                <input type="text" id="setting-primary_color_text" 
+                                       value="${homepageBasicSettings.primary_color || '#1e40af'}"
+                                       class="w-32 px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono"
+                                       oninput="document.getElementById('setting-primary_color').value = this.value">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 저장 버튼 -->
+                <div class="flex justify-end pt-4 border-t border-gray-200">
+                    <button type="submit" class="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 font-semibold">
+                        <i class="fas fa-save mr-2"></i>기본 설정 저장
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- 도움말 -->
+        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h4 class="font-bold text-blue-800 mb-2"><i class="fas fa-info-circle mr-2"></i>도움말</h4>
+            <ul class="text-sm text-blue-700 space-y-1">
+                <li>• <strong>학교명</strong>과 <strong>슬로건</strong>은 홈페이지 헤더와 푸터에 표시됩니다.</li>
+                <li>• <strong>연락처 정보</strong>는 홈페이지 상단바와 푸터, 오시는 길 페이지에 표시됩니다.</li>
+                <li>• 모듈별 상세 내용은 <strong>모듈 관리</strong> 탭에서 설정하세요.</li>
+            </ul>
+        </div>
+    `;
+}
+
+// 모듈 관리 탭 렌더링
+function renderModulesTab(pageModules) {
+    return `
+        <!-- 페이지 탭 -->
+        <div class="border-b border-gray-200 mb-6">
+            <nav class="flex space-x-4">
+                <button onclick="switchPage('home')" class="page-tab ${currentPage === 'home' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600 hover:text-gray-800'} py-3 px-4 border-b-2 font-medium transition-colors">
+                    <i class="fas fa-home mr-2"></i>홈
+                </button>
+                <button onclick="switchPage('about')" class="page-tab ${currentPage === 'about' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600 hover:text-gray-800'} py-3 px-4 border-b-2 font-medium transition-colors">
+                    <i class="fas fa-info-circle mr-2"></i>학교소개
+                </button>
+                <button onclick="switchPage('education')" class="page-tab ${currentPage === 'education' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600 hover:text-gray-800'} py-3 px-4 border-b-2 font-medium transition-colors">
+                    <i class="fas fa-book mr-2"></i>교육과정
+                </button>
+                <button onclick="switchPage('notice')" class="page-tab ${currentPage === 'notice' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600 hover:text-gray-800'} py-3 px-4 border-b-2 font-medium transition-colors">
+                    <i class="fas fa-bullhorn mr-2"></i>공지사항
+                </button>
+                <button onclick="switchPage('location')" class="page-tab ${currentPage === 'location' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600 hover:text-gray-800'} py-3 px-4 border-b-2 font-medium transition-colors">
+                    <i class="fas fa-map-marker-alt mr-2"></i>오시는 길
+                </button>
+            </nav>
+        </div>
+        
         <!-- 모듈 목록 -->
-        <div id="modules-list" class="space-y-4 mt-6">
+        <div id="modules-list" class="space-y-4">
             ${pageModules.length === 0 ? `
                 <div class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
                     <i class="fas fa-puzzle-piece text-4xl text-gray-400 mb-4"></i>
@@ -119,9 +270,66 @@ function renderModuleManagement(container) {
             </div>
         ` : ''}
     `;
+}
+
+// HTML 속성 이스케이프
+function escapeHtmlAttr(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+// 기본 설정 폼 이벤트 설정
+function setupBasicSettingsForm() {
+    const form = document.getElementById('basic-settings-form');
+    if (!form) return;
     
-    // 드래그 앤 드롭 이벤트 설정
-    setupDragAndDrop();
+    // 색상 입력 동기화
+    const colorInput = document.getElementById('setting-primary_color');
+    const colorTextInput = document.getElementById('setting-primary_color_text');
+    if (colorInput && colorTextInput) {
+        colorInput.addEventListener('input', () => {
+            colorTextInput.value = colorInput.value;
+        });
+    }
+    
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await saveBasicSettings();
+    });
+}
+
+// 기본 설정 저장
+async function saveBasicSettings() {
+    try {
+        const settings = {
+            school_name: document.getElementById('setting-school_name')?.value || '',
+            school_slogan: document.getElementById('setting-school_slogan')?.value || '',
+            contact_phone: document.getElementById('setting-contact_phone')?.value || '',
+            contact_email: document.getElementById('setting-contact_email')?.value || '',
+            contact_address: document.getElementById('setting-contact_address')?.value || '',
+            primary_color: document.getElementById('setting-primary_color')?.value || '#1e40af'
+        };
+        
+        const response = await axios.post('/api/homepage', settings, {
+            headers: { 'Authorization': 'Bearer ' + authToken }
+        });
+        
+        if (response.data.success) {
+            // 로컬 설정 업데이트
+            homepageBasicSettings = { ...homepageBasicSettings, ...settings };
+            alert('기본 설정이 저장되었습니다!');
+        } else {
+            alert('저장에 실패했습니다: ' + (response.data.message || '알 수 없는 오류'));
+        }
+    } catch (error) {
+        console.error('기본 설정 저장 실패:', error);
+        alert('저장에 실패했습니다. 다시 시도해주세요.');
+    }
 }
 
 // 모듈 카드 렌더링
