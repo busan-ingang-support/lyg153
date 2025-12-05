@@ -290,9 +290,15 @@ async function showAddCounselingForm() {
     
     document.getElementById('add-counseling-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        
+
         const userData = JSON.parse(localStorage.getItem('user'));
-        
+
+        if (!userData || !userData.id) {
+            alert('로그인 정보가 없습니다. 다시 로그인해주세요.');
+            window.location.href = '/login.html';
+            return;
+        }
+
         const data = {
             student_id: document.getElementById('counseling-student-id').value,
             counselor_id: userData.id,

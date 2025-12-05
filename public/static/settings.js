@@ -374,20 +374,26 @@ function setupSettingsForms() {
 async function saveSettings(settingsArray) {
     try {
         const userData = JSON.parse(localStorage.getItem('user'));
-        
+
+        if (!userData || !userData.id) {
+            alert('로그인 정보가 없습니다. 다시 로그인해주세요.');
+            window.location.href = '/login.html';
+            return;
+        }
+
         const settings = settingsArray.map(item => ({
             setting_key: item.key,
             setting_value: item.value,
             setting_type: 'string'
         }));
-        
+
         await axios.post('/api/settings/batch', {
             settings: settings,
             updated_by: userData.id
         }, {
             headers: { 'Authorization': `Bearer ${authToken}` }
         });
-        
+
         alert('설정이 저장되었습니다.');
     } catch (error) {
         console.error('설정 저장 실패:', error);
