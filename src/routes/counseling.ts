@@ -39,7 +39,7 @@ counseling.get('/', async (c) => {
     const stmt = c.env.DB.prepare(query).bind(...params)
     const { results } = await stmt.all()
     
-    return c.json({ records: results || [] })
+    return c.json({ counseling_records: results || [] })
   } catch (error: any) {
     console.error('상담기록 조회 오류:', error)
     return c.json({ error: error.message }, 500)
