@@ -1,10 +1,11 @@
 import { Hono } from 'hono';
 import type { CloudflareBindings } from '../types';
+import { authMiddleware, requireRole } from '../middleware/auth';
 
 const clubs = new Hono<{ Bindings: CloudflareBindings }>();
 
 // 동아리 목록 조회
-clubs.get('/', async (c) => {
+clubs.get('/', authMiddleware, async (c) => {
   const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const { semester_id } = c.req.query();
@@ -31,7 +32,7 @@ clubs.get('/', async (c) => {
 });
 
 // 동아리 회원 조회
-clubs.get('/:id/members', async (c) => {
+clubs.get('/:id/members', authMiddleware, async (c) => {
   const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const id = c.req.param('id');
@@ -50,7 +51,7 @@ clubs.get('/:id/members', async (c) => {
 });
 
 // 동아리 생성
-clubs.post('/', async (c) => {
+clubs.post('/', requireRole('admin', 'super_admin'), async (c) => {
   const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const { name, description, advisor_teacher_id, semester_id, max_members } = await c.req.json();
@@ -64,7 +65,7 @@ clubs.post('/', async (c) => {
 });
 
 // 동아리 가입
-clubs.post('/:id/join', async (c) => {
+clubs.post('/:id/join', authMiddleware, async (c) => {
   const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const clubId = c.req.param('id');
@@ -79,7 +80,7 @@ clubs.post('/:id/join', async (c) => {
 });
 
 // 동아리 활동 기록
-clubs.post('/:id/activities', async (c) => {
+clubs.post('/:id/activities', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
   const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const clubId = c.req.param('id');

@@ -9,7 +9,7 @@ counseling.use('*', authMiddleware)
 // ============================================
 // 상담기록 목록 조회
 // ============================================
-counseling.get('/', async (c) => {
+counseling.get('/', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
   try {
     const siteId = c.get('siteId') || 1
     const { semester_id, student_id } = c.req.query()
@@ -56,7 +56,7 @@ counseling.get('/', async (c) => {
 // ============================================
 // 상담기록 단일 조회
 // ============================================
-counseling.get('/:id', async (c) => {
+counseling.get('/:id', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
   try {
     const siteId = c.get('siteId') || 1
     const id = parseInt(c.req.param('id'))
@@ -92,7 +92,7 @@ counseling.get('/:id', async (c) => {
 // ============================================
 // 상담기록 추가
 // ============================================
-counseling.post('/', async (c) => {
+counseling.post('/', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
   try {
     const siteId = c.get('siteId') || 1
     const data = await c.req.json()
@@ -138,7 +138,7 @@ counseling.post('/', async (c) => {
 // ============================================
 // 상담기록 수정
 // ============================================
-counseling.put('/:id', async (c) => {
+counseling.put('/:id', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
   try {
     const siteId = c.get('siteId') || 1
     const id = parseInt(c.req.param('id'))
@@ -187,7 +187,7 @@ counseling.put('/:id', async (c) => {
 // ============================================
 // 상담기록 삭제
 // ============================================
-counseling.delete('/:id', async (c) => {
+counseling.delete('/:id', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
   try {
     const siteId = c.get('siteId') || 1
     const id = parseInt(c.req.param('id'))

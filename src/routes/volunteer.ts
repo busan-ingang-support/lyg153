@@ -88,7 +88,7 @@ volunteer.get('/:id', async (c) => {
 // ============================================
 // 봉사활동 추가
 // ============================================
-volunteer.post('/', async (c) => {
+volunteer.post('/', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
   try {
     const siteId = c.get('siteId') || 1
     const data = await c.req.json()
@@ -132,7 +132,7 @@ volunteer.post('/', async (c) => {
 // ============================================
 // 봉사활동 수정
 // ============================================
-volunteer.put('/:id', async (c) => {
+volunteer.put('/:id', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
   try {
     const siteId = c.get('siteId') || 1
     const id = parseInt(c.req.param('id'))
@@ -180,7 +180,7 @@ volunteer.put('/:id', async (c) => {
 // ============================================
 // 봉사활동 삭제
 // ============================================
-volunteer.delete('/:id', async (c) => {
+volunteer.delete('/:id', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
   try {
     const siteId = c.get('siteId') || 1
     const id = parseInt(c.req.param('id'))

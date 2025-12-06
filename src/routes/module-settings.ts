@@ -1,10 +1,11 @@
 import { Hono } from 'hono';
 import type { CloudflareBindings } from '../types';
+import { requireRole } from '../middleware/auth';
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 
 // 모든 모듈 설정 조회
-app.get('/', async (c) => {
+app.get('/', requireRole('admin', 'super_admin'), async (c) => {
   const siteId = c.get('siteId') || 1;
   const { DB } = c.env;
 
@@ -69,7 +70,7 @@ app.get('/:moduleName', async (c) => {
 });
 
 // 모듈 활성화/비활성화 토글
-app.patch('/:moduleName/toggle', async (c) => {
+app.patch('/:moduleName/toggle', requireRole('admin', 'super_admin'), async (c) => {
   const siteId = c.get('siteId') || 1;
   const { DB } = c.env;
   const moduleName = c.req.param('moduleName');
@@ -110,7 +111,7 @@ app.patch('/:moduleName/toggle', async (c) => {
 });
 
 // 모듈 설정 업데이트 (전체)
-app.put('/:moduleName', async (c) => {
+app.put('/:moduleName', requireRole('admin', 'super_admin'), async (c) => {
   const siteId = c.get('siteId') || 1;
   const { DB } = c.env;
   const moduleName = c.req.param('moduleName');
@@ -149,7 +150,7 @@ app.put('/:moduleName', async (c) => {
 });
 
 // 여러 모듈 설정 일괄 업데이트
-app.put('/', async (c) => {
+app.put('/', requireRole('admin', 'super_admin'), async (c) => {
   const siteId = c.get('siteId') || 1;
   const { DB } = c.env;
 
@@ -187,7 +188,7 @@ app.put('/', async (c) => {
 });
 
 // 모듈 추가 (동적으로 새 모듈 등록)
-app.post('/', async (c) => {
+app.post('/', requireRole('admin', 'super_admin'), async (c) => {
   const siteId = c.get('siteId') || 1;
   const { DB } = c.env;
 

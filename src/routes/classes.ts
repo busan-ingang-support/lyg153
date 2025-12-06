@@ -249,7 +249,7 @@ classes.get('/:id/grades', async (c) => {
 });
 
 // 반 생성
-classes.post('/', async (c) => {
+classes.post('/', requireRole('admin', 'super_admin'), async (c) => {
   const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const { name, grade, semester_id, homeroom_teacher_id, room_number, max_students } = await c.req.json();

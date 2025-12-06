@@ -127,7 +127,7 @@ courses.get('/:id', async (c) => {
 // ============================================
 // 수업 생성
 // ============================================
-courses.post('/', async (c) => {
+courses.post('/', requireRole('admin', 'super_admin'), async (c) => {
   const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const { subject_id, semester_id, teacher_id, class_id, course_name, schedule, max_students } = await c.req.json();
@@ -186,7 +186,7 @@ courses.post('/', async (c) => {
 // ============================================
 // 수업 수정
 // ============================================
-courses.put('/:id', async (c) => {
+courses.put('/:id', requireRole('admin', 'super_admin'), async (c) => {
   const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const id = c.req.param('id');
@@ -224,7 +224,7 @@ courses.put('/:id', async (c) => {
 // ============================================
 // 수업 삭제
 // ============================================
-courses.delete('/:id', async (c) => {
+courses.delete('/:id', requireRole('admin', 'super_admin'), async (c) => {
   const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const id = c.req.param('id');

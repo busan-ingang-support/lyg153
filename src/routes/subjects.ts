@@ -77,7 +77,7 @@ subjects.get('/:id', async (c) => {
 // ============================================
 // 과목 생성 (+ 자동으로 수업 생성)
 // ============================================
-subjects.post('/', async (c) => {
+subjects.post('/', requireRole('admin', 'super_admin'), async (c) => {
   const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const { name, code, description, credits, subject_type, grade, performance_ratio, written_ratio, teacher_id } = await c.req.json();
@@ -139,7 +139,7 @@ subjects.post('/', async (c) => {
 // ============================================
 // 과목 수정 (+ 연결된 수업도 업데이트)
 // ============================================
-subjects.put('/:id', async (c) => {
+subjects.put('/:id', requireRole('admin', 'super_admin'), async (c) => {
   const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const id = c.req.param('id');
@@ -210,7 +210,7 @@ subjects.put('/:id', async (c) => {
 // ============================================
 // 과목 삭제
 // ============================================
-subjects.delete('/:id', async (c) => {
+subjects.delete('/:id', requireRole('admin', 'super_admin'), async (c) => {
   const siteId = c.get('siteId') || 1;
   const db = c.env.DB;
   const id = c.req.param('id');

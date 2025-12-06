@@ -1,10 +1,11 @@
 import { Hono } from 'hono';
 import type { CloudflareBindings } from '../types';
+import { authMiddleware, requireRole } from '../middleware/auth';
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 
 // 수상 목록 조회 (특정 학생 또는 전체)
-app.get('/', async (c) => {
+app.get('/', authMiddleware, async (c) => {
   const { DB } = c.env;
   const siteId = c.get('siteId') || 1;
   const studentId = c.req.query('student_id');
@@ -71,7 +72,7 @@ app.get('/', async (c) => {
 });
 
 // 특정 수상 조회
-app.get('/:id', async (c) => {
+app.get('/:id', authMiddleware, async (c) => {
   const { DB } = c.env;
   const siteId = c.get('siteId') || 1;
   const id = c.req.param('id');
@@ -102,7 +103,7 @@ app.get('/:id', async (c) => {
 });
 
 // 수상 추가
-app.post('/', async (c) => {
+app.post('/', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
   const { DB } = c.env;
   const siteId = c.get('siteId') || 1;
 
@@ -158,7 +159,7 @@ app.post('/', async (c) => {
 });
 
 // 수상 수정
-app.put('/:id', async (c) => {
+app.put('/:id', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
   const { DB } = c.env;
   const siteId = c.get('siteId') || 1;
   const id = c.req.param('id');
@@ -208,7 +209,7 @@ app.put('/:id', async (c) => {
 });
 
 // 수상 삭제
-app.delete('/:id', async (c) => {
+app.delete('/:id', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
   const { DB } = c.env;
   const siteId = c.get('siteId') || 1;
   const id = c.req.param('id');
@@ -228,7 +229,7 @@ app.delete('/:id', async (c) => {
 });
 
 // 학생별 수상 통계
-app.get('/stats/by-student/:studentId', async (c) => {
+app.get('/stats/by-student/:studentId', authMiddleware, async (c) => {
   const { DB } = c.env;
   const siteId = c.get('siteId') || 1;
   const studentId = c.req.param('studentId');

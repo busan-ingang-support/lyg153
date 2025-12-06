@@ -55,7 +55,7 @@ semesters.get('/current', async (c) => {
 });
 
 // 학기 생성 (관리자 전용)
-semesters.post('/', async (c) => {
+semesters.post('/', requireRole('admin', 'super_admin'), async (c) => {
   try {
     const siteId = c.get('siteId') || 1;
     const db = c.env.DB;
@@ -89,7 +89,7 @@ semesters.post('/', async (c) => {
 });
 
 // 학기 수정
-semesters.put('/:id', async (c) => {
+semesters.put('/:id', requireRole('admin', 'super_admin'), async (c) => {
   try {
     const siteId = c.get('siteId') || 1;
     const db = c.env.DB;

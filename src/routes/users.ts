@@ -1,11 +1,11 @@
 import { Hono } from 'hono';
 import type { CloudflareBindings } from '../types';
-import { hashPassword } from '../utils/auth';
+import { hashPassword, requireRole } from '../utils/auth';
 
 const users = new Hono<{ Bindings: CloudflareBindings }>();
 
 // 모든 사용자 조회 (관리자 전용)
-users.get('/', async (c) => {
+users.get('/', requireRole('admin', 'super_admin'), async (c) => {
   try {
     const db = c.env.DB;
     const siteId = c.get('siteId') || 1;
@@ -73,7 +73,7 @@ users.get('/', async (c) => {
 });
 
 // 특정 사용자 조회
-users.get('/:id', async (c) => {
+users.get('/:id', requireRole('admin', 'super_admin'), async (c) => {
   try {
     const db = c.env.DB;
     const id = c.req.param('id');
@@ -129,7 +129,7 @@ users.get('/:id', async (c) => {
 });
 
 // 새 사용자 생성 (관리자 전용)
-users.post('/', async (c) => {
+users.post('/', requireRole('admin', 'super_admin'), async (c) => {
   try {
     const db = c.env.DB;
     const siteId = c.get('siteId') || 1;
@@ -165,7 +165,7 @@ users.post('/', async (c) => {
 });
 
 // 사용자 정보 수정
-users.put('/:id', async (c) => {
+users.put('/:id', requireRole('admin', 'super_admin'), async (c) => {
   try {
     const db = c.env.DB;
     const id = c.req.param('id');
@@ -215,8 +215,8 @@ users.put('/:id', async (c) => {
   }
 });
 
-// 사용자 권한 변경 (관리자 전용)
-users.put('/:id/role', async (c) => {
+// 사용자 권한 변경 (최고관리자 전용)
+users.put('/:id/role', requireRole('super_admin'), async (c) => {
   try {
     const db = c.env.DB;
     const id = c.req.param('id');
@@ -243,8 +243,8 @@ users.put('/:id/role', async (c) => {
   }
 });
 
-// 사용자 삭제 (관리자 전용)
-users.delete('/:id', async (c) => {
+// 사용자 삭제 (최고관리자 전용)
+users.delete('/:id', requireRole('super_admin'), async (c) => {
   try {
     const db = c.env.DB;
     const id = c.req.param('id');
