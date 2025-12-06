@@ -37,8 +37,10 @@ auth.post('/login', async (c) => {
       return c.json({ error: 'Invalid credentials' }, 401);
     }
     
-    // JWT 토큰 생성 (site_id 포함)
-    const token = await createToken(user.id as number, user.role as string, siteId);
+    // JWT 토큰 생성 (user의 실제 site_id 포함)
+    // super_admin의 경우 요청 도메인의 siteId 사용, 그 외는 user.site_id 사용
+    const tokenSiteId = user.role === 'super_admin' ? siteId : (user.site_id as number);
+    const token = await createToken(user.id as number, user.role as string, tokenSiteId);
 
     // 사용자 역할에 따른 추가 정보 조회
     let additionalInfo: any = {};
