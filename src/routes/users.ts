@@ -27,7 +27,7 @@ users.get('/', requireRole('admin', 'super_admin'), async (c) => {
           t.id as teacher_id,
           t.subject as teacher_subject
         FROM users u
-        LEFT JOIN teachers t ON u.id = t.user_id
+        LEFT JOIN teachers t ON u.id = t.user_id AND t.site_id = ?
         WHERE u.role = ? AND u.site_id = ? AND u.deleted_at IS NULL
       `;
     } else {
@@ -41,7 +41,7 @@ users.get('/', requireRole('admin', 'super_admin'), async (c) => {
       query += ' AND role = ?';
       params.push(role);
     } else if (role === 'teacher') {
-      params.push(role, siteId);
+      params.push(siteId, role, siteId);
     } else {
       params.push(siteId);
     }
