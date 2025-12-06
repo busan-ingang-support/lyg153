@@ -70,13 +70,13 @@ boards.get('/posts', async (c) => {
         c.subject_id,
         s.name as subject_name
       FROM board_posts bp
-      LEFT JOIN users u ON bp.author_id = u.id
-      LEFT JOIN boards b ON bp.board_id = b.id
-      LEFT JOIN courses c ON b.target_id = c.id AND b.board_type = 'course'
-      LEFT JOIN subjects s ON c.subject_id = s.id
+      LEFT JOIN users u ON bp.author_id = u.id AND u.site_id = ? AND u.deleted_at IS NULL
+      LEFT JOIN boards b ON bp.board_id = b.id AND b.site_id = ?
+      LEFT JOIN courses c ON b.target_id = c.id AND b.board_type = 'course' AND c.site_id = ? AND COALESCE(c.status, 1) = 1
+      LEFT JOIN subjects s ON c.subject_id = s.id AND s.site_id = ? AND COALESCE(s.status, 1) = 1
       WHERE bp.is_deleted = 0 AND bp.site_id = ?
     `;
-    const params: any[] = [siteId];
+    const params: any[] = [siteId, siteId, siteId, siteId, siteId];
 
     if (board_id) {
       query += ' AND bp.board_id = ?';
@@ -130,10 +130,10 @@ boards.get('/posts/:id', async (c) => {
         b.name as board_name,
         b.board_type
       FROM board_posts bp
-      LEFT JOIN users u ON bp.author_id = u.id
-      LEFT JOIN boards b ON bp.board_id = b.id
+      LEFT JOIN users u ON bp.author_id = u.id AND u.site_id = ? AND u.deleted_at IS NULL
+      LEFT JOIN boards b ON bp.board_id = b.id AND b.site_id = ?
       WHERE bp.id = ? AND bp.is_deleted = 0 AND bp.site_id = ?
-    `).bind(id, siteId).first();
+    `).bind(siteId, siteId, id, siteId).first();
 
     if (!post) {
       return c.json({ error: '게시글을 찾을 수 없습니다' }, 404);
@@ -145,10 +145,10 @@ boards.get('/posts/:id', async (c) => {
         bc.*,
         u.name as author_name
       FROM board_comments bc
-      LEFT JOIN users u ON bc.author_id = u.id
+      LEFT JOIN users u ON bc.author_id = u.id AND u.site_id = ? AND u.deleted_at IS NULL
       WHERE bc.post_id = ? AND bc.is_deleted = 0 AND bc.site_id = ?
       ORDER BY bc.created_at ASC
-    `).bind(id, siteId).all();
+    `).bind(siteId, id, siteId).all();
 
     return c.json({
       post,
