@@ -22,12 +22,12 @@ schedules.get('/', async (c) => {
         u.name as teacher_name,
         cl.name as class_name
       FROM schedules sch
-      LEFT JOIN courses c ON sch.course_id = c.id
-      LEFT JOIN subjects s ON c.subject_id = s.id
-      LEFT JOIN teachers t ON c.teacher_id = t.id
-      LEFT JOIN users u ON t.user_id = u.id
-      LEFT JOIN classes cl ON sch.class_id = cl.id
-      WHERE sch.site_id = ?
+      LEFT JOIN courses c ON sch.course_id = c.id AND c.deleted_at IS NULL
+      LEFT JOIN subjects s ON c.subject_id = s.id AND s.deleted_at IS NULL
+      LEFT JOIN teachers t ON c.teacher_id = t.id AND t.deleted_at IS NULL
+      LEFT JOIN users u ON t.user_id = u.id AND u.deleted_at IS NULL
+      LEFT JOIN classes cl ON sch.class_id = cl.id AND cl.deleted_at IS NULL
+      WHERE sch.site_id = ? AND sch.deleted_at IS NULL
     `;
 
     const params: any[] = [siteId];
@@ -70,11 +70,11 @@ schedules.get('/weekly/:classId', async (c) => {
         s.code as subject_code,
         u.name as teacher_name
       FROM schedules sch
-      LEFT JOIN courses c ON sch.course_id = c.id
-      LEFT JOIN subjects s ON c.subject_id = s.id
-      LEFT JOIN teachers t ON c.teacher_id = t.id
-      LEFT JOIN users u ON t.user_id = u.id
-      WHERE sch.class_id = ? AND sch.site_id = ?
+      LEFT JOIN courses c ON sch.course_id = c.id AND c.deleted_at IS NULL
+      LEFT JOIN subjects s ON c.subject_id = s.id AND s.deleted_at IS NULL
+      LEFT JOIN teachers t ON c.teacher_id = t.id AND t.deleted_at IS NULL
+      LEFT JOIN users u ON t.user_id = u.id AND u.deleted_at IS NULL
+      WHERE sch.class_id = ? AND sch.site_id = ? AND sch.deleted_at IS NULL
       ORDER BY sch.day_of_week, sch.period
     `).bind(classId, siteId).all();
     
@@ -136,7 +136,7 @@ schedules.post('/', async (c) => {
     // 기존 시간표 확인 (같은 반, 요일, 교시)
     const existing = await db.prepare(`
       SELECT id FROM schedules
-      WHERE class_id = ? AND day_of_week = ? AND period = ? AND site_id = ?
+      WHERE class_id = ? AND day_of_week = ? AND period = ? AND site_id = ? AND deleted_at IS NULL
     `).bind(class_id, day_of_week, period, siteId).first();
 
     if (existing) {
@@ -178,7 +178,7 @@ schedules.delete('/:id', async (c) => {
   const id = c.req.param('id');
 
   try {
-    const result = await db.prepare('DELETE FROM schedules WHERE id = ? AND site_id = ?').bind(id, siteId).run();
+    const result = await db.prepare('UPDATE schedules SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND site_id = ?').bind(id, siteId).run();
 
     if (result.meta.changes === 0) {
       return c.json({ error: '시간표 항목을 찾을 수 없습니다' }, 404);
@@ -203,7 +203,8 @@ schedules.delete('/slot/:classId/:dayOfWeek/:period', async (c) => {
 
   try {
     const result = await db.prepare(`
-      DELETE FROM schedules
+      UPDATE schedules
+      SET deleted_at = CURRENT_TIMESTAMP
       WHERE class_id = ? AND day_of_week = ? AND period = ? AND site_id = ?
     `).bind(classId, dayOfWeek, period, siteId).run();
 
@@ -233,12 +234,13 @@ schedules.post('/check-conflict', async (c) => {
         cl.name as class_name,
         c.course_name
       FROM schedules sch
-      LEFT JOIN courses c ON sch.course_id = c.id
-      LEFT JOIN classes cl ON sch.class_id = cl.id
+      LEFT JOIN courses c ON sch.course_id = c.id AND c.deleted_at IS NULL
+      LEFT JOIN classes cl ON sch.class_id = cl.id AND cl.deleted_at IS NULL
       WHERE c.teacher_id = ?
         AND sch.day_of_week = ?
         AND sch.period = ?
         AND sch.site_id = ?
+        AND sch.deleted_at IS NULL
     `;
 
     const params: any[] = [teacher_id, day_of_week, period, siteId];
@@ -270,7 +272,7 @@ schedules.get('/periods', async (c) => {
   try {
     const { results } = await db.prepare(`
       SELECT * FROM schedule_periods
-      WHERE is_active = 1 AND site_id = ?
+      WHERE is_active = 1 AND site_id = ? AND deleted_at IS NULL
       ORDER BY period_number
     `).bind(siteId).all();
 

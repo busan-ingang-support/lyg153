@@ -21,10 +21,10 @@ volunteer.get('/', async (c) => {
         s.student_number,
         sem.name as semester_name
       FROM volunteer_activities va
-      LEFT JOIN students s ON va.student_id = s.id
-      LEFT JOIN users u ON s.user_id = u.id
-      LEFT JOIN semesters sem ON va.semester_id = sem.id
-      WHERE va.site_id = ?
+      LEFT JOIN students s ON va.student_id = s.id AND s.deleted_at IS NULL
+      LEFT JOIN users u ON s.user_id = u.id AND u.deleted_at IS NULL
+      LEFT JOIN semesters sem ON va.semester_id = sem.id AND sem.deleted_at IS NULL
+      WHERE va.site_id = ? AND va.deleted_at IS NULL
     `
 
     const params: any[] = [siteId]
@@ -66,10 +66,10 @@ volunteer.get('/:id', async (c) => {
         s.student_number,
         sem.name as semester_name
       FROM volunteer_activities va
-      LEFT JOIN students s ON va.student_id = s.id
-      LEFT JOIN users u ON s.user_id = u.id
-      LEFT JOIN semesters sem ON va.semester_id = sem.id
-      WHERE va.id = ? AND va.site_id = ?
+      LEFT JOIN students s ON va.student_id = s.id AND s.deleted_at IS NULL
+      LEFT JOIN users u ON s.user_id = u.id AND u.deleted_at IS NULL
+      LEFT JOIN semesters sem ON va.semester_id = sem.id AND sem.deleted_at IS NULL
+      WHERE va.id = ? AND va.site_id = ? AND va.deleted_at IS NULL
     `).bind(id, siteId)
 
     const result = await stmt.first()
@@ -185,7 +185,7 @@ volunteer.delete('/:id', requireRole('teacher', 'admin', 'super_admin'), async (
     const siteId = c.get('siteId') || 1
     const id = parseInt(c.req.param('id'))
 
-    const stmt = c.env.DB.prepare('DELETE FROM volunteer_activities WHERE id = ? AND site_id = ?').bind(id, siteId)
+    const stmt = c.env.DB.prepare('UPDATE volunteer_activities SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND site_id = ?').bind(id, siteId)
     const result = await stmt.run()
 
     if (result.meta.changes === 0) {
