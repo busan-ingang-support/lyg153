@@ -22,7 +22,9 @@
       "Bash(ssh -T git@github.com-busan)",
       "Bash(gh auth status:*)",
       "Bash(git remote set-url:*)",
-      "Bash(ssh-add:*)"
+      "Bash(ssh-add:*)",
+      "Bash(curl:*)",
+      "Bash(node -e:*)"
     ],
     "deny": [],
     "ask": []

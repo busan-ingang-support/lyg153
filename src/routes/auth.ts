@@ -103,6 +103,30 @@ auth.get('/me', async (c) => {
   }
 });
 
+// 디버그 엔드포인트 (임시)
+auth.get('/debug-token', async (c) => {
+  const authHeader = c.req.header('Authorization');
+
+  if (!authHeader) {
+    return c.json({ error: 'No auth header' }, 400);
+  }
+
+  const token = authHeader.replace('Bearer ', '');
+
+  try {
+    const payload = JSON.parse(atob(token));
+    return c.json({
+      success: true,
+      payload,
+      currentTime: Math.floor(Date.now() / 1000),
+      isExpired: payload.exp < Math.floor(Date.now() / 1000),
+      siteIdFromContext: c.get('siteId')
+    });
+  } catch (e: any) {
+    return c.json({ error: 'Token parse failed', message: e.message }, 400);
+  }
+});
+
 // 비밀번호 변경
 auth.post('/change-password', async (c) => {
   const token = c.req.header('Authorization')?.replace('Bearer ', '');
