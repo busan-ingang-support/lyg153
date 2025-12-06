@@ -27,11 +27,11 @@ users.get('/', requireRole('admin', 'super_admin'), async (c) => {
           t.id as teacher_id,
           t.subject as teacher_subject
         FROM users u
-        LEFT JOIN teachers t ON u.id = t.user_id AND t.deleted_at IS NULL
-        WHERE u.role = ? AND u.site_id = ? AND u.deleted_at IS NULL
+        LEFT JOIN teachers t ON u.id = t.user_id
+        WHERE u.role = ? AND u.site_id = ?
       `;
     } else {
-      query = 'SELECT id, username, email, name, role, phone, is_active, created_at FROM users WHERE site_id = ? AND deleted_at IS NULL';
+      query = 'SELECT id, username, email, name, role, phone, is_active, created_at FROM users WHERE site_id = ?';
     }
 
     const params: any[] = [];
@@ -80,7 +80,7 @@ users.get('/:id', requireRole('admin', 'super_admin'), async (c) => {
     const siteId = c.get('siteId') || 1;
 
     const user = await db.prepare(
-      'SELECT id, username, email, name, role, phone, is_active, created_at FROM users WHERE id = ? AND site_id = ? AND deleted_at IS NULL'
+      'SELECT id, username, email, name, role, phone, is_active, created_at FROM users WHERE id = ? AND site_id = ?'
     ).bind(id, siteId).first();
     
     if (!user) {
@@ -92,14 +92,14 @@ users.get('/:id', requireRole('admin', 'super_admin'), async (c) => {
     
     if (user.role === 'student') {
       const student = await db.prepare(
-        'SELECT * FROM students WHERE user_id = ? AND deleted_at IS NULL'
+        'SELECT * FROM students WHERE user_id = ?'
       ).bind(id).first();
-
+      
       if (student) {
         // 반 정보 조회
         if (student.class_id) {
           const classInfo = await db.prepare(
-            'SELECT * FROM classes WHERE id = ? AND deleted_at IS NULL'
+            'SELECT * FROM classes WHERE id = ?'
           ).bind(student.class_id).first();
           additionalInfo.class = classInfo;
         }
@@ -107,15 +107,15 @@ users.get('/:id', requireRole('admin', 'super_admin'), async (c) => {
       }
     } else if (user.role === 'teacher') {
       const teacher = await db.prepare(
-        'SELECT * FROM teachers WHERE user_id = ? AND deleted_at IS NULL'
+        'SELECT * FROM teachers WHERE user_id = ?'
       ).bind(id).first();
       additionalInfo.teacher = teacher;
     } else if (user.role === 'parent') {
       const children = await db.prepare(`
         SELECT s.*, u.name as student_name, ps.relationship
         FROM parent_student ps
-        JOIN students s ON ps.student_id = s.id AND s.deleted_at IS NULL
-        JOIN users u ON s.user_id = u.id AND u.deleted_at IS NULL
+        JOIN students s ON ps.student_id = s.id
+        JOIN users u ON s.user_id = u.id
         WHERE ps.parent_user_id = ?
       `).bind(id).all();
       additionalInfo.children = children.results;
@@ -250,8 +250,8 @@ users.delete('/:id', requireRole('super_admin'), async (c) => {
     const id = c.req.param('id');
     const siteId = c.get('siteId') || 1;
 
-    // 사용자 삭제 (soft delete)
-    await db.prepare('UPDATE users SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND site_id = ?').bind(id, siteId).run();
+    // 사용자 삭제 (CASCADE로 관련 데이터도 삭제됨)
+    await db.prepare('DELETE FROM users WHERE id = ? AND site_id = ?').bind(id, siteId).run();
     
     return c.json({ message: 'User deleted successfully' });
   } catch (error) {

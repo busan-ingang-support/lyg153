@@ -24,9 +24,9 @@ subjects.get('/', async (c) => {
       u.name as teacher_name,
       u.id as teacher_user_id
     FROM subjects s
-    LEFT JOIN teachers t ON s.teacher_id = t.id AND t.site_id = ? AND t.deleted_at IS NULL
-    LEFT JOIN users u ON t.user_id = u.id AND u.site_id = ? AND u.deleted_at IS NULL
-    WHERE s.site_id = ? AND s.deleted_at IS NULL
+    LEFT JOIN teachers t ON s.teacher_id = t.id AND t.site_id = ?
+    LEFT JOIN users u ON t.user_id = u.id AND u.site_id = ?
+    WHERE s.site_id = ?
   `;
   const params: any[] = [siteId, siteId, siteId];
 
@@ -62,9 +62,9 @@ subjects.get('/:id', async (c) => {
       u.name as teacher_name,
       u.id as teacher_user_id
     FROM subjects s
-    LEFT JOIN teachers t ON s.teacher_id = t.id AND t.site_id = ? AND t.deleted_at IS NULL
-    LEFT JOIN users u ON t.user_id = u.id AND u.site_id = ? AND u.deleted_at IS NULL
-    WHERE s.id = ? AND s.site_id = ? AND s.deleted_at IS NULL
+    LEFT JOIN teachers t ON s.teacher_id = t.id AND t.site_id = ?
+    LEFT JOIN users u ON t.user_id = u.id AND u.site_id = ?
+    WHERE s.id = ? AND s.site_id = ?
   `).bind(siteId, siteId, id, siteId).first();
 
   if (!result) {
@@ -111,7 +111,7 @@ subjects.post('/', requireRole('admin', 'super_admin'), async (c) => {
 
     // 2. 현재 활성 학기 조회
     const activeSemester = await db.prepare(`
-      SELECT id FROM semesters WHERE is_current = 1 AND site_id = ? AND deleted_at IS NULL LIMIT 1
+      SELECT id FROM semesters WHERE is_current = 1 AND site_id = ? LIMIT 1
     `).bind(siteId).first() as any;
 
     // 3. 담당 교사가 있고 활성 학기가 있으면 자동으로 수업(course) 생성
@@ -172,13 +172,13 @@ subjects.put('/:id', requireRole('admin', 'super_admin'), async (c) => {
 
     // 2. 현재 활성 학기 조회
     const activeSemester = await db.prepare(`
-      SELECT id FROM semesters WHERE is_current = 1 AND site_id = ? AND deleted_at IS NULL LIMIT 1
+      SELECT id FROM semesters WHERE is_current = 1 AND site_id = ? LIMIT 1
     `).bind(siteId).first() as any;
 
     if (activeSemester) {
       // 3. 이 과목의 현재 학기 수업이 있는지 확인
       const existingCourse = await db.prepare(`
-        SELECT id FROM courses WHERE subject_id = ? AND semester_id = ? AND site_id = ? AND deleted_at IS NULL
+        SELECT id FROM courses WHERE subject_id = ? AND semester_id = ? AND site_id = ?
       `).bind(id, activeSemester.id, siteId).first() as any;
 
       if (existingCourse) {
@@ -216,7 +216,7 @@ subjects.delete('/:id', requireRole('admin', 'super_admin'), async (c) => {
   const id = c.req.param('id');
 
   try {
-    const result = await db.prepare('UPDATE subjects SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND site_id = ?').bind(id, siteId).run();
+    const result = await db.prepare('DELETE FROM subjects WHERE id = ? AND site_id = ?').bind(id, siteId).run();
 
     if (result.meta.changes === 0) {
       return c.json({ error: '과목을 찾을 수 없습니다' }, 404);
@@ -243,7 +243,7 @@ subjects.get('/stats/by-grade', async (c) => {
       SUM(CASE WHEN subject_type = 'required' THEN 1 ELSE 0 END) as required_count,
       SUM(CASE WHEN subject_type = 'elective' THEN 1 ELSE 0 END) as elective_count
     FROM subjects
-    WHERE grade IS NOT NULL AND site_id = ? AND deleted_at IS NULL
+    WHERE grade IS NOT NULL AND site_id = ?
     GROUP BY grade
     ORDER BY grade
   `).bind(siteId).all();
