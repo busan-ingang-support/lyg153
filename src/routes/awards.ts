@@ -22,9 +22,9 @@ app.get('/', authMiddleware, async (c) => {
         sem.name as semester_name
       FROM awards a
       LEFT JOIN students s ON a.student_id = s.id
-      LEFT JOIN users u ON s.user_id = u.id
+      LEFT JOIN users u ON s.user_id = u.id AND u.deleted_at IS NULL
       LEFT JOIN semesters sem ON a.semester_id = sem.id
-      WHERE a.site_id = ?
+      WHERE a.site_id = ? AND a.deleted_at IS NULL
     `;
     const params: any[] = [siteId];
 
@@ -44,7 +44,7 @@ app.get('/', authMiddleware, async (c) => {
     const result = await DB.prepare(query).bind(...params).all();
 
     // 전체 개수 조회
-    let countQuery = `SELECT COUNT(*) as total FROM awards WHERE site_id = ?`;
+    let countQuery = `SELECT COUNT(*) as total FROM awards WHERE site_id = ? AND deleted_at IS NULL`;
     const countParams: any[] = [siteId];
 
     if (studentId) {
@@ -86,9 +86,9 @@ app.get('/:id', authMiddleware, async (c) => {
         sem.name as semester_name
       FROM awards a
       LEFT JOIN students s ON a.student_id = s.id
-      LEFT JOIN users u ON s.user_id = u.id
+      LEFT JOIN users u ON s.user_id = u.id AND u.deleted_at IS NULL
       LEFT JOIN semesters sem ON a.semester_id = sem.id
-      WHERE a.id = ? AND a.site_id = ?
+      WHERE a.id = ? AND a.site_id = ? AND a.deleted_at IS NULL
     `).bind(id, siteId).first();
 
     if (!result) {
@@ -208,14 +208,14 @@ app.put('/:id', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
   }
 });
 
-// 수상 삭제
+// 수상 삭제 - Soft Delete
 app.delete('/:id', requireRole('teacher', 'admin', 'super_admin'), async (c) => {
   const { DB } = c.env;
   const siteId = c.get('siteId') || 1;
   const id = c.req.param('id');
 
   try {
-    const result = await DB.prepare('DELETE FROM awards WHERE id = ? AND site_id = ?').bind(id, siteId).run();
+    const result = await DB.prepare('UPDATE awards SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND site_id = ?').bind(id, siteId).run();
 
     if (!result.success) {
       throw new Error('수상 삭제 실패');
@@ -241,7 +241,7 @@ app.get('/stats/by-student/:studentId', authMiddleware, async (c) => {
         award_category,
         COUNT(*) as count
       FROM awards
-      WHERE student_id = ? AND site_id = ?
+      WHERE student_id = ? AND site_id = ? AND deleted_at IS NULL
       GROUP BY award_category
     `).bind(studentId, siteId).all();
 

@@ -23,10 +23,10 @@ counseling.get('/', requireRole('teacher', 'admin', 'super_admin'), async (c) =>
         cu.name as counselor_name
       FROM counseling_records cr
       LEFT JOIN students s ON cr.student_id = s.id
-      LEFT JOIN users u ON s.user_id = u.id
-      LEFT JOIN users cu ON cr.counselor_id = cu.id
+      LEFT JOIN users u ON s.user_id = u.id AND u.deleted_at IS NULL
+      LEFT JOIN users cu ON cr.counselor_id = cu.id AND cu.deleted_at IS NULL
       LEFT JOIN semesters sem ON cr.semester_id = sem.id
-      WHERE cr.site_id = ?
+      WHERE cr.site_id = ? AND cr.deleted_at IS NULL AND COALESCE(cr.status, 1) = 1
     `
 
     const params: any[] = [siteId]
@@ -70,10 +70,10 @@ counseling.get('/:id', requireRole('teacher', 'admin', 'super_admin'), async (c)
         cu.name as counselor_name
       FROM counseling_records cr
       LEFT JOIN students s ON cr.student_id = s.id
-      LEFT JOIN users u ON s.user_id = u.id
-      LEFT JOIN users cu ON cr.counselor_id = cu.id
+      LEFT JOIN users u ON s.user_id = u.id AND u.deleted_at IS NULL
+      LEFT JOIN users cu ON cr.counselor_id = cu.id AND cu.deleted_at IS NULL
       LEFT JOIN semesters sem ON cr.semester_id = sem.id
-      WHERE cr.id = ? AND cr.site_id = ?
+      WHERE cr.id = ? AND cr.site_id = ? AND cr.deleted_at IS NULL AND COALESCE(cr.status, 1) = 1
     `).bind(id, siteId)
 
     const result = await stmt.first()
@@ -192,7 +192,7 @@ counseling.delete('/:id', requireRole('teacher', 'admin', 'super_admin'), async 
     const siteId = c.get('siteId') || 1
     const id = parseInt(c.req.param('id'))
 
-    const stmt = c.env.DB.prepare('DELETE FROM counseling_records WHERE id = ? AND site_id = ?').bind(id, siteId)
+    const stmt = c.env.DB.prepare('UPDATE counseling_records SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND site_id = ?').bind(id, siteId)
     const result = await stmt.run()
 
     if (result.meta.changes === 0) {

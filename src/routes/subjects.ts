@@ -25,8 +25,8 @@ subjects.get('/', async (c) => {
       u.id as teacher_user_id
     FROM subjects s
     LEFT JOIN teachers t ON s.teacher_id = t.id AND t.site_id = ?
-    LEFT JOIN users u ON t.user_id = u.id AND u.site_id = ?
-    WHERE s.site_id = ?
+    LEFT JOIN users u ON t.user_id = u.id AND u.site_id = ? AND u.deleted_at IS NULL
+    WHERE s.site_id = ? AND COALESCE(s.status, 1) = 1
   `;
   const params: any[] = [siteId, siteId, siteId];
 
@@ -63,8 +63,8 @@ subjects.get('/:id', async (c) => {
       u.id as teacher_user_id
     FROM subjects s
     LEFT JOIN teachers t ON s.teacher_id = t.id AND t.site_id = ?
-    LEFT JOIN users u ON t.user_id = u.id AND u.site_id = ?
-    WHERE s.id = ? AND s.site_id = ?
+    LEFT JOIN users u ON t.user_id = u.id AND u.site_id = ? AND u.deleted_at IS NULL
+    WHERE s.id = ? AND s.site_id = ? AND COALESCE(s.status, 1) = 1
   `).bind(siteId, siteId, id, siteId).first();
 
   if (!result) {
@@ -178,7 +178,7 @@ subjects.put('/:id', requireRole('admin', 'super_admin'), async (c) => {
     if (activeSemester) {
       // 3. 이 과목의 현재 학기 수업이 있는지 확인
       const existingCourse = await db.prepare(`
-        SELECT id FROM courses WHERE subject_id = ? AND semester_id = ? AND site_id = ?
+        SELECT id FROM courses WHERE subject_id = ? AND semester_id = ? AND site_id = ? AND COALESCE(status, 1) = 1
       `).bind(id, activeSemester.id, siteId).first() as any;
 
       if (existingCourse) {
@@ -208,7 +208,7 @@ subjects.put('/:id', requireRole('admin', 'super_admin'), async (c) => {
 });
 
 // ============================================
-// 과목 삭제
+// 과목 삭제 - Soft Delete
 // ============================================
 subjects.delete('/:id', requireRole('admin', 'super_admin'), async (c) => {
   const siteId = c.get('siteId') || 1;
@@ -216,7 +216,7 @@ subjects.delete('/:id', requireRole('admin', 'super_admin'), async (c) => {
   const id = c.req.param('id');
 
   try {
-    const result = await db.prepare('DELETE FROM subjects WHERE id = ? AND site_id = ?').bind(id, siteId).run();
+    const result = await db.prepare('UPDATE subjects SET status = 0 WHERE id = ? AND site_id = ?').bind(id, siteId).run();
 
     if (result.meta.changes === 0) {
       return c.json({ error: '과목을 찾을 수 없습니다' }, 404);
@@ -243,7 +243,7 @@ subjects.get('/stats/by-grade', async (c) => {
       SUM(CASE WHEN subject_type = 'required' THEN 1 ELSE 0 END) as required_count,
       SUM(CASE WHEN subject_type = 'elective' THEN 1 ELSE 0 END) as elective_count
     FROM subjects
-    WHERE grade IS NOT NULL AND site_id = ?
+    WHERE grade IS NOT NULL AND site_id = ? AND COALESCE(status, 1) = 1
     GROUP BY grade
     ORDER BY grade
   `).bind(siteId).all();

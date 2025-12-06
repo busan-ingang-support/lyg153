@@ -28,10 +28,10 @@ users.get('/', requireRole('admin', 'super_admin'), async (c) => {
           t.subject as teacher_subject
         FROM users u
         LEFT JOIN teachers t ON u.id = t.user_id
-        WHERE u.role = ? AND u.site_id = ?
+        WHERE u.role = ? AND u.site_id = ? AND u.deleted_at IS NULL
       `;
     } else {
-      query = 'SELECT id, username, email, name, role, phone, is_active, created_at FROM users WHERE site_id = ?';
+      query = 'SELECT id, username, email, name, role, phone, is_active, created_at FROM users WHERE site_id = ? AND deleted_at IS NULL';
     }
 
     const params: any[] = [];
@@ -80,7 +80,7 @@ users.get('/:id', requireRole('admin', 'super_admin'), async (c) => {
     const siteId = c.get('siteId') || 1;
 
     const user = await db.prepare(
-      'SELECT id, username, email, name, role, phone, is_active, created_at FROM users WHERE id = ? AND site_id = ?'
+      'SELECT id, username, email, name, role, phone, is_active, created_at FROM users WHERE id = ? AND site_id = ? AND deleted_at IS NULL'
     ).bind(id, siteId).first();
     
     if (!user) {
@@ -243,16 +243,16 @@ users.put('/:id/role', requireRole('super_admin'), async (c) => {
   }
 });
 
-// 사용자 삭제 (최고관리자 전용)
+// 사용자 삭제 (최고관리자 전용) - Soft Delete
 users.delete('/:id', requireRole('super_admin'), async (c) => {
   try {
     const db = c.env.DB;
     const id = c.req.param('id');
     const siteId = c.get('siteId') || 1;
 
-    // 사용자 삭제 (CASCADE로 관련 데이터도 삭제됨)
-    await db.prepare('DELETE FROM users WHERE id = ? AND site_id = ?').bind(id, siteId).run();
-    
+    // Soft delete: deleted_at 타임스탬프 설정
+    await db.prepare('UPDATE users SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND site_id = ?').bind(id, siteId).run();
+
     return c.json({ message: 'User deleted successfully' });
   } catch (error) {
     console.error('Delete user error:', error);

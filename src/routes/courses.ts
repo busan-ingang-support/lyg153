@@ -32,10 +32,10 @@ courses.get('/', async (c) => {
         cl.name as class_name,
         cl.grade as class_grade
       FROM courses c
-      LEFT JOIN subjects s ON c.subject_id = s.id AND s.site_id = ?
+      LEFT JOIN subjects s ON c.subject_id = s.id AND s.site_id = ? AND COALESCE(s.status, 1) = 1
       LEFT JOIN semesters sem ON c.semester_id = sem.id AND sem.site_id = ?
       LEFT JOIN teachers t ON c.teacher_id = t.id AND t.site_id = ?
-      LEFT JOIN users u ON t.user_id = u.id AND u.site_id = ?
+      LEFT JOIN users u ON t.user_id = u.id AND u.site_id = ? AND u.deleted_at IS NULL
       LEFT JOIN classes cl ON c.class_id = cl.id AND cl.site_id = ?
     `;
 
@@ -45,11 +45,11 @@ courses.get('/', async (c) => {
     if (student_id) {
       query += `
         INNER JOIN enrollments e ON c.id = e.course_id AND e.site_id = ?
-        WHERE e.student_id = ? AND c.site_id = ?
+        WHERE e.student_id = ? AND c.site_id = ? AND COALESCE(c.status, 1) = 1
       `;
       params.push(siteId, parseInt(student_id), siteId);
     } else {
-      query += ' WHERE c.site_id = ?';
+      query += ' WHERE c.site_id = ? AND COALESCE(c.status, 1) = 1';
       params.push(siteId);
     }
 
@@ -105,12 +105,12 @@ courses.get('/:id', async (c) => {
         cl.name as class_name,
         cl.grade as class_grade
       FROM courses c
-      LEFT JOIN subjects s ON c.subject_id = s.id AND s.site_id = ?
+      LEFT JOIN subjects s ON c.subject_id = s.id AND s.site_id = ? AND COALESCE(s.status, 1) = 1
       LEFT JOIN semesters sem ON c.semester_id = sem.id AND sem.site_id = ?
       LEFT JOIN teachers t ON c.teacher_id = t.id AND t.site_id = ?
-      LEFT JOIN users u ON t.user_id = u.id AND u.site_id = ?
+      LEFT JOIN users u ON t.user_id = u.id AND u.site_id = ? AND u.deleted_at IS NULL
       LEFT JOIN classes cl ON c.class_id = cl.id AND cl.site_id = ?
-      WHERE c.id = ? AND c.site_id = ?
+      WHERE c.id = ? AND c.site_id = ? AND COALESCE(c.status, 1) = 1
     `).bind(siteId, siteId, siteId, siteId, siteId, id, siteId).first();
 
     if (!result) {
@@ -222,7 +222,7 @@ courses.put('/:id', requireRole('admin', 'super_admin'), async (c) => {
 });
 
 // ============================================
-// 수업 삭제
+// 수업 삭제 - Soft Delete
 // ============================================
 courses.delete('/:id', requireRole('admin', 'super_admin'), async (c) => {
   const siteId = c.get('siteId') || 1;
@@ -230,7 +230,7 @@ courses.delete('/:id', requireRole('admin', 'super_admin'), async (c) => {
   const id = c.req.param('id');
 
   try {
-    const result = await db.prepare('DELETE FROM courses WHERE id = ? AND site_id = ?').bind(id, siteId).run();
+    const result = await db.prepare('UPDATE courses SET status = 0 WHERE id = ? AND site_id = ?').bind(id, siteId).run();
 
     if (result.meta.changes === 0) {
       return c.json({ error: '수업을 찾을 수 없습니다' }, 404);
@@ -258,7 +258,7 @@ courses.get('/stats/by-class/:classId', async (c) => {
         COUNT(DISTINCT c.subject_id) as unique_subjects,
         COUNT(DISTINCT c.teacher_id) as unique_teachers
       FROM courses c
-      WHERE c.class_id = ? AND c.site_id = ?
+      WHERE c.class_id = ? AND c.site_id = ? AND COALESCE(c.status, 1) = 1
     `).bind(classId, siteId).all();
 
     return c.json({
