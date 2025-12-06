@@ -12,7 +12,17 @@
       "Bash(ls:*)",
       "Bash(find:*)",
       "Bash(grep:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(wrangler d1 execute:*)",
+      "Bash(npx wrangler d1 execute:*)",
+      "Bash(npx wrangler:*)",
+      "Bash(done)",
+      "Bash(git revert:*)",
+      "Bash(sqlite3:*)",
+      "Bash(ssh -T git@github.com-busan)",
+      "Bash(gh auth status:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(ssh-add:*)"
     ],
     "deny": [],
     "ask": []

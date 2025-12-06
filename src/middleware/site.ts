@@ -26,10 +26,21 @@ export async function siteMiddleware(c: Context<{ Bindings: CloudflareBindings }
   // 도메인에서 site_id 매핑
   let siteId = DOMAIN_SITE_MAP[hostname];
 
-  // 매핑되지 않은 도메인인 경우 기본값 1 사용
+  // 정확히 매핑되지 않은 경우 패턴 매칭
   if (!siteId) {
-    console.warn(`Unknown domain: ${hostname}, defaulting to site_id=1`);
-    siteId = 1;
+    // Cloudflare Pages preview 도메인 (*.lyg153.pages.dev)
+    if (hostname.endsWith('.lyg153.pages.dev')) {
+      siteId = 1;
+    }
+    // healthyeduministry.com 도메인 (모든 서브도메인)
+    else if (hostname.endsWith('.healthyeduministry.com') || hostname === 'healthyeduministry.com') {
+      siteId = 2;
+    }
+    // 기본값
+    else {
+      console.warn(`Unknown domain: ${hostname}, defaulting to site_id=1`);
+      siteId = 1;
+    }
   }
 
   // site_id를 컨텍스트에 저장
