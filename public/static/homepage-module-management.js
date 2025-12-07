@@ -6,6 +6,7 @@ let draggedOverModule = null;
 let currentPage = 'home'; // 현재 선택된 페이지
 let currentTab = 'modules'; // 현재 탭: 'modules' 또는 'settings'
 let homepageBasicSettings = {}; // 기본 설정
+let homepageContainer = null; // 컨테이너 참조 저장
 
 // 홈페이지 모듈 관리 페이지 표시
 async function showHomepageManagement(container) {
@@ -15,8 +16,9 @@ async function showHomepageManagement(container) {
         navigateToPage('dashboard');
         return;
     }
-    
+
     const content = container || document.getElementById('main-content');
+    homepageContainer = content; // 컨테이너 참조 저장
     
     // 로딩 표시
     content.innerHTML = `
@@ -60,14 +62,22 @@ async function showHomepageManagement(container) {
 // 탭 전환
 function switchTab(tab) {
     currentTab = tab;
-    const container = document.getElementById('main-content');
+    const container = homepageContainer || document.getElementById('main-content');
+    if (!container) {
+        console.error('Container not found for switchTab');
+        return;
+    }
     renderModuleManagement(container);
 }
 
 // 페이지 전환
 function switchPage(page) {
     currentPage = page;
-    const container = document.getElementById('main-content');
+    const container = homepageContainer || document.getElementById('main-content');
+    if (!container) {
+        console.error('Container not found for switchPage');
+        return;
+    }
     renderModuleManagement(container);
 }
 
