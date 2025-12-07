@@ -33,6 +33,7 @@ import homepage from './routes/homepage';
 import homepageModules from './routes/homepage-modules';
 import assignments from './routes/assignments';
 import notifications from './routes/notifications';
+import sites from './routes/sites';
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -74,6 +75,7 @@ app.route('/api/homepage', homepage);
 app.route('/api/homepage-modules', homepageModules);
 app.route('/api/assignments', assignments);
 app.route('/api/notifications', notifications);
+app.route('/api/sites', sites);
 
 // 기본 홈페이지
 app.get('/', (c) => {
@@ -179,11 +181,11 @@ app.get('/', (c) => {
         </div>
         
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
-        <script src="/static/public-home.js?v=202512051300"></script>
-        <script src="/static/student-home.js?v=202511141500"></script>
+        <script src="/static/public-home.js?v=202512072345"></script>
+        <script src="/static/student-home.js?v=202512071540"></script>
         <script src="/static/parent-home.js?v=202511212350"></script>
-        <script src="/static/homepage-module-management.js?v=202511211100"></script>
-        <script src="/static/app.js?v=202512052200"></script>
+        <script src="/static/homepage-module-management.js?v=202512071520"></script>
+        <script src="/static/app.js?v=202512071500"></script>
         <script src="/static/add-pages-functions.js?v=202511111600" defer></script>
         <script src="/static/schedule-management.js?v=202512052100" defer></script>
         <script src="/static/subject-management.js?v=202511111700" defer></script>

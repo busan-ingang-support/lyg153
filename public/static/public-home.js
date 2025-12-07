@@ -331,6 +331,13 @@ function updatePublicNavActive(page) {
 
 // 공개 페이지 네비게이션
 function navigatePublicPage(page, updateURL = true) {
+    // public-content 요소가 없으면 public-home이 아직 렌더링되지 않은 상태
+    const content = document.getElementById('public-content');
+    if (!content) {
+        // public-home이 로드되어 있지 않으면 무시
+        return;
+    }
+
     // URL 업데이트
     if (updateURL) {
         const newURL = `#public-${page}`;
@@ -338,16 +345,16 @@ function navigatePublicPage(page, updateURL = true) {
             window.history.pushState({ page }, '', newURL);
         }
     }
-    
+
     // 모바일 메뉴 닫기
     const mobileMenu = document.getElementById('mobile-menu');
     if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
         mobileMenu.classList.add('hidden');
     }
-    
+
     // 스크롤 최상단으로
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    
+
     // 네비게이션 활성 상태 업데이트
     updatePublicNavActive(page);
     
@@ -377,7 +384,13 @@ function navigatePublicPage(page, updateURL = true) {
 // ============================================
 async function showPublicHomePage() {
     const content = document.getElementById('public-content');
-    
+
+    // content 요소가 없으면 public-home이 아직 로드되지 않은 상태
+    if (!content) {
+        console.warn('public-content 요소가 없습니다. showPublicHome()을 먼저 호출해주세요.');
+        return;
+    }
+
     // 로딩 표시
     content.innerHTML = `
         <div class="text-center py-24">
@@ -1138,7 +1151,7 @@ async function loadPublicNoticePreview() {
                         <h3 class="card-title text-lg font-bold text-gray-900 mb-3 line-clamp-2 group-hover:text-blue-600 transition-colors">
                             ${escapeHtml(notice.title)}
                         </h3>
-                        <p class="text-gray-500 text-sm line-clamp-2 mb-4">${escapeHtml(notice.content || '').substring(0, 100)}...</p>
+                        <p class="text-gray-500 text-sm line-clamp-2 mb-4">${getPreviewText(notice.content, 100)}</p>
                         <time class="card-date text-sm text-gray-400">${dateStr}</time>
                     </div>
                 </article>
@@ -1548,17 +1561,18 @@ function showPublicNoticePage() {
 async function loadPublicNoticeList() {
     try {
         const response = await axios.get('/api/boards/posts?board_type=student&is_notice=1&limit=20');
-        
+
         const container = document.getElementById('public-notice-list');
         const notices = response.data.posts || [];
-        
+
         if (notices.length === 0) {
             container.innerHTML = '<p class="text-gray-500 text-center py-12">등록된 공지사항이 없습니다.</p>';
             return;
         }
-        
+
         container.innerHTML = notices.map(notice => `
-            <div class="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
+            <div class="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow cursor-pointer"
+                 onclick="showPublicNoticeDetail(${notice.id})">
                 <div class="flex items-start justify-between mb-2">
                     <h3 class="text-lg font-bold text-gray-800 flex items-center">
                         <i class="fas fa-bullhorn text-purple-600 mr-2"></i>
@@ -1566,7 +1580,7 @@ async function loadPublicNoticeList() {
                     </h3>
                     <span class="text-sm text-gray-500">${formatDate(notice.created_at)}</span>
                 </div>
-                <p class="text-gray-600 text-sm">${stripHtmlTags(notice.content).substring(0, 100)}...</p>
+                <p class="text-gray-600 text-sm">${getPreviewText(notice.content, 100)}</p>
                 <div class="mt-3 text-sm text-gray-500">
                     <i class="fas fa-eye mr-1"></i>${notice.view_count || 0}
                 </div>
@@ -1574,9 +1588,109 @@ async function loadPublicNoticeList() {
         `).join('');
     } catch (error) {
         console.error('공지사항 로드 실패:', error);
-        document.getElementById('public-notice-list').innerHTML = 
+        document.getElementById('public-notice-list').innerHTML =
             '<p class="text-red-500 text-center py-12">공지사항을 불러올 수 없습니다.</p>';
     }
+}
+
+// 공지사항 상세보기
+async function showPublicNoticeDetail(postId) {
+    const content = document.getElementById('public-content');
+
+    content.innerHTML = `
+        <div class="text-center py-24">
+            <i class="fas fa-spinner fa-spin text-4xl text-purple-600"></i>
+            <p class="text-gray-600 mt-4">로딩 중...</p>
+        </div>
+    `;
+
+    try {
+        const response = await axios.get(`/api/boards/posts/${postId}`);
+        const post = response.data.post;
+
+        if (!post) {
+            content.innerHTML = '<p class="text-red-500 text-center py-12">게시글을 찾을 수 없습니다.</p>';
+            return;
+        }
+
+        content.innerHTML = `
+            <section class="py-16 bg-white">
+                <div class="container mx-auto px-4 max-w-4xl">
+                    <button onclick="showPublicNoticePage()" class="mb-6 text-purple-600 hover:text-purple-800 flex items-center">
+                        <i class="fas fa-arrow-left mr-2"></i>목록으로
+                    </button>
+
+                    <article class="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                        <div class="p-6 border-b border-gray-200">
+                            <div class="flex items-center mb-2">
+                                <span class="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-medium mr-3">
+                                    공지
+                                </span>
+                            </div>
+                            <h1 class="text-2xl font-bold text-gray-800 mb-4">${escapeHtml(post.title)}</h1>
+                            <div class="flex items-center text-sm text-gray-500 space-x-4">
+                                <span><i class="fas fa-user mr-1"></i>${post.author_name || '관리자'}</span>
+                                <span><i class="fas fa-calendar mr-1"></i>${formatDate(post.created_at)}</span>
+                                <span><i class="fas fa-eye mr-1"></i>${post.view_count || 0}</span>
+                            </div>
+                        </div>
+
+                        <div class="p-6">
+                            <div class="prose max-w-none text-gray-700 whitespace-pre-wrap">
+                                ${formatNoticeContent(post.content)}
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            </section>
+        `;
+    } catch (error) {
+        console.error('공지사항 로드 실패:', error);
+        content.innerHTML = `
+            <div class="text-center py-12">
+                <p class="text-red-500">게시글을 불러오는데 실패했습니다.</p>
+                <button onclick="showPublicNoticePage()" class="mt-4 text-purple-600 hover:text-purple-800">
+                    목록으로 돌아가기
+                </button>
+            </div>
+        `;
+    }
+}
+
+// 게시글 내용 포맷팅 (HTML 또는 plain text 처리)
+function formatNoticeContent(content) {
+    if (!content) return '';
+
+    // HTML 태그가 포함되어 있으면 그대로 반환
+    if (/<[a-z][\s\S]*>/i.test(content)) {
+        return content;
+    }
+
+    // 문자열 "\n" (백슬래시+n)을 실제 줄바꿈으로 변환
+    let text = content.replace(/\\n/g, '\n');
+    // plain text인 경우: 줄바꿈을 <br>로 변환하고 HTML escape
+    return escapeHtml(text).replace(/\n/g, '<br>');
+}
+
+// 미리보기 텍스트 추출 (HTML 태그 및 특수문자 제거)
+function getPreviewText(content, maxLength) {
+    if (!content) return '';
+
+    // HTML 태그 제거
+    let text = content.replace(/<[^>]*>/g, '');
+    // 문자열 "\n" (백슬래시+n)을 공백으로
+    text = text.replace(/\\n/g, ' ');
+    // 실제 줄바꿈을 공백으로
+    text = text.replace(/\n/g, ' ');
+    // 특수 bullet 문자 제거
+    text = text.replace(/[■●▶★◆◇○□△▲▽▼►◄«»※·•‣⁃]/g, ' ');
+    // 연속 공백 정리
+    text = text.replace(/\s+/g, ' ').trim();
+    // 길이 제한
+    if (text.length > maxLength) {
+        return text.substring(0, maxLength) + '...';
+    }
+    return text;
 }
 
 // ============================================
@@ -1732,14 +1846,19 @@ function showLoginModal() {
 }
 
 function closeLoginModal() {
-    document.getElementById('login-modal').classList.add('hidden');
-    document.getElementById('login-error').classList.add('hidden');
+    const loginModal = document.getElementById('login-modal');
+    const loginError = document.getElementById('login-error');
+    if (loginModal) loginModal.classList.add('hidden');
+    if (loginError) loginError.classList.add('hidden');
 }
 
 // ESC 키로 모달 닫기
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-        closeLoginModal();
+        const loginModal = document.getElementById('login-modal');
+        if (loginModal && !loginModal.classList.contains('hidden')) {
+            closeLoginModal();
+        }
     }
 });
 
@@ -1756,7 +1875,14 @@ function stripHtmlTags(html) {
     if (!html) return '';
     const div = document.createElement('div');
     div.innerHTML = html;
-    return div.textContent || div.innerText || '';
+    let text = div.textContent || div.innerText || '';
+    // 줄바꿈을 공백으로 변환
+    text = text.replace(/\n/g, ' ');
+    // 특수 문자 bullet points 제거 (■, ●, ▶, ★, ◆ 등)
+    text = text.replace(/[■●▶★◆◇○□△▲▽▼►◄«»※·•‣⁃]/g, ' ');
+    // 연속 공백을 하나로 정리
+    text = text.replace(/\s+/g, ' ').trim();
+    return text;
 }
 
 // 텍스트 콘텐츠 포맷 함수 (줄바꿈 처리 및 구조화)

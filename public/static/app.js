@@ -292,6 +292,9 @@ async function showAdminDashboard() {
                                 <button id="view-homepage-btn" class="px-4 py-2 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 smooth-transition font-medium text-sm">
                                     <i class="fas fa-home mr-2"></i>홈페이지 보기
                                 </button>
+                                <button id="site-management-btn" class="hidden px-4 py-2 rounded-lg bg-purple-100 text-purple-700 hover:bg-purple-200 smooth-transition font-medium text-sm">
+                                    <i class="fas fa-globe mr-2"></i>사이트 관리
+                                </button>
                                 <button id="logout-btn" class="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 smooth-transition font-medium text-sm">
                                     <i class="fas fa-sign-out-alt mr-2"></i>로그아웃
                                 </button>
@@ -324,10 +327,17 @@ async function showAdminDashboard() {
         
         // 로그아웃 버튼 이벤트 재설정
         document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
-        
+
         // 홈페이지 보기 버튼 이벤트 설정
         document.getElementById('view-homepage-btn')?.addEventListener('click', handleViewHomepage);
-        
+
+        // 사이트 관리 버튼 이벤트 설정 (super_admin만)
+        const siteManagementBtn = document.getElementById('site-management-btn');
+        if (siteManagementBtn && currentUser && currentUser.role === 'super_admin') {
+            siteManagementBtn.classList.remove('hidden');
+            siteManagementBtn.addEventListener('click', () => navigateToPage('site-management'));
+        }
+
         dashboardScreen = document.getElementById('dashboard-screen');
     } else {
         dashboardScreen.classList.remove('hidden');
@@ -1258,6 +1268,15 @@ function navigateToPage(page, updateURL = true) {
                 showSystemSettings();
             } else {
                 alert('시스템 설정은 관리자만 접근할 수 있습니다.');
+                navigateToPage('dashboard');
+            }
+            break;
+        case 'site-management':
+            // 최고 관리자만 접근 가능
+            if (currentUser.role === 'super_admin') {
+                showSiteManagement(contentArea);
+            } else {
+                alert('사이트 관리는 최고 관리자만 접근할 수 있습니다.');
                 navigateToPage('dashboard');
             }
             break;
@@ -6665,5 +6684,248 @@ async function deleteVolunteer(id) {
     } catch (error) {
         console.error('삭제 실패:', error);
         alert('삭제에 실패했습니다.');
+    }
+}
+
+// ============================================
+// 사이트 관리 (super_admin 전용)
+// ============================================
+async function showSiteManagement(container) {
+    container.innerHTML = `
+        <div class="space-y-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">사이트 관리</h1>
+                    <p class="text-gray-600 mt-1">멀티테넌트 사이트를 관리합니다</p>
+                </div>
+                <button onclick="showSiteAddModal()" class="btn-pastel-primary px-4 py-2 rounded-lg font-medium">
+                    <i class="fas fa-plus mr-2"></i>사이트 추가
+                </button>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                <div id="site-list" class="divide-y divide-gray-100">
+                    <div class="flex items-center justify-center py-12">
+                        <i class="fas fa-spinner fa-spin text-3xl text-gray-400"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 사이트 추가/수정 모달 -->
+        <div id="site-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4">
+                <div class="flex items-center justify-between p-6 border-b">
+                    <h2 id="site-modal-title" class="text-xl font-bold text-gray-800">사이트 추가</h2>
+                    <button onclick="closeSiteModal()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <form id="site-form" onsubmit="handleSiteSubmit(event)" class="p-6 space-y-4">
+                    <input type="hidden" id="site-id" value="">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">도메인 *</label>
+                        <input type="text" id="site-domain" required
+                               placeholder="예: school.example.com"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                        <p class="text-xs text-gray-500 mt-1">사이트에 접속할 도메인 주소</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">사이트명 *</label>
+                        <input type="text" id="site-name" required
+                               placeholder="예: 한국대안학교"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">로고 URL</label>
+                        <input type="text" id="site-logo"
+                               placeholder="https://example.com/logo.png"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">기본 색상</label>
+                        <div class="flex items-center space-x-3">
+                            <input type="color" id="site-color" value="#4169E1"
+                                   class="w-12 h-10 rounded cursor-pointer border border-gray-300">
+                            <input type="text" id="site-color-text" value="#4169E1"
+                                   class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                   oninput="document.getElementById('site-color').value = this.value">
+                        </div>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="site-active" checked
+                               class="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500">
+                        <label for="site-active" class="ml-2 text-sm text-gray-700">활성화</label>
+                    </div>
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button type="button" onclick="closeSiteModal()"
+                                class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                            취소
+                        </button>
+                        <button type="submit" class="btn-pastel-primary px-4 py-2 rounded-lg font-medium">
+                            저장
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+
+    // 색상 선택기 연동
+    document.getElementById('site-color').addEventListener('input', (e) => {
+        document.getElementById('site-color-text').value = e.target.value;
+    });
+
+    // 사이트 목록 로드
+    await loadSiteList();
+}
+
+async function loadSiteList() {
+    try {
+        const response = await axios.get('/api/sites', {
+            headers: { 'Authorization': 'Bearer ' + authToken }
+        });
+
+        const sites = response.data.sites || [];
+        const container = document.getElementById('site-list');
+
+        if (sites.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-12 text-gray-500">
+                    <i class="fas fa-globe text-4xl mb-4"></i>
+                    <p>등록된 사이트가 없습니다</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = sites.map(site => `
+            <div class="flex items-center justify-between p-4 hover:bg-gray-50 transition">
+                <div class="flex items-center space-x-4">
+                    <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background-color: ${site.primary_color || '#4169E1'}20">
+                        ${site.logo_url
+                            ? `<img src="${site.logo_url}" alt="${site.name}" class="w-8 h-8 object-contain">`
+                            : `<i class="fas fa-globe" style="color: ${site.primary_color || '#4169E1'}"></i>`}
+                    </div>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="font-medium text-gray-800">${site.name}</span>
+                            ${site.id === 1 ? '<span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">기본</span>' : ''}
+                            ${site.is_active ? '' : '<span class="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded-full">비활성</span>'}
+                        </div>
+                        <div class="text-sm text-gray-500">${site.domain}</div>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="showSiteEditModal(${site.id})"
+                            class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    ${site.id !== 1 ? `
+                        <button onclick="deleteSite(${site.id}, '${site.name}')"
+                                class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('사이트 목록 로드 실패:', error);
+        document.getElementById('site-list').innerHTML = `
+            <div class="text-center py-12 text-red-500">
+                <i class="fas fa-exclamation-circle text-4xl mb-4"></i>
+                <p>사이트 목록을 불러오는데 실패했습니다</p>
+            </div>
+        `;
+    }
+}
+
+function showSiteAddModal() {
+    document.getElementById('site-modal-title').textContent = '사이트 추가';
+    document.getElementById('site-id').value = '';
+    document.getElementById('site-domain').value = '';
+    document.getElementById('site-name').value = '';
+    document.getElementById('site-logo').value = '';
+    document.getElementById('site-color').value = '#4169E1';
+    document.getElementById('site-color-text').value = '#4169E1';
+    document.getElementById('site-active').checked = true;
+    document.getElementById('site-modal').classList.remove('hidden');
+}
+
+async function showSiteEditModal(siteId) {
+    try {
+        const response = await axios.get(`/api/sites/${siteId}`, {
+            headers: { 'Authorization': 'Bearer ' + authToken }
+        });
+        const site = response.data.site;
+
+        document.getElementById('site-modal-title').textContent = '사이트 수정';
+        document.getElementById('site-id').value = site.id;
+        document.getElementById('site-domain').value = site.domain;
+        document.getElementById('site-name').value = site.name;
+        document.getElementById('site-logo').value = site.logo_url || '';
+        document.getElementById('site-color').value = site.primary_color || '#4169E1';
+        document.getElementById('site-color-text').value = site.primary_color || '#4169E1';
+        document.getElementById('site-active').checked = !!site.is_active;
+        document.getElementById('site-modal').classList.remove('hidden');
+    } catch (error) {
+        console.error('사이트 정보 로드 실패:', error);
+        alert('사이트 정보를 불러오는데 실패했습니다.');
+    }
+}
+
+function closeSiteModal() {
+    document.getElementById('site-modal').classList.add('hidden');
+}
+
+async function handleSiteSubmit(e) {
+    e.preventDefault();
+
+    const siteId = document.getElementById('site-id').value;
+    const data = {
+        domain: document.getElementById('site-domain').value,
+        name: document.getElementById('site-name').value,
+        logo_url: document.getElementById('site-logo').value || null,
+        primary_color: document.getElementById('site-color').value,
+        is_active: document.getElementById('site-active').checked
+    };
+
+    try {
+        if (siteId) {
+            // 수정
+            await axios.put(`/api/sites/${siteId}`, data, {
+                headers: { 'Authorization': 'Bearer ' + authToken }
+            });
+            alert('사이트가 수정되었습니다.');
+        } else {
+            // 추가
+            await axios.post('/api/sites', data, {
+                headers: { 'Authorization': 'Bearer ' + authToken }
+            });
+            alert('사이트가 추가되었습니다.');
+        }
+        closeSiteModal();
+        await loadSiteList();
+    } catch (error) {
+        console.error('사이트 저장 실패:', error);
+        alert(error.response?.data?.error || '사이트 저장에 실패했습니다.');
+    }
+}
+
+async function deleteSite(siteId, siteName) {
+    if (!confirm(`"${siteName}" 사이트를 삭제하시겠습니까?\n\n주의: 해당 사이트의 모든 데이터에 접근할 수 없게 됩니다.`)) {
+        return;
+    }
+
+    try {
+        await axios.delete(`/api/sites/${siteId}`, {
+            headers: { 'Authorization': 'Bearer ' + authToken }
+        });
+        alert('사이트가 삭제되었습니다.');
+        await loadSiteList();
+    } catch (error) {
+        console.error('사이트 삭제 실패:', error);
+        alert(error.response?.data?.error || '사이트 삭제에 실패했습니다.');
     }
 }

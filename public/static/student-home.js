@@ -695,13 +695,142 @@ async function loadStudentInfo(container) {
 // 학생 출석 현황 로드
 async function loadStudentAttendance(container) {
     container.innerHTML = '<div class="text-center py-12"><i class="fas fa-spinner fa-spin text-3xl text-gray-400"></i></div>';
-    
-    container.innerHTML = `
-        <div class="card-modern">
-            <h3 class="text-lg font-bold text-gray-800 mb-4">출석 현황</h3>
-            <p class="text-gray-500 text-center py-8">출석 통계 기능은 곧 추가될 예정입니다.</p>
-        </div>
-    `;
+
+    try {
+        const studentId = currentUser.student?.id;
+        if (!studentId) {
+            container.innerHTML = '<p class="text-red-500 text-center py-8">학생 정보를 찾을 수 없습니다.</p>';
+            return;
+        }
+
+        // 출석 요약 및 최근 기록 로드
+        const [summaryRes, recordsRes] = await Promise.all([
+            axios.get(`/api/attendance/student/${studentId}/summary`, {
+                headers: { 'Authorization': 'Bearer ' + authToken }
+            }),
+            axios.get(`/api/attendance/student/${studentId}`, {
+                headers: { 'Authorization': 'Bearer ' + authToken }
+            })
+        ]);
+
+        const summary = summaryRes.data.summary || { total: 0, present: 0, absent: 0, late: 0, excused: 0 };
+        const records = recordsRes.data.attendances || [];
+
+        // 출석률 계산
+        const attendanceRate = summary.total > 0 ? Math.round((summary.present / summary.total) * 100) : 0;
+
+        container.innerHTML = `
+            <div class="space-y-6">
+                <!-- 출석 요약 -->
+                <div class="card-modern">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">
+                        <i class="fas fa-chart-pie text-purple-600 mr-2"></i>출석 통계
+                    </h3>
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        <div class="bg-blue-50 rounded-xl p-4 text-center">
+                            <div class="text-3xl font-bold text-blue-600">${summary.total}</div>
+                            <div class="text-sm text-gray-600 mt-1">총 수업일</div>
+                        </div>
+                        <div class="bg-green-50 rounded-xl p-4 text-center">
+                            <div class="text-3xl font-bold text-green-600">${summary.present}</div>
+                            <div class="text-sm text-gray-600 mt-1">출석</div>
+                        </div>
+                        <div class="bg-red-50 rounded-xl p-4 text-center">
+                            <div class="text-3xl font-bold text-red-600">${summary.absent}</div>
+                            <div class="text-sm text-gray-600 mt-1">결석</div>
+                        </div>
+                        <div class="bg-yellow-50 rounded-xl p-4 text-center">
+                            <div class="text-3xl font-bold text-yellow-600">${summary.late}</div>
+                            <div class="text-sm text-gray-600 mt-1">지각</div>
+                        </div>
+                        <div class="bg-purple-50 rounded-xl p-4 text-center">
+                            <div class="text-3xl font-bold text-purple-600">${summary.excused}</div>
+                            <div class="text-sm text-gray-600 mt-1">조퇴/공결</div>
+                        </div>
+                    </div>
+
+                    <!-- 출석률 프로그레스 바 -->
+                    <div class="mt-6">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm font-medium text-gray-700">출석률</span>
+                            <span class="text-sm font-bold ${attendanceRate >= 80 ? 'text-green-600' : attendanceRate >= 60 ? 'text-yellow-600' : 'text-red-600'}">${attendanceRate}%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-3">
+                            <div class="h-3 rounded-full transition-all duration-500 ${attendanceRate >= 80 ? 'bg-green-500' : attendanceRate >= 60 ? 'bg-yellow-500' : 'bg-red-500'}" style="width: ${attendanceRate}%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 최근 출석 기록 -->
+                <div class="card-modern">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">
+                        <i class="fas fa-history text-purple-600 mr-2"></i>최근 출석 기록
+                    </h3>
+                    ${records.length > 0 ? `
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="border-b border-gray-200">
+                                        <th class="text-left py-3 px-4 text-sm font-medium text-gray-600">날짜</th>
+                                        <th class="text-left py-3 px-4 text-sm font-medium text-gray-600">과목</th>
+                                        <th class="text-left py-3 px-4 text-sm font-medium text-gray-600">상태</th>
+                                        <th class="text-left py-3 px-4 text-sm font-medium text-gray-600">비고</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${records.slice(0, 20).map(record => `
+                                        <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                            <td class="py-3 px-4 text-sm text-gray-800">${formatDate(record.date)}</td>
+                                            <td class="py-3 px-4 text-sm text-gray-600">${record.subject_name || record.course_name || '-'}</td>
+                                            <td class="py-3 px-4">
+                                                <span class="px-2 py-1 rounded-full text-xs font-medium ${getAttendanceStatusStyle(record.status)}">
+                                                    ${getAttendanceStatusText(record.status)}
+                                                </span>
+                                            </td>
+                                            <td class="py-3 px-4 text-sm text-gray-500">${record.notes || '-'}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                        ${records.length > 20 ? '<p class="text-sm text-gray-500 mt-4 text-center">최근 20개 기록만 표시됩니다.</p>' : ''}
+                    ` : `
+                        <p class="text-gray-500 text-center py-8">출석 기록이 없습니다.</p>
+                    `}
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        console.error('출석 현황 로드 실패:', error);
+        container.innerHTML = `
+            <div class="card-modern">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">출석 현황</h3>
+                <p class="text-red-500 text-center py-8">출석 정보를 불러오는데 실패했습니다.</p>
+            </div>
+        `;
+    }
+}
+
+// 출석 상태 스타일
+function getAttendanceStatusStyle(status) {
+    switch(status) {
+        case 'present': return 'bg-green-100 text-green-700';
+        case 'absent': return 'bg-red-100 text-red-700';
+        case 'late': return 'bg-yellow-100 text-yellow-700';
+        case 'excused': return 'bg-purple-100 text-purple-700';
+        default: return 'bg-gray-100 text-gray-700';
+    }
+}
+
+// 출석 상태 텍스트
+function getAttendanceStatusText(status) {
+    switch(status) {
+        case 'present': return '출석';
+        case 'absent': return '결석';
+        case 'late': return '지각';
+        case 'excused': return '공결';
+        default: return status || '-';
+    }
 }
 
 // ============================================

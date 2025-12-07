@@ -730,20 +730,25 @@ async function editModule(moduleId) {
     let formHTML = getModuleEditForm(module);
     
     modal.innerHTML = `
-        <div class="bg-white rounded-lg shadow-xl p-8 max-w-7xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
-            <div class="flex justify-between items-center mb-6">
+        <div class="bg-white rounded-lg shadow-xl max-w-6xl w-full mx-4 max-h-[95vh] overflow-hidden flex flex-col">
+            <div class="flex justify-between items-center p-6 border-b bg-gray-50">
                 <h2 class="text-2xl font-bold text-gray-800">모듈 편집</h2>
-                <button onclick="closeEditModuleModal()" class="text-gray-500 hover:text-gray-700">
-                    <i class="fas fa-times text-2xl"></i>
-                </button>
+                <div class="flex items-center gap-3">
+                    <button type="button" onclick="openFullPreview()" class="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 text-sm font-medium">
+                        <i class="fas fa-expand mr-2"></i>전체 화면 미리보기
+                    </button>
+                    <button onclick="closeEditModuleModal()" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
             </div>
-            
-            <div class="flex gap-6 flex-1 overflow-hidden">
-                <!-- 편집 폼 -->
-                <div class="w-1/2 overflow-y-auto pr-4">
+
+            <div class="flex-1 overflow-hidden flex">
+                <!-- 편집 폼 (좌측) -->
+                <div class="w-[400px] flex-shrink-0 overflow-y-auto p-6 border-r bg-white">
                     <form id="edit-module-form" class="space-y-6">
                         ${formHTML}
-                        <div class="flex justify-end space-x-4 mt-6 pt-6 border-t">
+                        <div class="flex justify-end space-x-4 mt-6 pt-6 border-t sticky bottom-0 bg-white py-4">
                             <button type="button" onclick="closeEditModuleModal()" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
                                 취소
                             </button>
@@ -753,17 +758,28 @@ async function editModule(moduleId) {
                         </div>
                     </form>
                 </div>
-                
-                <!-- 실시간 미리보기 -->
-                <div class="w-1/2 border-l pl-6 overflow-y-auto">
-                    <div class="sticky top-0 bg-white pb-4 mb-4 border-b">
-                        <h3 class="text-lg font-bold text-gray-800 mb-2">
-                            <i class="fas fa-eye mr-2"></i>실시간 미리보기
-                        </h3>
-                        <p class="text-sm text-gray-600">입력한 내용이 실시간으로 표시됩니다</p>
+
+                <!-- 실시간 미리보기 (우측) -->
+                <div class="flex-1 overflow-hidden flex flex-col bg-gray-100">
+                    <div class="bg-white px-4 py-3 border-b flex items-center justify-between">
+                        <div>
+                            <h3 class="text-sm font-bold text-gray-800">
+                                <i class="fas fa-eye mr-2"></i>실시간 미리보기
+                            </h3>
+                            <p class="text-xs text-gray-500">50% 축소 보기 (전체 화면 미리보기로 실제 크기 확인)</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="setPreviewScale(0.3)" class="px-2 py-1 text-xs rounded bg-gray-200 hover:bg-gray-300" data-scale="0.3">30%</button>
+                            <button type="button" onclick="setPreviewScale(0.5)" class="px-2 py-1 text-xs rounded bg-blue-500 text-white" data-scale="0.5">50%</button>
+                            <button type="button" onclick="setPreviewScale(0.75)" class="px-2 py-1 text-xs rounded bg-gray-200 hover:bg-gray-300" data-scale="0.75">75%</button>
+                        </div>
                     </div>
-                    <div id="module-preview" class="min-h-[400px]">
-                        ${renderModulePreview(module)}
+                    <div class="flex-1 overflow-auto p-4">
+                        <div id="preview-container" class="bg-white shadow-lg mx-auto origin-top-left" style="width: 1200px; transform: scale(0.5); transform-origin: top left;">
+                            <div id="module-preview">
+                                ${renderModulePreview(module)}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1869,10 +1885,108 @@ async function deleteModule(moduleId) {
         currentModules = refreshResponse.data.modules || [];
         const container = document.getElementById('main-content');
         renderModuleManagement(container);
-        
+
     } catch (error) {
         console.error('모듈 삭제 실패:', error);
         alert('모듈 삭제에 실패했습니다.');
     }
+}
+
+// 미리보기 스케일 조절
+function setPreviewScale(scale) {
+    const container = document.getElementById('preview-container');
+    if (container) {
+        container.style.transform = `scale(${scale})`;
+
+        // 버튼 활성 상태 업데이트
+        document.querySelectorAll('[data-scale]').forEach(btn => {
+            if (parseFloat(btn.dataset.scale) === scale) {
+                btn.className = 'px-2 py-1 text-xs rounded bg-blue-500 text-white';
+            } else {
+                btn.className = 'px-2 py-1 text-xs rounded bg-gray-200 hover:bg-gray-300';
+            }
+        });
+    }
+}
+
+// 전체 화면 미리보기 열기
+function openFullPreview() {
+    if (!window.currentEditingModule) {
+        alert('편집 중인 모듈이 없습니다.');
+        return;
+    }
+
+    const previewContent = document.getElementById('module-preview');
+    if (!previewContent) return;
+
+    // 새 창에서 미리보기 열기
+    const previewWindow = window.open('', '_blank', 'width=1400,height=900');
+    if (!previewWindow) {
+        alert('팝업 차단이 활성화되어 있습니다. 팝업을 허용해주세요.');
+        return;
+    }
+
+    previewWindow.document.write(`
+        <!DOCTYPE html>
+        <html lang="ko">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>모듈 미리보기 - ${window.currentEditingModule.module_type}</title>
+            <link rel="stylesheet" href="/static/styles.css">
+            <link rel="stylesheet" href="/static/postech-style.css">
+            <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+            <style>
+                body { margin: 0; padding: 0; background: #f3f4f6; }
+                .preview-header {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    background: white;
+                    border-bottom: 1px solid #e5e7eb;
+                    padding: 12px 24px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    z-index: 1000;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                }
+                .preview-content {
+                    margin-top: 60px;
+                    background: white;
+                    min-height: calc(100vh - 60px);
+                }
+                .preview-badge {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    background: #f3e8ff;
+                    color: #7c3aed;
+                    padding: 6px 12px;
+                    border-radius: 6px;
+                    font-size: 14px;
+                    font-weight: 500;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="preview-header">
+                <div class="preview-badge">
+                    <i class="fas fa-eye"></i>
+                    전체 화면 미리보기
+                </div>
+                <button onclick="window.close()" style="padding: 8px 16px; background: #f3f4f6; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">
+                    <i class="fas fa-times" style="margin-right: 6px;"></i>닫기
+                </button>
+            </div>
+            <div class="preview-content">
+                ${previewContent.innerHTML}
+            </div>
+        </body>
+        </html>
+    `);
+    previewWindow.document.close();
 }
 
