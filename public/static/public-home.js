@@ -873,7 +873,7 @@ function renderHomepageModule(module) {
                                     </div>
                                 </div>
                             </div>
-                            <div class="bg-gray-300 rounded-xl h-80 flex items-center justify-center">
+                            <div id="naver-map-${module.id}" class="bg-gray-300 rounded-xl h-80 flex items-center justify-center">
                                 ${module.map_embed ? module.map_embed : `
                                     <div class="text-center text-gray-500">
                                         <i class="fas fa-map text-5xl mb-3"></i>
@@ -2107,4 +2107,65 @@ function goToDashboard() {
     }
 }
 
+// ============================================
+// 네이버 지도 초기화
+// ============================================
+async function initNaverMapModules() {
+    // map 모듈을 찾아서 네이버 지도 초기화
+    const mapModules = document.querySelectorAll('[id^="naver-map-"]');
 
+    if (mapModules.length === 0) return;
+
+    // NaverMapUtils가 로드되었는지 확인
+    if (typeof NaverMapUtils === 'undefined') {
+        console.warn('NaverMapUtils not loaded');
+        return;
+    }
+
+    for (const mapContainer of mapModules) {
+        const moduleId = mapContainer.id.replace('naver-map-', '');
+
+        // 이미 지도가 렌더링되었는지 확인 (map_embed가 있는 경우)
+        if (mapContainer.querySelector('iframe, .naver-maps-container')) {
+            continue;
+        }
+
+        // 모듈 데이터에서 주소 정보 가져오기
+        const addressElement = mapContainer.closest('section')?.querySelector('[class*="fa-map-marker-alt"]')?.parentElement?.querySelector('p:last-child');
+        const address = addressElement?.textContent?.trim() || '서울특별시 중구 세종대로 110';
+
+        try {
+            // 주소로 좌표 검색
+            const coords = await NaverMapUtils.searchAddress(address);
+
+            // 지도 컨테이너 클리어
+            mapContainer.innerHTML = '';
+            mapContainer.classList.remove('flex', 'items-center', 'justify-center', 'bg-gray-300');
+
+            // 네이버 지도 초기화
+            await NaverMapUtils.initSchoolLocationMap(mapContainer.id, {
+                lat: coords.lat,
+                lng: coords.lng,
+                zoom: 16,
+                schoolName: homepageSettings.school_name || '우리 학교',
+                address: coords.address
+            });
+
+            console.log(`Naver map initialized for module ${moduleId}`);
+        } catch (error) {
+            console.error(`Failed to initialize map for module ${moduleId}:`, error);
+            // 에러 발생 시 기본 메시지 유지
+        }
+    }
+}
+
+// 페이지 로드 시 지도 초기화
+if (typeof window.addEventListener !== 'undefined') {
+    // renderHomepageModule이 호출된 후 지도 초기화
+    const originalShowLocationPage = showLocationPage;
+    showLocationPage = async function() {
+        await originalShowLocationPage.apply(this, arguments);
+        // 짧은 지연 후 지도 초기화 (DOM 렌더링 완료 대기)
+        setTimeout(initNaverMapModules, 300);
+    };
+}
