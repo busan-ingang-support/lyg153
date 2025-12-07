@@ -899,25 +899,74 @@ async function loadClassStatistics() {
     const container = document.getElementById('class-tab-content');
     container.innerHTML = `
         <div class="mb-4">
-            <h3 class="text-xl font-bold text-gray-800">반 통계</h4>
+            <h3 class="text-xl font-bold text-gray-800">반 통계</h3>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="bg-blue-50 p-6 rounded-lg">
                 <p class="text-sm text-blue-600 font-medium mb-2">전체 학생 수</p>
-                <p class="text-3xl font-bold text-blue-900">${currentClassInfo.student_count}명</p>
+                <p class="text-3xl font-bold text-blue-900">${currentClassInfo.student_count || 0}명</p>
             </div>
             <div class="bg-green-50 p-6 rounded-lg">
                 <p class="text-sm text-green-600 font-medium mb-2">평균 출석률</p>
-                <p class="text-3xl font-bold text-green-900">--%</p>
-                <p class="text-xs text-gray-600 mt-1">계산 중...</p>
+                <p id="stat-attendance-rate" class="text-3xl font-bold text-green-900">--%</p>
+                <p id="stat-attendance-detail" class="text-xs text-gray-600 mt-1">계산 중...</p>
             </div>
             <div class="bg-purple-50 p-6 rounded-lg">
                 <p class="text-sm text-purple-600 font-medium mb-2">평균 성적</p>
-                <p class="text-3xl font-bold text-purple-900">--점</p>
-                <p class="text-xs text-gray-600 mt-1">계산 중...</p>
+                <p id="stat-grade-avg" class="text-3xl font-bold text-purple-900">--점</p>
+                <p id="stat-grade-detail" class="text-xs text-gray-600 mt-1">계산 중...</p>
             </div>
         </div>
     `;
+
+    // 실제 통계 계산
+    try {
+        // 출석 통계 조회
+        const attendanceRes = await axios.get(`/api/attendance?class_id=${currentClassId}`, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const attendanceRecords = attendanceRes.data.attendance || [];
+
+        if (attendanceRecords.length > 0) {
+            const totalRecords = attendanceRecords.length;
+            const presentCount = attendanceRecords.filter(a => a.status === 'present').length;
+            const lateCount = attendanceRecords.filter(a => a.status === 'late').length;
+            const absentCount = attendanceRecords.filter(a => a.status === 'absent').length;
+            const attendanceRate = totalRecords > 0 ? ((presentCount + lateCount) / totalRecords * 100).toFixed(1) : 0;
+
+            document.getElementById('stat-attendance-rate').textContent = `${attendanceRate}%`;
+            document.getElementById('stat-attendance-detail').textContent = `출석 ${presentCount} / 지각 ${lateCount} / 결석 ${absentCount}`;
+        } else {
+            document.getElementById('stat-attendance-rate').textContent = '--%';
+            document.getElementById('stat-attendance-detail').textContent = '출석 기록 없음';
+        }
+
+        // 성적 통계 조회
+        const gradesRes = await axios.get(`/api/grades?class_id=${currentClassId}`, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const grades = gradesRes.data.grades || [];
+
+        if (grades.length > 0) {
+            const validGrades = grades.filter(g => g.score !== null && g.score !== undefined);
+            if (validGrades.length > 0) {
+                const totalScore = validGrades.reduce((sum, g) => sum + Number(g.score), 0);
+                const avgScore = (totalScore / validGrades.length).toFixed(1);
+                document.getElementById('stat-grade-avg').textContent = `${avgScore}점`;
+                document.getElementById('stat-grade-detail').textContent = `${validGrades.length}개 성적 기준`;
+            } else {
+                document.getElementById('stat-grade-avg').textContent = '--점';
+                document.getElementById('stat-grade-detail').textContent = '성적 기록 없음';
+            }
+        } else {
+            document.getElementById('stat-grade-avg').textContent = '--점';
+            document.getElementById('stat-grade-detail').textContent = '성적 기록 없음';
+        }
+    } catch (error) {
+        console.error('통계 로드 실패:', error);
+        document.getElementById('stat-attendance-detail').textContent = '통계 로드 실패';
+        document.getElementById('stat-grade-detail').textContent = '통계 로드 실패';
+    }
 }
 
 // 반 수상 내역 로드

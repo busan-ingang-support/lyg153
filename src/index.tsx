@@ -192,7 +192,7 @@ app.get('/', (c) => {
         <script src="/static/admin.js?v=202511071013" defer></script>
         <script src="/static/counseling.js?v=202512072405" defer></script>
         <script src="/static/settings.js?v=202512072405" defer></script>
-        <script src="/static/class-detail.js?v=202512052000" defer></script>
+        <script src="/static/class-detail.js?v=202512072430" defer></script>
         <script src="/static/student-detail.js?v=202512051215" defer></script>
         <script src="/static/reports.js?v=202512080100" defer></script>
         <script src="/static/attendance-improved.js?v=202511071013" defer></script>
