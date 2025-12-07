@@ -75,11 +75,17 @@ users.get('/', requireRole('admin', 'super_admin'), async (c) => {
 });
 
 // 특정 사용자 조회
-users.get('/:id', requireRole('admin', 'super_admin'), async (c) => {
+users.get('/:id', async (c) => {
   try {
     const db = c.env.DB;
     const id = c.req.param('id');
     const siteId = c.get('siteId') || 1;
+    const currentUser = c.get('user');
+
+    // 자기 자신이 아니고, 관리자도 아니면 접근 거부
+    if (currentUser?.userId != id && !['admin', 'super_admin'].includes(currentUser?.role)) {
+      return c.json({ error: 'Access denied' }, 403);
+    }
 
     // 현재 사이트의 사용자만 조회 가능
     const user = await db.prepare(
