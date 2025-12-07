@@ -2247,11 +2247,11 @@ function goToDashboard() {
 }
 
 // ============================================
-// 네이버 지도 초기화
+// 구글 지도 초기화 (iframe embed 방식)
 // ============================================
-async function initNaverMapModules() {
-    // map 모듈을 찾아서 네이버 지도 초기화
-    const mapModules = document.querySelectorAll('[id^="naver-map-"]');
+function initMapModules() {
+    // map 모듈을 찾아서 구글 지도 초기화
+    const mapModules = document.querySelectorAll('[id^="naver-map-"], [id^="google-map-"]');
 
     if (mapModules.length === 0) {
         console.log('No map modules found');
@@ -2260,17 +2260,11 @@ async function initNaverMapModules() {
 
     console.log(`Found ${mapModules.length} map module(s)`);
 
-    // NaverMapUtils가 로드되었는지 확인
-    if (typeof NaverMapUtils === 'undefined') {
-        console.error('NaverMapUtils not loaded');
-        return;
-    }
-
     for (const mapContainer of mapModules) {
-        const moduleId = mapContainer.id.replace('naver-map-', '');
+        const moduleId = mapContainer.id.replace('naver-map-', '').replace('google-map-', '');
 
-        // 이미 지도가 렌더링되었는지 확인
-        if (mapContainer.querySelector('.nmap-panes')) {
+        // 이미 iframe이 있으면 건너뛰기
+        if (mapContainer.querySelector('iframe')) {
             console.log(`Map already initialized for module ${moduleId}`);
             continue;
         }
@@ -2278,32 +2272,34 @@ async function initNaverMapModules() {
         // data-address 속성에서 주소 가져오기
         const address = mapContainer.getAttribute('data-address') || '서울특별시 중구 세종대로 110';
 
-        console.log(`Initializing map for module ${moduleId} with address: ${address}`);
+        console.log(`Initializing Google map for module ${moduleId} with address: ${address}`);
 
         try {
-            // 주소로 좌표 검색
-            const coords = await NaverMapUtils.searchAddress(address);
-
             // 지도 컨테이너 클리어
             mapContainer.innerHTML = '';
             mapContainer.classList.remove('flex', 'items-center', 'justify-center', 'bg-gray-300');
+            mapContainer.style.minHeight = '400px';
 
-            // 네이버 지도 초기화
-            await NaverMapUtils.initSchoolLocationMap(mapContainer.id, {
-                lat: coords.lat,
-                lng: coords.lng,
-                zoom: 16,
-                schoolName: homepageSettings.school_name || '우리 학교',
-                address: coords.address
-            });
+            // 구글 지도 iframe 삽입
+            const encodedAddress = encodeURIComponent(address);
+            const mapUrl = `https://maps.google.com/maps?q=${encodedAddress}&t=m&z=17&output=embed&iwloc=near`;
 
-            console.log(`✓ Naver map initialized for module ${moduleId}`);
+            mapContainer.innerHTML = `<iframe
+                src="${mapUrl}"
+                width="100%"
+                height="100%"
+                style="border:0; min-height:400px;"
+                allowfullscreen=""
+                loading="lazy"
+                referrerpolicy="no-referrer-when-downgrade">
+            </iframe>`;
+
+            console.log(`✓ Google map initialized for module ${moduleId}`);
         } catch (error) {
             console.error(`✗ Failed to initialize map for module ${moduleId}:`, error);
-            // 에러 발생 시 에러 메시지 표시 및 클래스 추가
             mapContainer.classList.add('map-error');
             mapContainer.innerHTML = `
-                <div class="text-center text-red-500">
+                <div class="text-center text-red-500 p-8">
                     <i class="fas fa-exclamation-triangle text-5xl mb-3"></i>
                     <p>지도를 불러올 수 없습니다</p>
                     <p class="text-sm">${error.message || '주소를 확인해주세요'}</p>
@@ -2313,8 +2309,9 @@ async function initNaverMapModules() {
     }
 }
 
-// 전역에서 지도 초기화 함수 노출
-window.initNaverMapModules = initNaverMapModules;
+// 전역에서 지도 초기화 함수 노출 (하위 호환성 유지)
+window.initNaverMapModules = initMapModules;
+window.initMapModules = initMapModules;
 
 // 지도 초기화 상태 추적 (무한 루프 방지)
 let mapInitializationInProgress = false;
@@ -2333,11 +2330,11 @@ if (typeof MutationObserver !== 'undefined') {
         const publicHome = document.getElementById('public-home');
         if (publicHome && publicHome.style.display !== 'none') {
             // 지도 모듈이 있는지 확인
-            const mapModules = document.querySelectorAll('[id^="naver-map-"]');
+            const mapModules = document.querySelectorAll('[id^="naver-map-"], [id^="google-map-"]');
             if (mapModules.length > 0) {
-                // 초기화되지 않은 지도가 있는지 확인
+                // 초기화되지 않은 지도가 있는지 확인 (iframe 체크)
                 const uninitializedMaps = Array.from(mapModules).filter(
-                    map => !map.querySelector('.nmap-panes') && !map.classList.contains('map-error')
+                    map => !map.querySelector('iframe') && !map.classList.contains('map-error')
                 );
 
                 if (uninitializedMaps.length === 0) {
@@ -2348,9 +2345,9 @@ if (typeof MutationObserver !== 'undefined') {
                 lastMapInitTime = now;
 
                 // 약간의 지연 후 초기화 (DOM 완전 렌더링 대기)
-                setTimeout(async () => {
+                setTimeout(() => {
                     console.log('MutationObserver: Initializing maps...');
-                    await initNaverMapModules();
+                    initMapModules();
                     mapInitializationInProgress = false;
                 }, 500);
             }

@@ -181,7 +181,7 @@ app.get('/', (c) => {
         </div>
         
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
-        <script src="/static/public-home.js?v=202512080055"></script>
+        <script src="/static/public-home.js?v=202512072410"></script>
         <script src="/static/student-home.js?v=202512071540"></script>
         <script src="/static/parent-home.js?v=202511212350"></script>
         <script src="/static/homepage-module-management.js?v=202512071520"></script>
@@ -199,7 +199,8 @@ app.get('/', (c) => {
         <script src="/static/teacher-management.js?v=202511212400" defer></script>
         <script src="/static/user-management.js?v=202511121000" defer></script>
         <script src="/static/assignment-management.js?v=202512041400" defer></script>
-        <script src="/static/naver-map.js?v=202512072330" defer></script>
+        <!-- naver-map.js는 구글 지도로 교체되어 더 이상 사용하지 않습니다 -->
+        <!-- <script src="/static/naver-map.js?v=202512072330" defer></script> -->
         <!-- homepage-management.js는 레거시 파일이므로 더 이상 사용하지 않습니다 -->
         <!-- <script src="/static/homepage-management.js?v=202511200000" defer></script> -->
     </body>
