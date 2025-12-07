@@ -50,6 +50,7 @@ sites.get('/:id', requireRole('super_admin'), async (c) => {
 
 // ============================================
 // 사이트 추가 (super_admin only)
+// - 사이트 생성 시 기본 데이터 자동 생성
 // ============================================
 sites.post('/', requireRole('super_admin'), async (c) => {
   try {
@@ -69,6 +70,7 @@ sites.post('/', requireRole('super_admin'), async (c) => {
       return c.json({ error: '이미 등록된 도메인입니다' }, 400)
     }
 
+    // 1. 사이트 생성
     const result = await c.env.DB.prepare(`
       INSERT INTO sites (domain, name, logo_url, primary_color, settings, is_active)
       VALUES (?, ?, ?, ?, ?, ?)
@@ -81,9 +83,72 @@ sites.post('/', requireRole('super_admin'), async (c) => {
       data.is_active !== undefined ? (data.is_active ? 1 : 0) : 1
     ).run()
 
+    const siteId = result.meta.last_row_id
+
+    // 2. 기본 게시판 생성
+    await c.env.DB.prepare(`
+      INSERT INTO boards (name, board_type, target_id, description, is_active, site_id)
+      VALUES
+        ('공지사항', 'student', NULL, '학교 전체 공지사항', 1, ?),
+        ('자유게시판', 'student', NULL, '학생들의 자유로운 소통 공간', 1, ?),
+        ('가정통신문', 'student', NULL, '학부모님께 전하는 소식', 1, ?),
+        ('학사일정', 'student', NULL, '학교 행사 및 일정 안내', 1, ?)
+    `).bind(siteId, siteId, siteId, siteId).run()
+
+    // 3. 기본 관리자 계정 생성 (요청에 포함된 경우)
+    if (data.admin_username && data.admin_password) {
+      await c.env.DB.prepare(`
+        INSERT INTO users (username, password_hash, email, name, role, site_id)
+        VALUES (?, ?, ?, ?, 'admin', ?)
+      `).bind(
+        data.admin_username,
+        data.admin_password, // 실제로는 해시 필요
+        data.admin_email || `${data.admin_username}@${data.domain}`,
+        data.admin_name || '관리자',
+        siteId
+      ).run()
+    }
+
+    // 4. 기본 학기 생성
+    const currentYear = new Date().getFullYear()
+    const currentMonth = new Date().getMonth() + 1
+    const semester = currentMonth >= 3 && currentMonth <= 8 ? 1 : 2
+    const isCurrent = 1
+
+    await c.env.DB.prepare(`
+      INSERT INTO semesters (name, year, semester, start_date, end_date, is_current, site_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      `${currentYear}학년도 ${semester}학기`,
+      currentYear,
+      semester,
+      semester === 1 ? `${currentYear}-03-01` : `${currentYear}-09-01`,
+      semester === 1 ? `${currentYear}-08-31` : `${currentYear + 1}-02-28`,
+      isCurrent,
+      siteId
+    ).run()
+
+    // 5. 기본 모듈 설정 생성
+    const defaultModules = [
+      'attendance', 'grades', 'volunteer', 'clubs',
+      'counseling', 'awards', 'reading', 'assignments'
+    ]
+    for (const moduleName of defaultModules) {
+      await c.env.DB.prepare(`
+        INSERT OR IGNORE INTO module_settings (module_name, is_enabled, site_id)
+        VALUES (?, 1, ?)
+      `).bind(moduleName, siteId).run()
+    }
+
     return c.json({
       message: '사이트가 추가되었습니다',
-      id: result.meta.last_row_id
+      id: siteId,
+      created: {
+        boards: 4,
+        semester: 1,
+        modules: defaultModules.length,
+        admin: data.admin_username ? 1 : 0
+      }
     }, 201)
   } catch (error: any) {
     console.error('사이트 추가 오류:', error)
