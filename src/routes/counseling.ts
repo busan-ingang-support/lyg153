@@ -220,8 +220,8 @@ counseling.get('/student/:student_id', async (c) => {
     if (userRole === 'parent') {
       // 학부모: 자녀만 조회 가능
       const relation = await c.env.DB.prepare(`
-        SELECT id FROM parent_student WHERE parent_user_id = ? AND student_id = ? AND COALESCE(status, 1) = 1 AND site_id = ?
-      `).bind(userId, studentId, siteId).first()
+        SELECT id FROM parent_student WHERE parent_user_id = ? AND student_id = ? AND COALESCE(status, 1) = 1
+      `).bind(userId, studentId).first()
 
       if (!relation) {
         return c.json({ error: 'Forbidden: Not your child' }, 403)
