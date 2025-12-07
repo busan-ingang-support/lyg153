@@ -3,7 +3,9 @@
 대안학교를 위한 **멀티테넌트** 통합 학적 관리 시스템
 
 ## 링크
-- **프로덕션:** https://2a04156c.lyg153.pages.dev/
+- **프로덕션:** 
+  사이트 1: https://lyg153.pages.dev/
+  사이트 2: https://lyg153.healthyeduministry.com/
 - **GitHub:** https://github.com/busan-ingang-support/lyg153
 - **대시보드:** https://dash.cloudflare.com/5d199369a23f91feb4ef82d6679e73c3/pages/view/lyg153
 
