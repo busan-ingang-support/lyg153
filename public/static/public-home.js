@@ -2161,11 +2161,15 @@ async function initNaverMapModules() {
 
 // 페이지 로드 시 지도 초기화
 if (typeof window.addEventListener !== 'undefined') {
-    // renderHomepageModule이 호출된 후 지도 초기화
-    const originalShowLocationPage = showLocationPage;
-    showLocationPage = async function() {
-        await originalShowLocationPage.apply(this, arguments);
-        // 짧은 지연 후 지도 초기화 (DOM 렌더링 완료 대기)
-        setTimeout(initNaverMapModules, 300);
-    };
+    // DOMContentLoaded 이후에 showLocationPage override
+    window.addEventListener('DOMContentLoaded', function() {
+        if (typeof showLocationPage === 'function') {
+            const originalShowLocationPage = showLocationPage;
+            showLocationPage = async function() {
+                await originalShowLocationPage.apply(this, arguments);
+                // 짧은 지연 후 지도 초기화 (DOM 렌더링 완료 대기)
+                setTimeout(initNaverMapModules, 300);
+            };
+        }
+    });
 }
