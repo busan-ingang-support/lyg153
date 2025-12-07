@@ -3,6 +3,30 @@ let currentUser = null;
 let authToken = null;
 let currentView = 'dashboard';
 
+// 토큰 만료 체크 함수
+function isTokenExpired(token) {
+    if (!token) return true;
+    try {
+        const payload = JSON.parse(atob(token));
+        // 만료 시간보다 현재 시간이 크면 만료됨
+        return payload.exp < Math.floor(Date.now() / 1000);
+    } catch {
+        return true;
+    }
+}
+
+// Axios 인터셉터 설정 - 401 에러 시 자동 로그아웃
+axios.interceptors.response.use(
+    response => response,
+    error => {
+        if (error.response?.status === 401) {
+            console.log('인증 만료 - 자동 로그아웃');
+            handleLogout();
+        }
+        return Promise.reject(error);
+    }
+);
+
 // 함수가 정의될 때까지 기다리는 헬퍼 함수
 function waitForFunction(functionName, intervalMs = 50, maxAttempts = 20) {
     return new Promise((resolve, reject) => {
@@ -33,8 +57,8 @@ async function initializeApp() {
     }
     window.isInitializing = true;
     
-    if (savedToken && savedUser) {
-        // 이미 로그인된 상태면 대시보드로
+    if (savedToken && savedUser && !isTokenExpired(savedToken)) {
+        // 이미 로그인된 상태이고 토큰이 유효하면 대시보드로
         authToken = savedToken;
         currentUser = JSON.parse(savedUser);
         
@@ -57,7 +81,14 @@ async function initializeApp() {
             }, 100);
         }
     } else {
-        // 로그인 안 되어있으면 공개 홈페이지 표시
+        // 로그인 안 되어있거나 토큰이 만료됨 - 공개 홈페이지 표시
+        // 만료된 토큰이 있으면 정리
+        if (savedToken && isTokenExpired(savedToken)) {
+            console.log('토큰 만료됨 - localStorage 정리');
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('currentUser');
+        }
+
         // public-home.js가 로드될 때까지 기다리기
         await waitForFunction('showPublicHome', 50, 20);
         if (typeof showPublicHome === 'function') {
