@@ -1687,33 +1687,15 @@ function getPreviewText(content, maxLength) {
     return text;
 }
 
-// 사이트별 테스트 계정 정보
+// 테스트 계정 정보 (모든 사이트 동일한 username 사용)
 function getTestAccountInfo() {
-    // 사이트별 테스트 계정 매핑
-    const testAccounts = {
-        1: {
-            admin: 'admin',
-            teacher: 'teacher1',
-            student: 'student1',
-            parent: 'parent1'
-        },
-        2: {
-            admin: 'green_admin',
-            teacher: 'green_teacher1',
-            student: 'green_student1',
-            parent: 'green_parent1'
-        }
-    };
-
-    const accounts = testAccounts[currentSiteId] || testAccounts[1];
-
     return `
         <p class="text-xs font-semibold text-gray-700 mb-2">테스트 계정</p>
         <div class="grid grid-cols-2 gap-2 text-xs text-gray-600">
-            <div><span class="font-medium">관리자:</span> ${accounts.admin}</div>
-            <div><span class="font-medium">교사:</span> ${accounts.teacher}</div>
-            <div><span class="font-medium">학생:</span> ${accounts.student}</div>
-            <div><span class="font-medium">학부모:</span> ${accounts.parent}</div>
+            <div><span class="font-medium">관리자:</span> admin</div>
+            <div><span class="font-medium">교사:</span> teacher1</div>
+            <div><span class="font-medium">학생:</span> student1</div>
+            <div><span class="font-medium">학부모:</span> parent1</div>
         </div>
         <p class="text-xs text-gray-500 mt-2">비밀번호: [계정명]123</p>
     `;
