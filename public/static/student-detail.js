@@ -703,7 +703,8 @@ async function handleStudentFormSubmit(e) {
         navigateToPage('students');
     } catch (error) {
         console.error('학생 저장 실패:', error);
-        alert(error.response?.data?.message || '학생 정보 저장에 실패했습니다.');
+        const errorMessage = error.response?.data?.error || error.response?.data?.message || '학생 정보 저장에 실패했습니다.';
+        alert(errorMessage);
     }
 }
 

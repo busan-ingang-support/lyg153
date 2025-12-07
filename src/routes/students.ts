@@ -416,6 +416,9 @@ students.put('/:id', requireRole('admin', 'super_admin'), async (c) => {
     return c.json({ message: 'Student updated successfully' });
   } catch (error: any) {
     console.error('Update student error:', error);
+    if (error.message?.includes('UNIQUE constraint')) {
+      return c.json({ error: 'Email or phone number already exists for another user' }, 409);
+    }
     return c.json({ error: 'Internal server error', details: error.message }, 500);
   }
 });
