@@ -5,12 +5,18 @@ let currentView = 'dashboard';
 
 // 토큰 만료 체크 함수
 function isTokenExpired(token) {
-    if (!token) return true;
+    if (!token) {
+        console.log('토큰 없음');
+        return true;
+    }
     try {
         const payload = JSON.parse(atob(token));
-        // 만료 시간보다 현재 시간이 크면 만료됨
-        return payload.exp < Math.floor(Date.now() / 1000);
-    } catch {
+        const now = Math.floor(Date.now() / 1000);
+        const isExpired = payload.exp < now;
+        console.log('토큰 체크:', { exp: payload.exp, now, isExpired, diff: payload.exp - now });
+        return isExpired;
+    } catch (e) {
+        console.log('토큰 파싱 오류:', e);
         return true;
     }
 }
