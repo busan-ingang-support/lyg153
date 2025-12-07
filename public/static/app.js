@@ -1904,8 +1904,8 @@ async function loadTeacherDashboardData() {
                 <div class="p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition">
                     <div class="flex justify-between items-start">
                         <div>
-                            <h3 class="font-semibold text-gray-800">${course.course_name || course.subject_name}</h3>
-                            <p class="text-sm text-gray-600 mt-1">${course.class_name} · ${course.schedule || '시간 미정'}</p>
+                            <h3 class="font-semibold text-gray-800">${course.course_name || course.subject_name || '과목명 미정'}</h3>
+                            <p class="text-sm text-gray-600 mt-1">${course.class_name || '반 미정'} · ${course.schedule || '시간 미정'}</p>
                         </div>
                         <span class="px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs font-medium">${course.credits || 0}학점</span>
                     </div>
