@@ -55,7 +55,7 @@ homepage.get('/', async (c) => {
   result.results.forEach((row: any) => {
     const key = row.setting_key.replace('homepage_', '');
     let value = row.setting_value;
-    
+
     // JSON 파싱 시도
     if (row.setting_type === 'json') {
       try {
@@ -64,11 +64,11 @@ homepage.get('/', async (c) => {
         // 파싱 실패 시 원본 값 사용
       }
     }
-    
+
     settings[key] = value;
   })
 
-  return c.json({ success: true, settings })
+  return c.json({ success: true, settings, siteId })
 })
 
 // 홈페이지 설정 조회 (관리자용 - 인증 필요)

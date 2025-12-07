@@ -12,6 +12,9 @@ let homepageSettings = {
     primary_color: '#1e40af'
 };
 
+// 현재 사이트 ID
+let currentSiteId = 1;
+
 // 공개 홈페이지 표시
 async function showPublicHome() {
     const app = document.getElementById('app');
@@ -21,6 +24,7 @@ async function showPublicHome() {
         const response = await axios.get('/api/homepage');
         const settings = response.data.settings || {};
         homepageSettings = { ...homepageSettings, ...settings };
+        currentSiteId = response.data.siteId || 1;
     } catch (error) {
         console.error('홈페이지 설정 로드 실패:', error);
     }
@@ -228,15 +232,8 @@ async function showPublicHome() {
                     </button>
                 </form>
                 
-                <div class="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <p class="text-xs font-semibold text-gray-700 mb-2">테스트 계정</p>
-                    <div class="grid grid-cols-2 gap-2 text-xs text-gray-600">
-                        <div><span class="font-medium">관리자:</span> admin</div>
-                        <div><span class="font-medium">교사:</span> teacher1</div>
-                        <div><span class="font-medium">학생:</span> student1</div>
-                        <div><span class="font-medium">학부모:</span> parent1</div>
-                    </div>
-                    <p class="text-xs text-gray-500 mt-2">비밀번호: [계정명]123</p>
+                <div id="test-account-info" class="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    ${getTestAccountInfo()}
                 </div>
             </div>
         </div>
@@ -1688,6 +1685,38 @@ function getPreviewText(content, maxLength) {
         return text.substring(0, maxLength) + '...';
     }
     return text;
+}
+
+// 사이트별 테스트 계정 정보
+function getTestAccountInfo() {
+    // 사이트별 테스트 계정 매핑
+    const testAccounts = {
+        1: {
+            admin: 'admin',
+            teacher: 'teacher1',
+            student: 'student1',
+            parent: 'parent1'
+        },
+        2: {
+            admin: 'green_admin',
+            teacher: 'green_teacher1',
+            student: 'green_student1',
+            parent: 'green_parent1'
+        }
+    };
+
+    const accounts = testAccounts[currentSiteId] || testAccounts[1];
+
+    return `
+        <p class="text-xs font-semibold text-gray-700 mb-2">테스트 계정</p>
+        <div class="grid grid-cols-2 gap-2 text-xs text-gray-600">
+            <div><span class="font-medium">관리자:</span> ${accounts.admin}</div>
+            <div><span class="font-medium">교사:</span> ${accounts.teacher}</div>
+            <div><span class="font-medium">학생:</span> ${accounts.student}</div>
+            <div><span class="font-medium">학부모:</span> ${accounts.parent}</div>
+        </div>
+        <p class="text-xs text-gray-500 mt-2">비밀번호: [계정명]123</p>
+    `;
 }
 
 // ============================================
