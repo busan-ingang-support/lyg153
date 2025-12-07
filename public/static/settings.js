@@ -294,12 +294,12 @@ function setupSettingsForms() {
 // 설정 일괄 저장
 async function saveSettings(settingsArray) {
     try {
-        const userData = JSON.parse(localStorage.getItem('user'));
+        const userData = JSON.parse(localStorage.getItem('currentUser'));
 
         if (!userData || !userData.id) {
             alert('로그인 정보가 없습니다. 다시 로그인해주세요.');
             localStorage.removeItem('authToken');
-            localStorage.removeItem('user');
+            localStorage.removeItem('currentUser');
             window.location.reload();
             return;
         }

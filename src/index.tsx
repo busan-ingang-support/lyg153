@@ -185,13 +185,13 @@ app.get('/', (c) => {
         <script src="/static/student-home.js?v=202512071540"></script>
         <script src="/static/parent-home.js?v=202511212350"></script>
         <script src="/static/homepage-module-management.js?v=202512071520"></script>
-        <script src="/static/app.js?v=202512072402"></script>
+        <script src="/static/app.js?v=202512072405"></script>
         <script src="/static/add-pages-functions.js?v=202511111600" defer></script>
         <script src="/static/schedule-management.js?v=202512052100" defer></script>
         <script src="/static/subject-management.js?v=202511111700" defer></script>
         <script src="/static/admin.js?v=202511071013" defer></script>
-        <script src="/static/counseling.js?v=202511212400" defer></script>
-        <script src="/static/settings.js?v=202511212400" defer></script>
+        <script src="/static/counseling.js?v=202512072405" defer></script>
+        <script src="/static/settings.js?v=202512072405" defer></script>
         <script src="/static/class-detail.js?v=202512052000" defer></script>
         <script src="/static/student-detail.js?v=202512051215" defer></script>
         <script src="/static/reports.js?v=202512080100" defer></script>
