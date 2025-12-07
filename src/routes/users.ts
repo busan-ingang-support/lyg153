@@ -33,34 +33,17 @@ users.get('/', requireRole('admin', 'super_admin'), async (c) => {
           t.subject as teacher_subject
         FROM users u
         LEFT JOIN teachers t ON u.id = t.user_id AND t.site_id = ?
-        WHERE u.role = ? AND u.deleted_at IS NULL
+        WHERE u.role = ? AND u.deleted_at IS NULL AND u.site_id = ?
       `;
-      params.push(siteId, role);
-
-      // super_admin이 아닌 경우에만 site_id 필터링 추가
-      if (userRole !== 'super_admin') {
-        query += ' AND u.site_id = ?';
-        params.push(siteId);
-      }
+      params.push(siteId, role, siteId);
     } else if (role) {
       // 특정 역할 필터링 (teacher 제외)
-      query = 'SELECT id, username, email, name, role, phone, is_active, created_at, site_id FROM users WHERE deleted_at IS NULL AND role = ?';
-      params.push(role);
-
-      // super_admin이 아닌 경우에만 site_id 필터링 추가
-      if (userRole !== 'super_admin') {
-        query += ' AND site_id = ?';
-        params.push(siteId);
-      }
+      query = 'SELECT id, username, email, name, role, phone, is_active, created_at, site_id FROM users WHERE deleted_at IS NULL AND role = ? AND site_id = ?';
+      params.push(role, siteId);
     } else {
       // 전체 사용자 조회
-      query = 'SELECT id, username, email, name, role, phone, is_active, created_at, site_id FROM users WHERE deleted_at IS NULL';
-
-      // super_admin이 아닌 경우에만 site_id 필터링 추가
-      if (userRole !== 'super_admin') {
-        query += ' AND site_id = ?';
-        params.push(siteId);
-      }
+      query = 'SELECT id, username, email, name, role, phone, is_active, created_at, site_id FROM users WHERE deleted_at IS NULL AND site_id = ?';
+      params.push(siteId);
     }
 
     // 검색 조건 추가
@@ -97,18 +80,11 @@ users.get('/:id', requireRole('admin', 'super_admin'), async (c) => {
     const db = c.env.DB;
     const id = c.req.param('id');
     const siteId = c.get('siteId') || 1;
-    const userRole = c.get('userRole');
 
-    // super_admin은 모든 사이트의 사용자 조회 가능
-    let query = 'SELECT id, username, email, name, role, phone, is_active, created_at FROM users WHERE id = ? AND deleted_at IS NULL';
-    const params: any[] = [id];
-
-    if (userRole !== 'super_admin') {
-      query += ' AND site_id = ?';
-      params.push(siteId);
-    }
-
-    const user = await db.prepare(query).bind(...params).first();
+    // 현재 사이트의 사용자만 조회 가능
+    const user = await db.prepare(
+      'SELECT id, username, email, name, role, phone, is_active, created_at, site_id FROM users WHERE id = ? AND site_id = ? AND deleted_at IS NULL'
+    ).bind(id, siteId).first();
     
     if (!user) {
       return c.json({ error: 'User not found' }, 404);
@@ -197,12 +173,11 @@ users.put('/:id', requireRole('admin', 'super_admin'), async (c) => {
     const db = c.env.DB;
     const id = c.req.param('id');
     const siteId = c.get('siteId') || 1;
-    const userRole = c.get('userRole');
     const { email, name, phone, is_active, password } = await c.req.json();
-    
+
     const updates: string[] = [];
     const params: any[] = [];
-    
+
     if (email !== undefined) {
       updates.push('email = ?');
       params.push(email);
@@ -224,20 +199,16 @@ users.put('/:id', requireRole('admin', 'super_admin'), async (c) => {
       const passwordHash = await hashPassword(password);
       params.push(passwordHash);
     }
-    
+
     if (updates.length === 0) {
       return c.json({ error: 'No fields to update' }, 400);
     }
 
     updates.push('updated_at = CURRENT_TIMESTAMP');
-    params.push(id);
+    params.push(id, siteId);
 
-    // super_admin은 모든 사이트의 사용자 수정 가능
-    let updateQuery = `UPDATE users SET ${updates.join(', ')} WHERE id = ?`;
-    if (userRole !== 'super_admin') {
-      updateQuery += ' AND site_id = ?';
-      params.push(siteId);
-    }
+    // 현재 사이트의 사용자만 수정 가능
+    const updateQuery = `UPDATE users SET ${updates.join(', ')} WHERE id = ? AND site_id = ?`;
 
     await db.prepare(updateQuery).bind(...params).run();
     
@@ -253,6 +224,7 @@ users.put('/:id/role', requireRole('super_admin'), async (c) => {
   try {
     const db = c.env.DB;
     const id = c.req.param('id');
+    const siteId = c.get('siteId') || 1;
     const { role } = await c.req.json();
 
     if (!role) {
@@ -264,10 +236,10 @@ users.put('/:id/role', requireRole('super_admin'), async (c) => {
       return c.json({ error: 'Invalid role' }, 400);
     }
 
-    // super_admin은 site_id 체크 없이 모든 사용자 권한 변경 가능
+    // 현재 사이트의 사용자만 권한 변경 가능
     await db.prepare(
-      'UPDATE users SET role = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-    ).bind(role, id).run();
+      'UPDATE users SET role = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND site_id = ?'
+    ).bind(role, id, siteId).run();
     
     return c.json({ message: 'User role updated successfully' });
   } catch (error) {
@@ -281,9 +253,12 @@ users.delete('/:id', requireRole('super_admin'), async (c) => {
   try {
     const db = c.env.DB;
     const id = c.req.param('id');
+    const siteId = c.get('siteId') || 1;
 
-    // Soft delete: deleted_at 타임스탬프 설정 (super_admin은 site_id 체크 없이 삭제 가능)
-    await db.prepare('UPDATE users SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?').bind(id).run();
+    // Soft delete: 현재 사이트의 사용자만 삭제 가능
+    await db.prepare(
+      'UPDATE users SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND site_id = ?'
+    ).bind(id, siteId).run();
 
     return c.json({ message: 'User deleted successfully' });
   } catch (error) {
