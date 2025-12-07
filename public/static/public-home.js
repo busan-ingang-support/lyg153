@@ -2158,7 +2158,8 @@ async function initNaverMapModules() {
             console.log(`✓ Naver map initialized for module ${moduleId}`);
         } catch (error) {
             console.error(`✗ Failed to initialize map for module ${moduleId}:`, error);
-            // 에러 발생 시 에러 메시지 표시
+            // 에러 발생 시 에러 메시지 표시 및 클래스 추가
+            mapContainer.classList.add('map-error');
             mapContainer.innerHTML = `
                 <div class="text-center text-red-500">
                     <i class="fas fa-exclamation-triangle text-5xl mb-3"></i>
@@ -2173,19 +2174,42 @@ async function initNaverMapModules() {
 // 전역에서 지도 초기화 함수 노출
 window.initNaverMapModules = initNaverMapModules;
 
+// 지도 초기화 상태 추적 (무한 루프 방지)
+let mapInitializationInProgress = false;
+let lastMapInitTime = 0;
+
 // 페이지 전환 시 지도 초기화를 위한 MutationObserver
 if (typeof MutationObserver !== 'undefined') {
     const publicHomeObserver = new MutationObserver(function(mutations) {
+        // 이미 초기화 중이거나 최근에 초기화했으면 건너뛰기
+        const now = Date.now();
+        if (mapInitializationInProgress || (now - lastMapInitTime < 2000)) {
+            return;
+        }
+
         // 공개 홈페이지 컨테이너가 표시되는지 확인
         const publicHome = document.getElementById('public-home');
         if (publicHome && publicHome.style.display !== 'none') {
             // 지도 모듈이 있는지 확인
             const mapModules = document.querySelectorAll('[id^="naver-map-"]');
             if (mapModules.length > 0) {
+                // 초기화되지 않은 지도가 있는지 확인
+                const uninitializedMaps = Array.from(mapModules).filter(
+                    map => !map.querySelector('.nmap-panes') && !map.classList.contains('map-error')
+                );
+
+                if (uninitializedMaps.length === 0) {
+                    return; // 모두 초기화됨
+                }
+
+                mapInitializationInProgress = true;
+                lastMapInitTime = now;
+
                 // 약간의 지연 후 초기화 (DOM 완전 렌더링 대기)
-                setTimeout(() => {
+                setTimeout(async () => {
                     console.log('MutationObserver: Initializing maps...');
-                    initNaverMapModules();
+                    await initNaverMapModules();
+                    mapInitializationInProgress = false;
                 }, 500);
             }
         }
