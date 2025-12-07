@@ -1566,7 +1566,7 @@ async function loadPublicNoticeList() {
                     </h3>
                     <span class="text-sm text-gray-500">${formatDate(notice.created_at)}</span>
                 </div>
-                <p class="text-gray-600 text-sm">${escapeHtml(notice.content).substring(0, 100)}...</p>
+                <p class="text-gray-600 text-sm">${stripHtmlTags(notice.content).substring(0, 100)}...</p>
                 <div class="mt-3 text-sm text-gray-500">
                     <i class="fas fa-eye mr-1"></i>${notice.view_count || 0}
                 </div>
@@ -1749,6 +1749,14 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// HTML 태그 제거 (목록에서 미리보기용)
+function stripHtmlTags(html) {
+    if (!html) return '';
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    return div.textContent || div.innerText || '';
 }
 
 // 텍스트 콘텐츠 포맷 함수 (줄바꿈 처리 및 구조화)

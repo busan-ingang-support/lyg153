@@ -905,7 +905,7 @@ async function loadBoardList(boardType = 'notice') {
                             ${post.subject_name ? `<span class="badge badge-info text-xs">${escapeHtml(post.subject_name)}</span>` : ''}
                             <h3 class="text-lg font-bold text-gray-800">${escapeHtml(post.title)}</h3>
                         </div>
-                        <p class="text-sm text-gray-600 mb-3 line-clamp-2">${escapeHtml(post.content)}</p>
+                        <p class="text-sm text-gray-600 mb-3 line-clamp-2">${stripHtmlTags(post.content)}</p>
                         <div class="flex items-center space-x-4 text-xs text-gray-500">
                             <span><i class="fas fa-user mr-1"></i>${escapeHtml(post.author_name || '익명')}</span>
                             <span><i class="fas fa-clock mr-1"></i>${formatDate(post.created_at)}</span>
@@ -1007,8 +1007,8 @@ async function showBoardDetail(postId) {
                     <span><i class="fas fa-clock mr-1"></i>${formatDate(post.created_at)}</span>
                     <span><i class="fas fa-eye mr-1"></i>${post.view_count || 0}</span>
                 </div>
-                <div class="prose max-w-none text-gray-700 whitespace-pre-wrap">
-                    ${escapeHtml(post.content).replace(/\n/g, '<br>')}
+                <div class="prose max-w-none text-gray-700">
+                    ${post.content}
                 </div>
             </div>
             
@@ -1401,6 +1401,14 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// HTML 태그 제거 (목록에서 미리보기용)
+function stripHtmlTags(html) {
+    if (!html) return '';
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    return div.textContent || div.innerText || '';
 }
 
 function formatDate(dateString) {
