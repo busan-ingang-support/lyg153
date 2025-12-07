@@ -24,7 +24,8 @@
       "Bash(git remote set-url:*)",
       "Bash(ssh-add:*)",
       "Bash(curl:*)",
-      "Bash(node -e:*)"
+      "Bash(node -e:*)",
+      "Bash(TOKEN=\"eyJ1c2VySWQiOjYsInJvbGUiOiJwYXJlbnQiLCJzaXRlSWQiOjEsImV4cCI6MTc2NTE2ODcxOX0=\")"
     ],
     "deny": [],
     "ask": []

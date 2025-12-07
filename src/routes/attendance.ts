@@ -340,10 +340,10 @@ attendance.get('/student/:student_id/summary', async (c) => {
     const stats = await db.prepare(`
       SELECT
         COUNT(*) as total,
-        SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present,
-        SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent,
-        SUM(CASE WHEN status = 'late' THEN 1 ELSE 0 END) as late,
-        SUM(CASE WHEN status = 'excused' THEN 1 ELSE 0 END) as excused
+        SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as present,
+        SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) as absent,
+        SUM(CASE WHEN a.status = 'late' THEN 1 ELSE 0 END) as late,
+        SUM(CASE WHEN a.status = 'excused' THEN 1 ELSE 0 END) as excused
       FROM attendance a
       JOIN enrollments e ON a.enrollment_id = e.id
       WHERE e.student_id = ? AND COALESCE(a.status, 'present') != '' AND a.site_id = ?
