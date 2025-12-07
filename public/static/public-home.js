@@ -1694,9 +1694,9 @@ function getTestAccountInfo() {
         <div class="text-xs text-gray-600 space-y-1">
             <div><span class="font-medium">최고관리자:</span> lyg / lyg123</div>
             <div><span class="font-medium">관리자:</span> admin / admin123</div>
-            <div><span class="font-medium">교사:</span> teacher / teach123</div>
-            <div><span class="font-medium">학생:</span> student / stud123</div>
-            <div><span class="font-medium">학부모:</span> parent / par123</div>
+            <div><span class="font-medium">교사:</span> teacher / teacher123</div>
+            <div><span class="font-medium">학생:</span> student / student123</div>
+            <div><span class="font-medium">학부모:</span> parent / parent123</div>
         </div>
     `;
 }
