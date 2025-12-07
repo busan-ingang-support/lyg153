@@ -1,12 +1,41 @@
 // 네이버 지도 API
 const NAVER_MAP_CLIENT_ID = 'OykAVAy8XlxheHOXk9kBLmxn9r7qK8jffJES2Lgo';
 
+// geocoder 서비스가 완전히 준비되었는지 확인
+function isGeocoderReady() {
+  return window.naver &&
+         window.naver.maps &&
+         window.naver.maps.Service &&
+         typeof window.naver.maps.Service.geocode === 'function';
+}
+
 // 네이버 지도 스크립트 로드
 function loadNaverMapScript() {
   return new Promise((resolve, reject) => {
     // 이미 로드되었는지 확인
-    if (window.naver && window.naver.maps && window.naver.maps.Service) {
+    if (isGeocoderReady()) {
       resolve();
+      return;
+    }
+
+    // 이미 스크립트가 로딩 중인지 확인
+    const existingScript = document.querySelector('script[src*="openapi.map.naver.com"]');
+    if (existingScript) {
+      // 기존 스크립트가 있으면 로드 완료를 기다림
+      const checkInterval = setInterval(() => {
+        if (isGeocoderReady()) {
+          clearInterval(checkInterval);
+          console.log('Naver Maps API with geocoder ready (existing script)');
+          resolve();
+        }
+      }, 100);
+
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        if (!isGeocoderReady()) {
+          reject(new Error('Naver Maps geocoder service not available after timeout'));
+        }
+      }, 5000);
       return;
     }
 
@@ -15,17 +44,18 @@ function loadNaverMapScript() {
     // submodules=geocoder 파라미터 추가 - geocoding 서비스 사용을 위해 필수
     script.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${NAVER_MAP_CLIENT_ID}&submodules=geocoder`;
     script.onload = () => {
-      // geocoder 서비스가 준비될 때까지 대기 (최대 3초)
+      // geocoder 서비스가 준비될 때까지 대기 (최대 5초)
       let attempts = 0;
-      const maxAttempts = 30;
+      const maxAttempts = 50;
       const checkInterval = setInterval(() => {
         attempts++;
-        if (window.naver && window.naver.maps && window.naver.maps.Service) {
+        if (isGeocoderReady()) {
           clearInterval(checkInterval);
           console.log('Naver Maps API with geocoder loaded successfully');
           resolve();
         } else if (attempts >= maxAttempts) {
           clearInterval(checkInterval);
+          console.error('Geocoder check failed. naver.maps.Service:', window.naver?.maps?.Service);
           reject(new Error('Naver Maps geocoder service not available after timeout'));
         }
       }, 100);
