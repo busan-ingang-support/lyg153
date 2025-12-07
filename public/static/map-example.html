@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>네이버 지도 사용 예시</title>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        .map-container {
+            width: 100%;
+            height: 400px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #ddd;
+        }
+        .controls {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            padding: 10px 20px;
+            background: #4169E1;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #3557c7;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>네이버 지도 API 사용 예시</h1>
+
+        <!-- 예시 1: 학교 위치 표시 -->
+        <div class="section">
+            <h2>1. 학교 위치 표시</h2>
+            <div id="school-map" class="map-container"></div>
+            <div class="controls">
+                <input type="text" id="school-address" placeholder="학교 주소를 입력하세요">
+                <button onclick="updateSchoolLocation()">위치 업데이트</button>
+            </div>
+            <div id="school-result" class="result" style="display:none;"></div>
+        </div>
+
+        <!-- 예시 2: 여러 위치 표시 (학생 주소 등) -->
+        <div class="section">
+            <h2>2. 여러 위치 표시 (학생 거주지 예시)</h2>
+            <div id="multi-map" class="map-container"></div>
+        </div>
+
+        <!-- 예시 3: 주소 검색 -->
+        <div class="section">
+            <h2>3. 주소 검색 (Geocoding)</h2>
+            <div class="controls">
+                <input type="text" id="search-address" placeholder="주소를 입력하세요 (예: 서울시 종로구 세종대로 209)">
+                <button onclick="searchAddressCoords()">좌표 검색</button>
+            </div>
+            <div id="search-result" class="result" style="display:none;"></div>
+        </div>
+    </div>
+
+    <script src="/static/naver-map.js"></script>
+    <script>
+        let schoolMapInstance = null;
+        let multiMapInstance = null;
+
+        // 페이지 로드 시 기본 지도 초기화
+        window.addEventListener('load', async () => {
+            // 예시 1: 학교 위치 지도
+            try {
+                schoolMapInstance = await NaverMapUtils.initSchoolLocationMap('school-map', {
+                    lat: 37.5665, // 서울시청
+                    lng: 126.9780,
+                    zoom: 16,
+                    schoolName: '대안학교',
+                    address: '서울특별시 중구 세종대로 110'
+                });
+                console.log('School map initialized');
+            } catch (error) {
+                console.error('Failed to initialize school map:', error);
+            }
+
+            // 예시 2: 여러 위치 표시
+            try {
+                const studentLocations = [
+                    {
+                        lat: 37.5665,
+                        lng: 126.9780,
+                        title: '학생 A',
+                        description: '서울시 중구'
+                    },
+                    {
+                        lat: 37.5700,
+                        lng: 126.9850,
+                        title: '학생 B',
+                        description: '서울시 종로구'
+                    },
+                    {
+                        lat: 37.5630,
+                        lng: 126.9900,
+                        title: '학생 C',
+                        description: '서울시 중구'
+                    },
+                    {
+                        lat: 37.5600,
+                        lng: 126.9750,
+                        title: '학생 D',
+                        description: '서울시 용산구'
+                    }
+                ];
+
+                multiMapInstance = await NaverMapUtils.initMultiLocationMap('multi-map', studentLocations);
+                console.log('Multi-location map initialized');
+            } catch (error) {
+                console.error('Failed to initialize multi-location map:', error);
+            }
+        });
+
+        // 학교 위치 업데이트
+        async function updateSchoolLocation() {
+            const address = document.getElementById('school-address').value.trim();
+            const resultDiv = document.getElementById('school-result');
+
+            if (!address) {
+                alert('주소를 입력해주세요');
+                return;
+            }
+
+            try {
+                resultDiv.style.display = 'none';
+                resultDiv.textContent = '검색 중...';
+                resultDiv.style.display = 'block';
+
+                const result = await NaverMapUtils.searchAddress(address);
+
+                // 새 지도로 교체
+                document.getElementById('school-map').innerHTML = '';
+                schoolMapInstance = await NaverMapUtils.initSchoolLocationMap('school-map', {
+                    lat: result.lat,
+                    lng: result.lng,
+                    zoom: 16,
+                    schoolName: '대안학교',
+                    address: result.address
+                });
+
+                resultDiv.textContent = `✓ 위치 업데이트 완료: ${result.address} (위도: ${result.lat}, 경도: ${result.lng})`;
+            } catch (error) {
+                resultDiv.textContent = `✗ 오류: ${error.message}`;
+            }
+        }
+
+        // 주소로 좌표 검색
+        async function searchAddressCoords() {
+            const address = document.getElementById('search-address').value.trim();
+            const resultDiv = document.getElementById('search-result');
+
+            if (!address) {
+                alert('주소를 입력해주세요');
+                return;
+            }
+
+            try {
+                resultDiv.style.display = 'none';
+                resultDiv.textContent = '검색 중...';
+                resultDiv.style.display = 'block';
+
+                const result = await NaverMapUtils.searchAddress(address);
+
+                resultDiv.innerHTML = `
+                    <strong>검색 결과:</strong><br>
+                    주소: ${result.address}<br>
+                    도로명 주소: ${result.roadAddress || 'N/A'}<br>
+                    지번 주소: ${result.jibunAddress || 'N/A'}<br>
+                    위도: ${result.lat}<br>
+                    경도: ${result.lng}
+                `;
+            } catch (error) {
+                resultDiv.textContent = `✗ 검색 실패: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
