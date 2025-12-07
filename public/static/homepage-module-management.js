@@ -824,7 +824,15 @@ function getModuleEditForm(module) {
                             <input type="text" name="subtitle" value="${module.subtitle || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">배경 이미지 URL</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">배경 동영상 URL</label>
+                            <input type="text" name="video_url" value="${module.video_url || ''}" placeholder="YouTube URL 또는 동영상 파일 URL" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                            <p class="text-xs text-gray-500 mt-1">
+                                YouTube: https://www.youtube.com/watch?v=VIDEO_ID 또는 https://youtu.be/VIDEO_ID<br>
+                                직접 업로드: https://example.com/video.mp4 (MP4, WebM, OGG)
+                            </p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">배경 이미지 URL (동영상 없을 때)</label>
                             <input type="text" name="hero_background_image" value="${module.hero_background_image || ''}" placeholder="https://..." class="w-full px-3 py-2 border border-gray-300 rounded-lg">
                         </div>
                     </div>
