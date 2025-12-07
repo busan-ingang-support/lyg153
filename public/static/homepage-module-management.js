@@ -59,10 +59,25 @@ async function showHomepageManagement(container) {
     }
 }
 
+// 유효한 컨테이너 가져오기 (DOM에서 제거된 경우 새로 찾기)
+function getValidContainer() {
+    // homepageContainer가 있고 DOM에 여전히 존재하는지 확인
+    if (homepageContainer && document.body.contains(homepageContainer)) {
+        return homepageContainer;
+    }
+    // 그렇지 않으면 main-content를 새로 찾기
+    const mainContent = document.getElementById('main-content');
+    if (mainContent) {
+        homepageContainer = mainContent;
+        return mainContent;
+    }
+    return null;
+}
+
 // 탭 전환
 function switchTab(tab) {
     currentTab = tab;
-    const container = homepageContainer || document.getElementById('main-content');
+    const container = getValidContainer();
     if (!container) {
         console.error('Container not found for switchTab');
         return;
@@ -73,7 +88,7 @@ function switchTab(tab) {
 // 페이지 전환
 function switchPage(page) {
     currentPage = page;
-    const container = homepageContainer || document.getElementById('main-content');
+    const container = getValidContainer();
     if (!container) {
         console.error('Container not found for switchPage');
         return;
