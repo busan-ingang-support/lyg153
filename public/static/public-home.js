@@ -1691,14 +1691,13 @@ function getPreviewText(content, maxLength) {
 function getTestAccountInfo() {
     return `
         <p class="text-xs font-semibold text-gray-700 mb-2">테스트 계정</p>
-        <div class="grid grid-cols-2 gap-2 text-xs text-gray-600">
-            <div><span class="font-medium">최고관리자:</span> lyg</div>
-            <div><span class="font-medium">관리자:</span> admin</div>
-            <div><span class="font-medium">교사:</span> teacher1</div>
-            <div><span class="font-medium">학생:</span> student1</div>
-            <div><span class="font-medium">학부모:</span> parent1</div>
+        <div class="text-xs text-gray-600 space-y-1">
+            <div><span class="font-medium">최고관리자:</span> lyg / lyg123</div>
+            <div><span class="font-medium">관리자:</span> admin / admin123</div>
+            <div><span class="font-medium">교사:</span> teacher / teach123</div>
+            <div><span class="font-medium">학생:</span> student / stud123</div>
+            <div><span class="font-medium">학부모:</span> parent / par123</div>
         </div>
-        <p class="text-xs text-gray-500 mt-2">비밀번호: [계정명]123</p>
     `;
 }
 
