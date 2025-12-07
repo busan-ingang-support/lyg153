@@ -35,8 +35,8 @@ assignments.get('/student/:student_id', async (c) => {
   } else if (userRole === 'parent') {
     // 학부모인 경우 자녀 확인
     const relation = await db.prepare(`
-      SELECT id FROM parent_student WHERE parent_user_id = ? AND student_id = ? AND COALESCE(status, 1) = 1
-    `).bind(userId, studentId).first();
+      SELECT id FROM parent_student WHERE parent_user_id = ? AND student_id = ? AND COALESCE(status, 1) = 1 AND site_id = ?
+    `).bind(userId, studentId, siteId).first();
 
     if (!relation) {
       return c.json({ error: 'Forbidden: Not your child' }, 403);
@@ -149,9 +149,9 @@ assignments.get('/', async (c) => {
       SELECT e.course_id
       FROM enrollments e
       JOIN parent_student ps ON e.student_id = ps.student_id
-      WHERE ps.parent_user_id = ? AND e.status = 'active' AND COALESCE(ps.status, 1) = 1 AND e.site_id = ?
+      WHERE ps.parent_user_id = ? AND e.status = 'active' AND COALESCE(ps.status, 1) = 1 AND e.site_id = ? AND ps.site_id = ?
     ) AND a.is_published = 1`;
-    params.push(userId, siteId);
+    params.push(userId, siteId, siteId);
   }
 
   // 교사인 경우: 본인이 담당하는 과목의 과제만
@@ -578,8 +578,8 @@ async function sendAssignmentNotifications(
       for (const enrollment of enrollments) {
         // 해당 학생의 학부모 조회
         const { results: parents } = await db.prepare(`
-          SELECT parent_user_id FROM parent_student WHERE student_id = ? AND COALESCE(status, 1) = 1
-        `).bind(enrollment.student_id).all();
+          SELECT parent_user_id FROM parent_student WHERE student_id = ? AND COALESCE(status, 1) = 1 AND site_id = ?
+        `).bind(enrollment.student_id, siteId).all();
 
         for (const parent of parents) {
           await db.prepare(`
