@@ -20,52 +20,6 @@ async function showSystemSettings() {
                 <p class="text-gray-600 mt-2">학교 정보 및 시스템 설정을 관리합니다</p>
             </div>
             
-            <!-- 학교 기본 정보 -->
-            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-                <h3 class="text-xl font-bold mb-4 text-gray-800 border-b pb-2">
-                    <i class="fas fa-school mr-2"></i>학교 기본 정보
-                </h3>
-                <form id="school-info-form" class="space-y-4">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">학교명</label>
-                            <input type="text" id="setting-school-name" 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                   placeholder="학교 이름">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">학교 전화번호</label>
-                            <input type="text" id="setting-school-phone" 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                   placeholder="02-1234-5678">
-                        </div>
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">학교 주소</label>
-                            <input type="text" id="setting-school-address" 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                   placeholder="학교 주소">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">교장 이름</label>
-                            <input type="text" id="setting-principal-name" 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                   placeholder="교장 이름">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">담당 이메일</label>
-                            <input type="email" id="setting-school-email" 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                   placeholder="school@example.com">
-                        </div>
-                    </div>
-                    <div class="flex justify-end">
-                        <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
-                            <i class="fas fa-save mr-2"></i>저장
-                        </button>
-                    </div>
-                </form>
-            </div>
-            
             <!-- 학사 일정 설정 -->
             <div class="bg-white rounded-lg shadow-md p-6 mb-6">
                 <h3 class="text-xl font-bold mb-4 text-gray-800 border-b pb-2">
@@ -289,40 +243,7 @@ async function loadSystemSettings() {
 
 // 설정 폼 이벤트 리스너 설정
 function setupSettingsForms() {
-    // 학교 기본 정보 저장
-    document.getElementById('school-info-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const schoolName = document.getElementById('setting-school-name').value;
-        const schoolPhone = document.getElementById('setting-school-phone').value;
-        const schoolAddress = document.getElementById('setting-school-address').value;
-        const principalName = document.getElementById('setting-principal-name').value;
-        const schoolEmail = document.getElementById('setting-school-email').value;
-        
-        // 시스템 설정 저장
-        await saveSettings([
-            { key: 'school-name', value: schoolName },
-            { key: 'school-phone', value: schoolPhone },
-            { key: 'school-address', value: schoolAddress },
-            { key: 'principal-name', value: principalName },
-            { key: 'school-email', value: schoolEmail }
-        ]);
-        
-        // 홈페이지 설정에도 동기화 (공개 홈페이지에서 사용)
-        try {
-            await axios.post('/api/homepage', {
-                school_name: schoolName,
-                contact_phone: schoolPhone,
-                contact_address: schoolAddress,
-                contact_email: schoolEmail
-            }, {
-                headers: { 'Authorization': `Bearer ${authToken}` }
-            });
-        } catch (error) {
-            console.error('홈페이지 설정 동기화 실패:', error);
-        }
-    });
-    
+
     // 학사 일정 설정 저장
     document.getElementById('academic-settings-form').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -377,7 +298,9 @@ async function saveSettings(settingsArray) {
 
         if (!userData || !userData.id) {
             alert('로그인 정보가 없습니다. 다시 로그인해주세요.');
-            window.location.href = '/login.html';
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('user');
+            window.location.reload();
             return;
         }
 

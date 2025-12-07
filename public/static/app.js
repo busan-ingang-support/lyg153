@@ -154,7 +154,7 @@ async function handleLogin(e) {
         authToken = response.data.token;
         
         localStorage.setItem('authToken', authToken);
-        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        localStorage.setItem('user', JSON.stringify(currentUser));
         
         // 로그인 모달 닫기 (있으면)
         const loginModal = document.getElementById('login-modal');

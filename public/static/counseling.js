@@ -295,7 +295,9 @@ async function showAddCounselingForm() {
 
         if (!userData || !userData.id) {
             alert('로그인 정보가 없습니다. 다시 로그인해주세요.');
-            window.location.href = '/login.html';
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('user');
+            window.location.reload();
             return;
         }
 
