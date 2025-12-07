@@ -1310,8 +1310,8 @@ function navigateToPage(page, updateURL = true) {
             break;
         case 'homepage':
         case 'homepage-management':
-            // 최고 관리자만 접근 가능
-            if (currentUser.role === 'super_admin') {
+            // 관리자 이상 접근 가능
+            if (currentUser.role === 'super_admin' || currentUser.role === 'admin') {
                 // 함수가 로드될 때까지 대기
                 if (typeof showHomepageManagement === 'function') {
                     showHomepageManagement(contentArea);
@@ -1342,7 +1342,7 @@ function navigateToPage(page, updateURL = true) {
                     }, 100);
                 }
             } else {
-                alert('홈페이지 관리는 최고 관리자만 접근할 수 있습니다.');
+                alert('홈페이지 관리는 관리자만 접근할 수 있습니다.');
                 navigateToPage('dashboard');
             }
             break;

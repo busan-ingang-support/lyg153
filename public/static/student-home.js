@@ -354,15 +354,17 @@ async function loadRecentNotices() {
         const response = await axios.get('/api/boards/posts?board_type=student&is_notice=1&limit=5', {
             headers: { 'Authorization': `Bearer ${authToken}` }
         });
-        
+
         const container = document.getElementById('recent-notices');
+        if (!container) return;
+
         const notices = response.data.posts || [];
-        
+
         if (notices.length === 0) {
             container.innerHTML = '<p class="text-gray-500 text-center py-4">공지사항이 없습니다.</p>';
             return;
         }
-        
+
         container.innerHTML = notices.map(notice => `
             <div class="flex items-start space-x-3 p-3 hover:bg-gray-50 rounded-lg cursor-pointer">
                 <i class="fas fa-file-alt text-gray-400 mt-1"></i>
@@ -374,8 +376,10 @@ async function loadRecentNotices() {
         `).join('');
     } catch (error) {
         console.error('공지사항 로드 실패:', error);
-        document.getElementById('recent-notices').innerHTML = 
-            '<p class="text-gray-500 text-center py-4">공지사항을 불러올 수 없습니다.</p>';
+        const container = document.getElementById('recent-notices');
+        if (container) {
+            container.innerHTML = '<p class="text-gray-500 text-center py-4">공지사항을 불러올 수 없습니다.</p>';
+        }
     }
 }
 
