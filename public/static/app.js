@@ -598,7 +598,7 @@ async function loadSidebarMenu() {
         }
         let menuHTML = `
             <!-- 고정 메뉴: 대시보드 -->
-            <a href="#" data-page="dashboard" class="nav-link flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded transition">
+            <a href="#" data-page="dashboard" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
                 <i class="fas fa-home w-5 mr-3"></i>
                 <span>대시보드</span>
             </a>
