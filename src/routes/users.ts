@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { CloudflareBindings } from '../types';
-import { hashPassword, requireRole } from '../utils/auth';
+import { hashPassword } from '../utils/auth';
+import { requireRole } from '../middleware/auth';
 
 const users = new Hono<{ Bindings: CloudflareBindings }>();
 
