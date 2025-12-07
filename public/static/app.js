@@ -56,18 +56,26 @@ function waitForFunction(functionName, intervalMs = 50, maxAttempts = 20) {
 async function initializeApp() {
     const savedToken = localStorage.getItem('authToken');
     const savedUser = localStorage.getItem('currentUser');
-    
+
+    console.log('initializeApp 시작:', {
+        hasToken: !!savedToken,
+        hasUser: !!savedUser,
+        isInitializing: window.isInitializing
+    });
+
     // 중복 호출 방지
     if (window.isInitializing) {
+        console.log('이미 초기화 중 - 종료');
         return;
     }
     window.isInitializing = true;
-    
+
     if (savedToken && savedUser && !isTokenExpired(savedToken)) {
+        console.log('유효한 토큰 있음 - 대시보드로 이동');
         // 이미 로그인된 상태이고 토큰이 유효하면 대시보드로
         authToken = savedToken;
         currentUser = JSON.parse(savedUser);
-        
+
         // 필요한 함수가 로드될 때까지 기다리기
         if (currentUser.role === 'student') {
             await waitForFunction('showStudentHome', 50, 20);
@@ -75,7 +83,8 @@ async function initializeApp() {
             // public-home.js가 로드되었는지 확인
             await waitForFunction('showPublicHome', 50, 10);
         }
-        
+
+        console.log('showDashboard 호출');
         showDashboard();
         
         // URL에서 페이지 확인하여 해당 페이지로 이동
@@ -88,6 +97,11 @@ async function initializeApp() {
         }
     } else {
         // 로그인 안 되어있거나 토큰이 만료됨 - 공개 홈페이지 표시
+        console.log('토큰 없거나 만료됨 - 공개 홈페이지 표시', {
+            savedToken: !!savedToken,
+            savedUser: !!savedUser
+        });
+
         // 만료된 토큰이 있으면 정리
         if (savedToken && isTokenExpired(savedToken)) {
             console.log('토큰 만료됨 - localStorage 정리');
@@ -98,10 +112,12 @@ async function initializeApp() {
         // public-home.js가 로드될 때까지 기다리기
         await waitForFunction('showPublicHome', 50, 20);
         if (typeof showPublicHome === 'function') {
+            console.log('showPublicHome 호출');
             showPublicHome();
             // showPublicHome 내부에서 URL 확인을 하므로 여기서는 추가 작업 불필요
         } else {
             // 함수가 없으면 기본 로그인 화면 표시
+            console.log('showPublicHome 함수 없음 - 로그인 화면 표시');
             document.getElementById('login-screen')?.classList.remove('hidden');
         }
     }
