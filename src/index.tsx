@@ -197,7 +197,7 @@ app.get('/', (c) => {
         <script src="/static/teacher-management.js?v=202511212400" defer></script>
         <script src="/static/user-management.js?v=202511121000" defer></script>
         <script src="/static/assignment-management.js?v=202512041400" defer></script>
-        <script src="/static/naver-map.js?v=202512072200" defer></script>
+        <script src="/static/naver-map.js?v=202512072300" defer></script>
         <!-- homepage-management.js는 레거시 파일이므로 더 이상 사용하지 않습니다 -->
         <!-- <script src="/static/homepage-management.js?v=202511200000" defer></script> -->
     </body>
