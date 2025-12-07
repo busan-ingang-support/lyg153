@@ -1,9 +1,12 @@
 import { Hono } from 'hono';
 import type { CloudflareBindings } from '../types';
 import { hashPassword } from '../utils/auth';
-import { requireRole } from '../middleware/auth';
+import { authMiddleware, requireRole } from '../middleware/auth';
 
 const users = new Hono<{ Bindings: CloudflareBindings }>();
+
+// 인증이 필요한 모든 엔드포인트에 authMiddleware 적용
+users.use('/*', authMiddleware);
 
 // 모든 사용자 조회 (관리자 전용)
 users.get('/', requireRole('admin', 'super_admin'), async (c) => {
@@ -80,10 +83,11 @@ users.get('/:id', async (c) => {
     const db = c.env.DB;
     const id = c.req.param('id');
     const siteId = c.get('siteId') || 1;
-    const currentUser = c.get('user');
+    const userId = c.get('userId');
+    const userRole = c.get('userRole');
 
     // 자기 자신이 아니고, 관리자도 아니면 접근 거부
-    if (currentUser?.userId != id && !['admin', 'super_admin'].includes(currentUser?.role)) {
+    if (userId != id && !['admin', 'super_admin'].includes(userRole)) {
       return c.json({ error: 'Access denied' }, 403);
     }
 

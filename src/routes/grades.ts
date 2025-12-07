@@ -1,8 +1,11 @@
 import { Hono } from 'hono';
 import type { CloudflareBindings } from '../types';
-import { requireRole } from '../middleware/auth';
+import { authMiddleware, requireRole } from '../middleware/auth';
 
 const grades = new Hono<{ Bindings: CloudflareBindings }>();
+
+// 인증이 필요한 모든 엔드포인트에 authMiddleware 적용
+grades.use('/*', authMiddleware);
 
 // 성적 조회
 grades.get('/', async (c) => {

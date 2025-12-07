@@ -1,9 +1,12 @@
 import { Hono } from 'hono';
 
 import type { CloudflareBindings } from '../types';
-import { requireRole } from '../middleware/auth';
+import { authMiddleware, requireRole } from '../middleware/auth';
 
 const assignments = new Hono<{ Bindings: CloudflareBindings }>();
+
+// 인증이 필요한 모든 엔드포인트에 authMiddleware 적용
+assignments.use('/*', authMiddleware);
 
 // ============================================
 // Bug 2 Fix: 더 구체적인 라우트를 먼저 정의

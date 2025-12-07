@@ -1,8 +1,11 @@
 import { Hono } from 'hono';
 import type { CloudflareBindings } from '../types';
-import { requireRole } from '../middleware/auth';
+import { authMiddleware, requireRole } from '../middleware/auth';
 
 const attendance = new Hono<{ Bindings: CloudflareBindings }>();
+
+// 인증이 필요한 모든 엔드포인트에 authMiddleware 적용
+attendance.use('/*', authMiddleware);
 
 // 출석 기록 조회
 attendance.get('/', async (c) => {

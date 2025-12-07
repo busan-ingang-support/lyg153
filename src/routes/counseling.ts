@@ -206,4 +206,67 @@ counseling.delete('/:id', requireRole('teacher', 'admin', 'super_admin'), async 
   }
 })
 
+// ============================================
+// 학생별 상담기록 조회 (학부모/학생/교사/관리자)
+// ============================================
+counseling.get('/student/:student_id', async (c) => {
+  try {
+    const siteId = c.get('siteId') || 1
+    const studentId = parseInt(c.req.param('student_id'))
+    const userId = c.get('userId')
+    const userRole = c.get('userRole')
+
+    // 권한 체크
+    if (userRole === 'parent') {
+      // 학부모: 자녀만 조회 가능
+      const relation = await c.env.DB.prepare(`
+        SELECT id FROM parent_student WHERE parent_user_id = ? AND student_id = ? AND COALESCE(status, 1) = 1 AND site_id = ?
+      `).bind(userId, studentId, siteId).first()
+
+      if (!relation) {
+        return c.json({ error: 'Forbidden: Not your child' }, 403)
+      }
+    } else if (userRole === 'student') {
+      // 학생: 본인만 조회 가능
+      const student = await c.env.DB.prepare(`
+        SELECT id FROM students WHERE user_id = ? AND id = ? AND site_id = ?
+      `).bind(userId, studentId, siteId).first()
+
+      if (!student) {
+        return c.json({ error: 'Forbidden: Not your record' }, 403)
+      }
+    }
+    // 교사, 관리자, super_admin은 모두 조회 가능
+
+    // 비공개 상담은 교사/관리자/super_admin만 볼 수 있음
+    let confidentialFilter = ''
+    if (userRole === 'parent' || userRole === 'student') {
+      confidentialFilter = ' AND COALESCE(cr.is_confidential, 0) = 0'
+    }
+
+    const stmt = c.env.DB.prepare(`
+      SELECT
+        cr.*,
+        u.name as student_name,
+        cu.name as counselor_name,
+        cu.name as teacher_name,
+        sem.name as semester_name
+      FROM counseling_records cr
+      LEFT JOIN students s ON cr.student_id = s.id
+      LEFT JOIN users u ON s.user_id = u.id AND u.deleted_at IS NULL
+      LEFT JOIN users cu ON cr.counselor_id = cu.id AND cu.deleted_at IS NULL
+      LEFT JOIN semesters sem ON cr.semester_id = sem.id
+      WHERE cr.student_id = ? AND cr.site_id = ? AND cr.deleted_at IS NULL AND COALESCE(cr.status, 1) = 1${confidentialFilter}
+      ORDER BY cr.counseling_date DESC
+    `).bind(studentId, siteId)
+
+    const { results } = await stmt.all()
+
+    return c.json({ counselings: results || [] })
+  } catch (error: any) {
+    console.error('학생별 상담기록 조회 오류:', error)
+    return c.json({ error: error.message }, 500)
+  }
+})
+
 export default counseling
