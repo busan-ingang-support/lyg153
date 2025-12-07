@@ -486,23 +486,23 @@ function renderGradeReport(data) {
                 <h3 class="text-xl font-bold text-gray-800 mb-4">출석 현황</h3>
                 <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
                     <div class="text-center p-4 bg-gray-50 rounded">
-                        <p class="text-2xl font-bold text-gray-800">${data.attendanceStats.total_days}</p>
+                        <p class="text-2xl font-bold text-gray-800">${data.attendanceStats?.total_days || 0}</p>
                         <p class="text-sm text-gray-600">수업일수</p>
                     </div>
                     <div class="text-center p-4 bg-green-50 rounded">
-                        <p class="text-2xl font-bold text-green-600">${data.attendanceStats.present_days}</p>
+                        <p class="text-2xl font-bold text-green-600">${data.attendanceStats?.present_days || 0}</p>
                         <p class="text-sm text-gray-600">출석</p>
                     </div>
                     <div class="text-center p-4 bg-red-50 rounded">
-                        <p class="text-2xl font-bold text-red-600">${data.attendanceStats.absent_days}</p>
+                        <p class="text-2xl font-bold text-red-600">${data.attendanceStats?.absent_days || 0}</p>
                         <p class="text-sm text-gray-600">결석</p>
                     </div>
                     <div class="text-center p-4 bg-yellow-50 rounded">
-                        <p class="text-2xl font-bold text-yellow-600">${data.attendanceStats.late_days}</p>
+                        <p class="text-2xl font-bold text-yellow-600">${data.attendanceStats?.late_days || 0}</p>
                         <p class="text-sm text-gray-600">지각</p>
                     </div>
                     <div class="text-center p-4 bg-blue-50 rounded">
-                        <p class="text-2xl font-bold text-blue-600">${summary.attendanceRate}%</p>
+                        <p class="text-2xl font-bold text-blue-600">${summary.attendanceRate || 0}%</p>
                         <p class="text-sm text-gray-600">출석률</p>
                     </div>
                 </div>
