@@ -5,15 +5,24 @@ const NAVER_MAP_CLIENT_ID = 'OykAVAy8XlxheHOXk9kBLmxn9r7qK8jffJES2Lgo';
 function loadNaverMapScript() {
   return new Promise((resolve, reject) => {
     // 이미 로드되었는지 확인
-    if (window.naver && window.naver.maps) {
+    if (window.naver && window.naver.maps && window.naver.maps.Service) {
       resolve();
       return;
     }
 
     const script = document.createElement('script');
     script.type = 'text/javascript';
-    script.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${NAVER_MAP_CLIENT_ID}`;
-    script.onload = () => resolve();
+    // submodules=geocoder 파라미터 추가 - geocoding 서비스 사용을 위해 필수
+    script.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${NAVER_MAP_CLIENT_ID}&submodules=geocoder`;
+    script.onload = () => {
+      // geocoder 로드 확인
+      if (window.naver && window.naver.maps && window.naver.maps.Service) {
+        console.log('Naver Maps API with geocoder loaded successfully');
+        resolve();
+      } else {
+        reject(new Error('Naver Maps geocoder service not available'));
+      }
+    };
     script.onerror = () => reject(new Error('Failed to load Naver Map script'));
     document.head.appendChild(script);
   });
