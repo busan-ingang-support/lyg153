@@ -1404,6 +1404,7 @@ async function saveModule(moduleId, form) {
                     moduleData.settings = {
                         title: data.title || '',
                         subtitle: data.subtitle || '',
+                        video_url: data.video_url || '',
                         hero_background_image: data.hero_background_image || ''
                     };
                     break;

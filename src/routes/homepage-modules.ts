@@ -252,8 +252,13 @@ modules.post('/', async (c) => {
 
     const moduleId = result.meta.last_row_id
 
-    // 설정 저장
+    // 설정 저장 (빈 값이 아닌 것만)
     for (const [key, value] of Object.entries(settings)) {
+      // undefined, null, 빈 문자열 건너뛰기
+      if (value === undefined || value === null || value === '') {
+        continue;
+      }
+
       let settingValue = value;
       let settingType = 'string';
 
@@ -372,8 +377,13 @@ modules.put('/:id', async (c) => {
     // 기존 설정 삭제 후 재생성
     await DB.prepare(`DELETE FROM homepage_module_settings WHERE module_id = ? AND site_id = ?`).bind(moduleId, siteId).run()
 
-    // 새 설정 저장
+    // 새 설정 저장 (빈 값이 아닌 것만)
     for (const [key, value] of Object.entries(settings)) {
+      // undefined, null, 빈 문자열 건너뛰기
+      if (value === undefined || value === null || value === '') {
+        continue;
+      }
+
       let settingValue = value;
       let settingType = 'string';
 
