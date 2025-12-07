@@ -691,8 +691,8 @@ function renderHomepageModule(module) {
                                 <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
                             </a>
                         </div>
-                        <div id="public-notice-preview" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            <div class="col-span-full text-center py-12">
+                        <div id="public-notice-preview" class="space-y-3">
+                            <div class="text-center py-12">
                                 <i class="fas fa-spinner fa-spin text-3xl text-gray-300"></i>
                             </div>
                         </div>
@@ -1136,23 +1136,20 @@ async function loadPublicNoticePreview() {
             const category = notice.category || '공지';
             const categoryColor = categoryColors[category] || 'bg-blue-600';
             const dateStr = formatDateKorean(notice.created_at);
-            
+
             return `
-                <article class="news-card group cursor-pointer" onclick="navigatePublicPage('notice')">
-                    <div class="card-image relative h-48 bg-gradient-to-br from-slate-700 to-slate-900 overflow-hidden">
-                        <div class="absolute inset-0 flex items-center justify-center">
-                            <i class="fas fa-newspaper text-5xl text-white/20"></i>
-                        </div>
-                        <span class="card-category absolute top-4 left-4 px-3 py-1 ${categoryColor} text-white text-xs font-bold rounded-full uppercase tracking-wide">
+                <article class="group cursor-pointer bg-white border border-gray-200 rounded-lg p-4 hover:bg-gray-50 hover:border-blue-300 transition-all" onclick="showPublicNoticeDetail(${notice.id})">
+                    <div class="flex items-start gap-4">
+                        <span class="shrink-0 px-2.5 py-1 ${categoryColor} text-white text-xs font-semibold rounded">
                             ${escapeHtml(category)}
                         </span>
-                    </div>
-                    <div class="card-body p-6">
-                        <h3 class="card-title text-lg font-bold text-gray-900 mb-3 line-clamp-2 group-hover:text-blue-600 transition-colors">
-                            ${escapeHtml(notice.title)}
-                        </h3>
-                        <p class="text-gray-500 text-sm line-clamp-2 mb-4">${getPreviewText(notice.content, 100)}</p>
-                        <time class="card-date text-sm text-gray-400">${dateStr}</time>
+                        <div class="flex-1 min-w-0">
+                            <h3 class="text-base font-semibold text-gray-900 group-hover:text-blue-600 transition-colors truncate">
+                                ${escapeHtml(notice.title)}
+                            </h3>
+                            <p class="text-gray-500 text-sm mt-1 line-clamp-1">${getPreviewText(notice.content, 80)}</p>
+                        </div>
+                        <time class="shrink-0 text-sm text-gray-400">${dateStr}</time>
                     </div>
                 </article>
             `;
@@ -1162,8 +1159,8 @@ async function loadPublicNoticePreview() {
         const container = document.getElementById('public-notice-preview');
         if (container) {
             container.innerHTML = `
-                <div class="col-span-full text-center py-16 bg-red-50 rounded-2xl">
-                    <i class="fas fa-exclamation-circle text-5xl text-red-300 mb-4"></i>
+                <div class="text-center py-12 bg-red-50 rounded-lg">
+                    <i class="fas fa-exclamation-circle text-4xl text-red-300 mb-3"></i>
                     <p class="text-red-500">공지사항을 불러올 수 없습니다.</p>
                 </div>
             `;
