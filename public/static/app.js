@@ -710,8 +710,8 @@ async function loadSidebarMenu() {
             `;
         }
         
-        // 최고 관리자 전용: 홈페이지 관리
-        if (currentUser && currentUser.role === 'super_admin') {
+        // 관리자 전용: 홈페이지 관리
+        if (currentUser && (currentUser.role === 'super_admin' || currentUser.role === 'admin')) {
             menuHTML += `
                 <a href="#" data-page="homepage" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
                     <i class="fas fa-globe w-5 mr-3"></i>
@@ -776,8 +776,8 @@ function showDefaultTeacherMenu(sidebarNav) {
 
 // 관리자용 기본 메뉴
 function showDefaultAdminMenu(sidebarNav) {
-    const isSuperAdmin = currentUser && currentUser.role === 'super_admin';
-    
+    const isAdmin = currentUser && (currentUser.role === 'super_admin' || currentUser.role === 'admin');
+
     sidebarNav.innerHTML = `
         <a href="#" data-page="dashboard" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
             <i class="fas fa-home w-5 mr-3"></i>
@@ -824,7 +824,7 @@ function showDefaultAdminMenu(sidebarNav) {
             <i class="fas fa-cog w-5 mr-3"></i>
             <span>설정</span>
         </a>
-        ${isSuperAdmin ? `
+        ${isAdmin ? `
         <a href="#" data-page="homepage" class="nav-link flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded transition">
             <i class="fas fa-globe w-5 mr-3"></i>
             <span>홈페이지 관리</span>
