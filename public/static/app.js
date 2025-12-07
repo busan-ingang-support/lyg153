@@ -285,7 +285,7 @@ async function showAdminDashboard() {
                                 <div class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-purple-100">
                                     <i class="fas fa-graduation-cap text-base text-purple-600"></i>
                                 </div>
-                                <h1 class="text-lg font-bold text-gray-800">학적 관리 시스템</h1>
+                                <h1 id="system-title" class="text-lg font-bold text-gray-800">학적 관리 시스템</h1>
                             </div>
                             <div class="flex items-center space-x-4">
                                 <span id="user-info" class="text-sm text-gray-600"></span>
@@ -367,9 +367,30 @@ async function showAdminDashboard() {
     
     // 사이드바 메뉴 로드
     await loadSidebarMenu();
-    
+
+    // 학교 이름 로드
+    loadSchoolName();
+
     // 대시보드 페이지로 이동
     navigateToPage('dashboard');
+}
+
+// 학교 이름 로드 및 표시
+async function loadSchoolName() {
+    try {
+        const response = await axios.get('/api/homepage');
+        const schoolName = response.data?.settings?.school_name;
+
+        if (schoolName) {
+            const systemTitle = document.getElementById('system-title');
+            if (systemTitle) {
+                systemTitle.textContent = schoolName;
+            }
+        }
+    } catch (error) {
+        console.error('학교 이름 로드 실패:', error);
+        // 에러가 발생해도 기본값 "학적 관리 시스템"이 표시됨
+    }
 }
 
 // 교사 대시보드 표시 (자기 반/과목만)
@@ -377,7 +398,7 @@ async function showTeacherDashboard() {
     // 관리자 대시보드와 동일한 구조 사용
     // loadSidebarMenu()에서 이미 교사 권한을 체크하여 필터링된 메뉴를 로드함
     await showAdminDashboard();
-    
+
     // 교사 정보는 loadSidebarMenu()에서 이미 가져왔으므로
     // 여기서는 추가 작업 없음 (필요시 여기서도 확인 가능)
 }

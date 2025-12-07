@@ -144,7 +144,7 @@ app.get('/', (c) => {
                                 <div class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-purple-100">
                                     <i class="fas fa-graduation-cap text-base text-purple-600"></i>
                                 </div>
-                                <h1 class="text-lg font-bold text-gray-800">학적 관리 시스템</h1>
+                                <h1 id="system-title" class="text-lg font-bold text-gray-800">학적 관리 시스템</h1>
                             </div>
                             <div class="flex items-center space-x-4">
                                 <span id="user-info" class="text-sm text-gray-600"></span>
