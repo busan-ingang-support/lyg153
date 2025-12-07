@@ -13,8 +13,10 @@ users.get('/', requireRole('admin', 'super_admin'), async (c) => {
     const userRole = c.get('userRole');
     const { role, search, limit = 50, offset = 0 } = c.req.query();
 
-    // teacher 역할인 경우 teachers 테이블과 조인하여 teacher_id 포함
+    const params: any[] = [];
     let query: string;
+
+    // teacher 역할인 경우 teachers 테이블과 조인하여 teacher_id 포함
     if (role === 'teacher') {
       query = `
         SELECT
@@ -26,43 +28,42 @@ users.get('/', requireRole('admin', 'super_admin'), async (c) => {
           u.phone,
           u.is_active,
           u.created_at,
+          u.site_id,
           t.id as teacher_id,
           t.subject as teacher_subject
         FROM users u
         LEFT JOIN teachers t ON u.id = t.user_id AND t.site_id = ?
         WHERE u.role = ? AND u.deleted_at IS NULL
       `;
+      params.push(siteId, role);
+
       // super_admin이 아닌 경우에만 site_id 필터링 추가
       if (userRole !== 'super_admin') {
         query += ' AND u.site_id = ?';
+        params.push(siteId);
       }
-    } else {
-      query = 'SELECT id, username, email, name, role, phone, is_active, created_at FROM users WHERE deleted_at IS NULL';
+    } else if (role) {
+      // 특정 역할 필터링 (teacher 제외)
+      query = 'SELECT id, username, email, name, role, phone, is_active, created_at, site_id FROM users WHERE deleted_at IS NULL AND role = ?';
+      params.push(role);
+
       // super_admin이 아닌 경우에만 site_id 필터링 추가
       if (userRole !== 'super_admin') {
         query += ' AND site_id = ?';
-      }
-    }
-
-    const params: any[] = [];
-
-    if (role && role !== 'teacher') {
-      if (userRole !== 'super_admin') {
-        params.push(siteId);
-      }
-      query += ' AND role = ?';
-      params.push(role);
-    } else if (role === 'teacher') {
-      params.push(siteId, role);
-      if (userRole !== 'super_admin') {
         params.push(siteId);
       }
     } else {
+      // 전체 사용자 조회
+      query = 'SELECT id, username, email, name, role, phone, is_active, created_at, site_id FROM users WHERE deleted_at IS NULL';
+
+      // super_admin이 아닌 경우에만 site_id 필터링 추가
       if (userRole !== 'super_admin') {
+        query += ' AND site_id = ?';
         params.push(siteId);
       }
     }
-    
+
+    // 검색 조건 추가
     if (search) {
       if (role === 'teacher') {
         query += ' AND (u.name LIKE ? OR u.email LIKE ? OR u.username LIKE ?)';
@@ -72,16 +73,17 @@ users.get('/', requireRole('admin', 'super_admin'), async (c) => {
       const searchTerm = `%${search}%`;
       params.push(searchTerm, searchTerm, searchTerm);
     }
-    
+
+    // 정렬 및 페이징
     if (role === 'teacher') {
       query += ' ORDER BY u.created_at DESC LIMIT ? OFFSET ?';
     } else {
       query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
     }
     params.push(Number(limit), Number(offset));
-    
+
     const { results } = await db.prepare(query).bind(...params).all();
-    
+
     return c.json({ users: results });
   } catch (error) {
     console.error('Get users error:', error);
