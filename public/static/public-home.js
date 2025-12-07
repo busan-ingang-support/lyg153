@@ -1692,6 +1692,7 @@ function getTestAccountInfo() {
     return `
         <p class="text-xs font-semibold text-gray-700 mb-2">테스트 계정</p>
         <div class="grid grid-cols-2 gap-2 text-xs text-gray-600">
+            <div><span class="font-medium">최고관리자:</span> lyg</div>
             <div><span class="font-medium">관리자:</span> admin</div>
             <div><span class="font-medium">교사:</span> teacher1</div>
             <div><span class="font-medium">학생:</span> student1</div>
